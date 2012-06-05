@@ -335,8 +335,6 @@ public class SourceConverterStage2
 	{
 		IASTFunctionDefinition func = (IASTFunctionDefinition) declaration;
 		IBinding funcBinding = func.getDeclarator().getName().resolveBinding();
-
-		//printerr(funcBinding.getClass().getCanonicalName());
 		
 		MethodDeclaration method = ast.newMethodDeclaration();
 		method.setName(ast.newSimpleName(getSimpleName(func.getDeclarator().getName())));
@@ -380,11 +378,15 @@ public class SourceConverterStage2
 						create.arguments().addAll(evalExpr(chain.getInitializerValue()));
 						assign.setRightHandSide(create);
 					}
-					else
+					else if (chain.getInitializerValue() != null)
 					{
 						assign.setRightHandSide(evalExpr(chain.getInitializerValue()).get(0));
 					}
-
+					else
+					{
+						// TODO...
+					}
+					
 					// Add assignment statements to start of generated method...
 					ExpressionStatement stmt = ast.newExpressionStatement(assign);
 					method.getBody().statements().add(start, stmt);
@@ -521,10 +523,20 @@ public class SourceConverterStage2
 	 */
 	private void evalDeclaration(IASTDeclaration declaration) throws DOMException
 	{
-		if (declaration instanceof IASTFunctionDefinition)
+		if (declaration instanceof IASTFunctionDefinition &&
+			((IASTFunctionDefinition)declaration).getDeclarator().getName().resolveBinding() instanceof IFunction)
 		{
 			print("function definition");
 			evalFunction(declaration);
+		}
+		else if (declaration instanceof IASTFunctionDefinition)
+		{
+			IBinding bind = ((IASTFunctionDefinition) declaration).getDeclarator().getName().resolveBinding();
+			
+			if (bind instanceof IProblemBinding)
+				printerr("Problem function: " + ((IProblemBinding) bind).getMessage() + ((IProblemBinding) bind).getLineNumber());
+			else
+				printerr("Function with unknown binding: " + bind.getClass().getCanonicalName());
 		}
 		else if (declaration instanceof IASTSimpleDeclaration)
 		{
@@ -660,12 +672,13 @@ public class SourceConverterStage2
 			if (parameter instanceof ICPPASTParameterDeclaration)
 			{
 				ICPPASTParameterDeclaration parameterDeclaration = (ICPPASTParameterDeclaration)parameter;
-				printerr("parameterDeclaration: " + parameter.getRawSignature());
+				printerr("parameterDeclaration: " + parameter.getRawSignature() + parameterDeclaration.getDeclarator().getName().resolveBinding().getClass().getCanonicalName());
 
 				// Not much we can do with this...
 				String str = parameterDeclaration.getDeclarator().getName().resolveBinding().getName();
 				TypeParameter typeParam = ast.newTypeParameter();
-				typeParam.setName(ast.newSimpleName(str));
+				printerr(normalizeName(str));
+				typeParam.setName(ast.newSimpleName(normalizeName(str)));
 				ret.add(typeParam);
 			}
 			else if (parameter instanceof ICPPASTSimpleTypeTemplateParameter)
@@ -1230,7 +1243,6 @@ public class SourceConverterStage2
 					TypeEnum type = getTypeEnum(var.getType());
 					if (type == TypeEnum.OTHER)
 					{
-						print("YEAH!!!!!!!!!!!!TTTT");
 						ClassInstanceCreation create = ast.newClassInstanceCreation();
 						create.setType(cppToJavaType(var.getType()));
 						create.arguments().addAll(evaluate(decl.getInitializer()));
@@ -2246,6 +2258,22 @@ public class SourceConverterStage2
 		}
 		else if (name.startsWith("~"))
 			replace = name.replace("~", "destruct_");
+		else if (name.equals("bool"))
+			replace = "Boolean";
+		else if (name.equals("byte"))
+			replace = "Byte";
+		else if (name.equals("char"))
+			replace = "Character";
+		else if (name.equals("short"))
+			replace = "Short";
+		else if (name.equals("int"))
+			replace = "Integer";
+		else if (name.equals("long"))
+			replace = "Long";
+		else if (name.equals("float"))
+			replace = "Float";
+		else if (name.equals("double"))
+			replace = "Double";
 		else
 			replace = name // Cast operators need cleaning.
 			.replace(' ', '_')
@@ -2258,6 +2286,9 @@ public class SourceConverterStage2
 			.replace('>', '_')
 			.replace(',', '_');
 
+		if (replace.isEmpty())
+			replace = "MISSING";
+		
 		return replace;
 	}
 
@@ -2671,7 +2702,7 @@ public class SourceConverterStage2
 
 			ret.add(trys);
 		}
-		else
+		else if (statement != null)
 		{
 			printerr(statement.getClass().getCanonicalName());
 		}
@@ -3091,7 +3122,7 @@ public class SourceConverterStage2
 
 		PackageDeclaration packageDeclaration = ast.newPackageDeclaration();
 		unit.setPackage(packageDeclaration);
-		packageDeclaration.setName(ast.newSimpleName("astexplorer")); //TODO
+		packageDeclaration.setName(ast.newSimpleName("yourpackage")); //TODO
 
 		TypeDeclaration global = ast.newTypeDeclaration();
 		global.setName(ast.newSimpleName("Globals"));
