@@ -270,6 +270,7 @@ import org.eclipse.text.edits.TextEdit;
  * Rename String to something.
  * Address of operator.
  * Anonymous stuff.
+ * - Anonymous enums. TICK.
  */
 
 /**
@@ -677,7 +678,6 @@ public class SourceConverterStage2
 				// Not much we can do with this...
 				String str = parameterDeclaration.getDeclarator().getName().resolveBinding().getName();
 				TypeParameter typeParam = ast.newTypeParameter();
-				printerr(normalizeName(str));
 				typeParam.setName(ast.newSimpleName(normalizeName(str)));
 				ret.add(typeParam);
 			}
@@ -952,6 +952,9 @@ public class SourceConverterStage2
 	{
 		IASTEnumerator[] enumerators = enumerationSpecifier.getEnumerators();
 		
+		if (enumerators.length == 0)
+			return;
+		
 		EnumDeclaration enumd = ast.newEnumDeclaration();
 		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(enumerationSpecifier.getName()));
 
@@ -959,12 +962,26 @@ public class SourceConverterStage2
 			decl.bodyDeclarations().add(enumd);
 		else
 			unit.types().add(enumd);
+		
+		String finalName;
 
-		if (!getSimpleName(enumerationSpecifier.getName()).isEmpty())
-			enumd.setName(ast.newSimpleName(getSimpleName(enumerationSpecifier.getName())));
+		if (!getSimpleName(enumerationSpecifier.getName()).equals("MISSING"))
+		{
+			finalName = getSimpleName(enumerationSpecifier.getName());
+			enumd.setName(ast.newSimpleName(finalName));
+		}
 		else
-			enumd.setName(ast.newSimpleName("anonymous"));
-
+		{
+			// If the enum is anonymous we save the first enum value name
+			// in a map so we can use it as a key to lookup the given name of this
+			// enumeration later...
+			IASTEnumerator first = enumerators[0];
+			String nm = first.getName().resolveBinding().getName();
+			finalName = "AnonEnum" + m_anonEnumCount;
+			enumd.setName(ast.newSimpleName(finalName));
+			m_anonEnumMap.put(nm, finalName);
+			m_anonEnumCount++;
+		}
 
 		IASTExpression lastValue = null;
 		int sinceLastValue = 1;
@@ -1005,13 +1022,9 @@ public class SourceConverterStage2
 		enumd.bodyDeclarations().add(field);
 
 		MethodDeclaration con = ast.newMethodDeclaration();
-
-		if (getSimpleName(enumerationSpecifier.getName()).isEmpty())
-			con.setName(ast.newSimpleName("anonymous"));
-		else
-			con.setName(ast.newSimpleName(getSimpleName(enumerationSpecifier.getName())));
-
+		con.setName(ast.newSimpleName(finalName));
 		con.setConstructor(true);
+
 		SingleVariableDeclaration var2 = ast.newSingleVariableDeclaration();
 		var2.setType(ast.newPrimitiveType(PrimitiveType.INT));
 		var2.setName(ast.newSimpleName("enumVal"));
@@ -1032,10 +1045,7 @@ public class SourceConverterStage2
 		method.setName(ast.newSimpleName("fromValue"));
 		method.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
 
-		if (getSimpleName(enumerationSpecifier.getName()).isEmpty())
-			method.setReturnType2(ast.newSimpleType(ast.newSimpleName("anonymous")));
-		else
-			method.setReturnType2(ast.newSimpleType(ast.newSimpleName(getSimpleName(enumerationSpecifier.getName()))));
+		method.setReturnType2(ast.newSimpleType(ast.newSimpleName(finalName)));
 
 		SingleVariableDeclaration var3 = ast.newSingleVariableDeclaration();
 		var3.setType(ast.newPrimitiveType(PrimitiveType.INT));
@@ -1778,7 +1788,21 @@ public class SourceConverterStage2
 				{
 					IEnumerator enumerator = (IEnumerator) bind;
 					String enumeration = getSimpleType(((IEnumeration)enumerator.getType()).getName());
-					QualifiedName qual = ast.newQualifiedName(ast.newSimpleName(enumeration), ast.newSimpleName(getSimpleName(idExpression.getName())));
+					QualifiedName qual;
+					if (enumeration.equals("MISSING"))
+					{
+						String first = ((IEnumeration)enumerator.getOwner()).getEnumerators()[0].getName();
+						String enumName = m_anonEnumMap.get(first);
+						
+						if (enumName == null)
+							exitOnError();
+						
+						qual = ast.newQualifiedName(ast.newSimpleName(enumName), ast.newSimpleName(getSimpleName(idExpression.getName())));
+					}
+					else
+					{
+						qual = ast.newQualifiedName(ast.newSimpleName(enumeration), ast.newSimpleName(getSimpleName(idExpression.getName())));
+					}
 					FieldAccess fa = ast.newFieldAccess();
 					fa.setExpression(qual);
 					fa.setName(ast.newSimpleName("val"));
@@ -2203,7 +2227,7 @@ public class SourceConverterStage2
 			ret = qualifiedType;
 
 		if (ret.isEmpty())
-			return "anonymous";
+			return "MISSING";
 		else
 			return ret;
 	}
@@ -3105,6 +3129,10 @@ public class SourceConverterStage2
 	private List<String> bitfields = new ArrayList<String>();
 	
 	private List<Statement> stmtQueue = new ArrayList<Statement>();
+
+	private int m_anonEnumCount = 0;
+	
+	private HashMap<String, String> m_anonEnumMap = new HashMap<String, String>();
 	
 	/**
 	 * Traverses the AST of the given translation unit
