@@ -72,6 +72,7 @@ enum { value3, value4 };
 
 class foo
 {
+public:
 	foo() { }
 	foo(int i) {
 		// Test use of anonymous enums values
@@ -119,9 +120,6 @@ class test : public foo {
 	// Test value in class with implicit constructor...
 	foo test_foo_with_init;
 
-	// Test value in class with initializer value...
-	foo test_foo_with_int_constructor(55);
-
 	// Test bit fields...
 	int test_with_bit_field : 5;
 
@@ -165,7 +163,7 @@ class test : public foo {
 		}
 
 		// Test qualified enum access...
-		int i = test_enum::val1 + test_enum::val2;
+		int i = test::val1 + test::val2;
 
 		// Test various pointer to basic types...
 		char * ptr1;
@@ -173,14 +171,15 @@ class test : public foo {
 		short * ptr3;
 		unsigned * ptr4;
 		bool * ptr5;
-		// Test multiple declarators on with one declaration...
-		int * ptr7, * ptr6;
+		int * ptr6;
+		// Test multiple declarators with one declaration...
+		foo * ptr7, * ptr8;
 
 		// Test address of operator...
 		ptr7 = &a;
 
 		// Test basic pointer assignment...
-		ptr7 = ptr6;
+		ptr8 = ptr7;
 
 		// Test number literals...
 		return 1072;

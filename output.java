@@ -12,19 +12,31 @@ class Globals {
 		short h;
 		long i;
 	}
+
+	class_outside_namespace cls1 = new class_outside_namespace();
+	int variable;
+	AnonClass3 anon_class3 = new AnonClass3();
+}
+
+class CppString {
+	int m_count;
+
+	public CppString(int i) {
+		m_count = i;
+	}
 }
 
 class mypair<T> {
 	T[] values;
 
 	public mypair(T first, T second) {
-		values[0].op_assign(first); // Why is it using op_assign here?
+		values[0].op_assign(first);
 		values[1].op_assign(second);
 	}
 }
 
 class HashMap<T, V> {
-	T one = new T(); // This won't work in Java...
+	T one = new T();
 	V two = new V();
 }
 
@@ -125,6 +137,22 @@ class test extends foo {
 		}
 	}
 
+	class AnonClass0 {
+		int a;
+		int b;
+	}
+
+	AnonClass0 anon_class1 = new AnonClass0();
+	AnonClass0 anon_class2 = new AnonClass0();
+
+	class AnonClass1 {
+		int c;
+		int d;
+	}
+
+	AnonClass1 anon_class3 = new AnonClass1();
+	AnonClass1 anon_class4 = new AnonClass1();
+
 	class subby {
 		int k;
 	}
@@ -153,8 +181,7 @@ class test extends foo {
 		if ((l=b) != null){}
 		for (foo a5=b;(a5) != null;a5=b){}
 		while ((b) != null){}
-		if ((b) != null){}
-		for (int i=0;i < 10;i++){
+		if ((b) != null){}for (int i=0;i < 10;i++){
 			for (i=1;i < 5;i++){
 				break;
 			}
@@ -166,12 +193,14 @@ class test extends foo {
 		PtrShort ptr3;
 		PtrInteger ptr4;
 		PtrBoolean ptr5;
-		PtrInteger ptr7;
 		PtrInteger ptr6;
-		ptr7.val=""; // Haven't implemented addressof yety...
-		ptr7.val=ptr6.val;
+		foo ptr7;
+		foo ptr8;
+		ptr7=a;
+		ptr8=ptr7;
 		return 1072;
 	}
+
 	public foo func4(int a, int b, short c) {
 		foo[] sd = new foo[15];
 		for (int gen___i0 = 0; gen___i0 < sd.length; gen__i0++) {
@@ -199,4 +228,34 @@ class test extends foo {
 	public foo func4(int a, int b) {
 		return func4(a, b, 55);
 	}
+
+	/**
+	 * @union
+	 */
+	class test_union {
+		int a;
+		float b;
+	}
+
+	class test_struct {
+		int a;
+		int b;
+	}
+}
+
+/**
+ * @union
+ */
+class test_union2 {
+	short a;
+	short b;
+}
+
+class AnonClass2 {
+	class AnonClass3 {
+		int a;
+	}
+
+	AnonClass3 anon_class1 = new AnonClass3();
+	AnonClass3 anon_class2 = new AnonClass3();
 }
