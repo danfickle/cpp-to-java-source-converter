@@ -271,9 +271,9 @@ import org.eclipse.text.edits.TextEdit;
  * Overuse of op_assign.
  * Rename String to something. TICK.
  * Address of operator. TICK.
- * Anonymous stuff.
+ * Anonymous stuff. TICK.
  * - Anonymous enums. TICK.
- * - Anonymous classes, unions, structs.
+ * - Anonymous classes, unions, structs. TICK.
  */
 
 /**
@@ -285,6 +285,12 @@ public class SourceConverterStage2
 {
 	/**
 	 * Builds default argument function calls.
+	 * For example:
+	 *   int func_with_defaults(int one, int two = 5);
+	 * would generate:
+	 * 	 public int func_with_defaults(int one) {
+	 *	     return func_with_defaults(one, 5);
+	 *   }
 	 */
 	private void makeDefaultCalls(IASTFunctionDeclarator func, IBinding funcBinding, TypeDeclaration decl) throws DOMException
 	{
@@ -317,11 +323,19 @@ public class SourceConverterStage2
 			for (int k4 = k; k4 < defaultValues.size(); k4++)
 				methodInvoc.arguments().add(vals.get(k4));
 
-			ReturnStatement ret2 = ast.newReturnStatement();
-			ret2.setExpression(methodInvoc);
-			funcBlockDef.statements().add(ret2);
-			methodDef.setBody(funcBlockDef);
+			if (evalReturnType(funcBinding).toString().equals("void"))
+			{
+				funcBlockDef.statements().add(ast.newExpressionStatement(methodInvoc));
+			}
+			else
+			{
+				ReturnStatement ret2 = ast.newReturnStatement();
+				ret2.setExpression(methodInvoc);
+				funcBlockDef.statements().add(ret2);
+			}
 
+			methodDef.setBody(funcBlockDef);
+			
 			if (decl != null)
 				decl.bodyDeclarations().add(methodDef);
 			else
