@@ -106,6 +106,9 @@ class test : public foo {
 		val4 = 1045
 	};
 
+	// Test an anonymous enclosed class...
+	class { int a, b; } anon_class1, anon_class2;
+
 	// Test an enclosed class...
 	class subby
 	{
@@ -241,6 +244,28 @@ class test : public foo {
 		// Test copy constructor on return...
 		return sd[2];
 	}
+
+	// Test a union...
+	union test_union
+	{
+		int a;
+		float b;
+	};
+
+	// Test a struct...
+	struct test_struct
+	{
+		int a;
+		int b;
+	};
 };
+
+// Test a namepace level union...
+union test_union2
+{
+	short a, b;
+};
+
+
 };
 
