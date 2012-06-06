@@ -18,13 +18,13 @@ class mypair<T> {
 	T[] values;
 
 	public mypair(T first, T second) {
-		values[0].op_assign(first);
+		values[0].op_assign(first); // Why is it using op_assign here?
 		values[1].op_assign(second);
 	}
 }
 
 class HashMap<T, V> {
-	T one = new T();
+	T one = new T(); // This won't work in Java...
 	V two = new V();
 }
 
@@ -145,7 +145,34 @@ class test extends foo {
 		return test_with_bit_field;
 	}
 
-	public int func3(foo a,foo b,Ptr<foo> c,foo d,foo e,RefInteger f){foo j;while ((j=b) != null){}foo l;if ((l=b) != null){}for (foo a5=b;(a5) != null;a5=b){}while ((b) != null){}if ((b) != null){}for (int i=0;i < 10;i++){for (i=1;i < 5;i++){break;}continue;}int i=test_enum.val1.val + test_enum.val2.val;PtrByte ptr1;Ptr<int> ptr2;PtrShort ptr3;PtrInteger ptr4;PtrBoolean ptr5;PtrInteger ptr7;PtrInteger ptr6;p="";p=ptr6.val;return 1072;}	public foo func4(int a, int b, short c) {
+	public int func3(foo a,foo b,Ptr<foo> c,foo d,foo e,RefInteger f)
+	{
+		foo j;
+		while ((j=b) != null){}
+		foo l;
+		if ((l=b) != null){}
+		for (foo a5=b;(a5) != null;a5=b){}
+		while ((b) != null){}
+		if ((b) != null){}
+		for (int i=0;i < 10;i++){
+			for (i=1;i < 5;i++){
+				break;
+			}
+			continue;
+		}
+		int i=test_enum.val1.val + test_enum.val2.val;
+		PtrByte ptr1;
+		Ptr<int> ptr2;
+		PtrShort ptr3;
+		PtrInteger ptr4;
+		PtrBoolean ptr5;
+		PtrInteger ptr7;
+		PtrInteger ptr6;
+		ptr7.val=""; // Haven't implemented addressof yety...
+		ptr7.val=ptr6.val;
+		return 1072;
+	}
+	public foo func4(int a, int b, short c) {
 		foo[] sd = new foo[15];
 		for (int gen___i0 = 0; gen___i0 < sd.length; gen__i0++) {
 			sd[gen___i0] = new foo();

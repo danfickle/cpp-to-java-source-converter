@@ -164,10 +164,10 @@ class test : public foo {
 		int * ptr7, * ptr6;
 
 		// Test address of operator...
-		p = &i;
+		ptr7 = &a;
 
 		// Test basic pointer assignment...
-		p = ptr6;
+		ptr7 = ptr6;
 
 		// Test number literals...
 		return 1072;
