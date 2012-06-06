@@ -202,10 +202,12 @@ import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.ParameterizedType;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PrimitiveType;
+import org.eclipse.jdt.core.dom.TagElement;
 import org.eclipse.jdt.core.dom.InfixExpression.Operator;
 import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -1123,7 +1125,14 @@ public class SourceConverterStage2
 			else
 				unit.types().add(tyd);
 
-			
+			if (compositeTypeSpecifier.getKey() == IASTCompositeTypeSpecifier.k_union)
+			{
+				Javadoc jd = ast.newJavadoc();
+				TagElement tg = ast.newTagElement();
+				tg.setTagName("@union");
+				jd.tags().add(tg);
+				tyd.setJavadoc(jd);
+			}
 			
 			currentDeclarations.put(getCompleteName(compositeTypeSpecifier.getName()), tyd);
 
