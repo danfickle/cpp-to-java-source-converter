@@ -268,9 +268,10 @@ import org.eclipse.text.edits.TextEdit;
  *
  * Overuse of op_assign.
  * Rename String to something. TICK.
- * Address of operator.
+ * Address of operator. TICK.
  * Anonymous stuff.
  * - Anonymous enums. TICK.
+ * - Anonymous classes, unions, structs.
  */
 
 /**
@@ -1860,6 +1861,10 @@ public class SourceConverterStage2
 				ret.add(paren);
 			}
 			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_star)
+			{
+				ret.addAll(evalExpr(unaryExpression.getOperand()));
+			}
+			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_amper)
 			{
 				ret.addAll(evalExpr(unaryExpression.getOperand()));
 			}
