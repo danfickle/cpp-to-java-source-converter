@@ -506,20 +506,69 @@ public class SourceConverterStage2
 
 		VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
 		frag.setName(ast.newSimpleName(ifield.getName()));
+		
 		if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER)
 		{
 			ClassInstanceCreation create = ast.newClassInstanceCreation();
-			create.setType(cppToJavaType(ifield.getType()));
+
+			if (ifield.getType().toString().isEmpty())
+				create.setType(ast.newSimpleType(ast.newSimpleName("AnonClass" + (m_anonClassCount - 1))));
+			else
+				create.setType(cppToJavaType(ifield.getType()));
+			
 			frag.setInitializer(create);
 		}
 
 		//frag.setInitializer(evaluate(declarator.getInitializer()).get(0));
 		FieldDeclaration field = ast.newFieldDeclaration(frag);
-		field.setType(cppToJavaType(ifield.getType()));
+
+		if (ifield.getType().toString().isEmpty())
+			field.setType(ast.newSimpleType(ast.newSimpleName("AnonClass" + (m_anonClassCount - 1))));
+		else
+			field.setType(cppToJavaType(ifield.getType()));
 
 		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(declarator.getName()));
 		decl.bodyDeclarations().add(field);
 	}
+	
+	/**
+	 * Generates a Java field, given a C++ variable.
+	 */
+	private void generateVariable(IBinding binding, IASTDeclarator declarator) throws DOMException
+	{
+		IVariable ifield = (IVariable) binding;
+
+		VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
+		frag.setName(ast.newSimpleName(ifield.getName()));
+		
+		if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER)
+		{
+			ClassInstanceCreation create = ast.newClassInstanceCreation();
+
+			if (ifield.getType().toString().isEmpty())
+				create.setType(ast.newSimpleType(ast.newSimpleName("AnonClass" + (m_anonClassCount - 1))));
+			else
+				create.setType(cppToJavaType(ifield.getType()));
+			
+			frag.setInitializer(create);
+		}
+
+		//frag.setInitializer(evaluate(declarator.getInitializer()).get(0));
+		FieldDeclaration field = ast.newFieldDeclaration(frag);
+
+		if (ifield.getType().toString().isEmpty())
+			field.setType(ast.newSimpleType(ast.newSimpleName("AnonClass" + (m_anonClassCount - 1))));
+		else
+			field.setType(cppToJavaType(ifield.getType()));
+
+		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(declarator.getName()));
+		
+		if (decl != null)
+			decl.bodyDeclarations().add(field);
+		else
+			currentDeclarations.get("").bodyDeclarations().add(field);
+	}
+	
 	
 	/**
 	 * Attempts to evaluate the given declaration (function, class,
@@ -568,9 +617,13 @@ public class SourceConverterStage2
 				{
 					makeDefaultCalls((IASTFunctionDeclarator) declarator, binding, null);
 				}
+				else if (binding instanceof IVariable)
+				{
+					generateVariable(binding, declarator);
+				}
 				else
 				{
-					printerr("Unsupported declarator in class: " + declarator.getClass().getCanonicalName());
+					printerr("Unsupported declarator: " + declarator.getClass().getCanonicalName() + ":" + binding.getClass().getName());
 				}
 				// TODO subclasses here.
 			}
@@ -1134,13 +1187,20 @@ public class SourceConverterStage2
 				tyd.setJavadoc(jd);
 			}
 			
-			currentDeclarations.put(getCompleteName(compositeTypeSpecifier.getName()), tyd);
-
-			if (!getSimpleName(compositeTypeSpecifier.getName()).isEmpty())
-				tyd.setName(ast.newSimpleName(getSimpleName(compositeTypeSpecifier.getName())));
+			String finalName;
+			if (getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
+			{
+				finalName = "AnonClass" + m_anonClassCount;
+				currentDeclarations.put(getCompleteName(compositeTypeSpecifier.getName()), tyd);
+				m_anonClassCount++;
+			}
 			else
-				tyd.setName(ast.newSimpleName("anonymous"));
-			
+			{
+				finalName = getSimpleName(compositeTypeSpecifier.getName());
+				currentDeclarations.put(getCompleteName(compositeTypeSpecifier.getName()), tyd);
+			}
+			tyd.setName(ast.newSimpleName(finalName));
+
 			tyd.typeParameters().addAll(templateParamsQueue);			
 			templateParamsQueue.clear();
 			
@@ -3147,6 +3207,8 @@ public class SourceConverterStage2
 	private List<Statement> stmtQueue = new ArrayList<Statement>();
 
 	private int m_anonEnumCount = 0;
+	
+	private int m_anonClassCount = 0;
 	
 	private HashMap<String, String> m_anonEnumMap = new HashMap<String, String>();
 	

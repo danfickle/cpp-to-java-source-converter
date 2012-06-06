@@ -30,7 +30,7 @@ class String
 
 	// Test constructor initializer lists...
 	String(int i) : m_count(i) { }
-}
+};
 
 
 // Test basic template class...
@@ -108,6 +108,7 @@ class test : public foo {
 
 	// Test an anonymous enclosed class...
 	class { int a, b; } anon_class1, anon_class2;
+	class { int c, d; } anon_class3, anon_class4;
 
 	// Test an enclosed class...
 	class subby
@@ -265,6 +266,12 @@ union test_union2
 {
 	short a, b;
 };
+
+// Test an anonymous class containing an anonymous class...
+class
+{
+	class { int a; } anon_class1, anon_class2;
+} anon_class3;
 
 
 };
