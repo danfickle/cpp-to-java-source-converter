@@ -21,8 +21,17 @@ class_outside_namespace cls1;
 int variable;
 
 // Test a namespace...
-namespace shit 
+namespace mynamespace
 {
+// Test class with a reserved Java name...
+class String
+{
+	int m_count;
+
+	// Test constructor initializer lists...
+	String(int i) : m_count(i) { }
+}
+
 
 // Test basic template class...
 template <class T>

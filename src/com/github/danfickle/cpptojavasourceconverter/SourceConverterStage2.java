@@ -265,9 +265,9 @@ import org.eclipse.text.edits.TextEdit;
  * Default arguments for function declarations. TICK.
  * If isEventualPtrOrRef then add .val to expression. TICK.
  * TypeDeclarations losing type param info. TICK.
- 
+ *
  * Overuse of op_assign.
- * Rename String to something.
+ * Rename String to something. TICK.
  * Address of operator.
  * Anonymous stuff.
  * - Anonymous enums. TICK.
@@ -2298,6 +2298,8 @@ public class SourceConverterStage2
 			replace = "Float";
 		else if (name.equals("double"))
 			replace = "Double";
+		else if (name.equals("String"))
+			replace = "CppString";
 		else
 			replace = name // Cast operators need cleaning.
 			.replace(' ', '_')
