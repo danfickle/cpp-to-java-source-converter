@@ -440,6 +440,18 @@ public class SourceConverterStage2
 	
 	/**
 	 * Generates getters and setters for bit fields.
+	 * For example:
+	 *   int test_with_bit_field : 1;
+	 * would generate:
+	 * 	 public int get__test_with_bit_field()
+	 *   {
+	 *	   return __bitfields & 1;
+	 *   }
+	 *   public void set__test_with_bit_field(int val)
+	 *   {
+	 *     __bitfields &= ~1;
+	 *	   __bitfields |= (val << 0) & 1;
+	 *   }
 	 */
 	private void generateBitField(IBinding binding, IASTDeclarator declarator) throws DOMException
 	{
