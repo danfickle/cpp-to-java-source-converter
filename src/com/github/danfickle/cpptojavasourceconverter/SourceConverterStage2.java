@@ -276,6 +276,7 @@ import org.eclipse.text.edits.TextEdit;
  * - Anonymous classes, unions, structs. TICK.
  * Switch not working. TICK.
  * Fix wrong type for anon classes (nested).
+ * Fix empty stuff in for statement.
  */
 
 /**
@@ -2518,9 +2519,17 @@ public class SourceConverterStage2
 
 			return ret;
 		}
-		else
+		else if (stmt instanceof IASTNullStatement)
 		{
-			printerr("Another kind of expression");
+			return null;
+			//
+//			List<Expression> ret = new ArrayList<Expression>();			
+//				ret.add(ast.newBooleanLiteral(true)); // FIXME.
+//				return ret;
+		}
+		else if (stmt != null)
+		{
+			printerr("Another kind of intializer:" + stmt.getClass().getCanonicalName());
 			exitOnError();
 		}
 		return null;
@@ -2681,10 +2690,19 @@ public class SourceConverterStage2
 				;//evaluate(((ICPPASTForStatement)forStatement).getConditionDeclaration());
 
 			ForStatement fs = ast.newForStatement();
-			fs.initializers().addAll(evaluateForInitializer(forStatement.getInitializerStatement()));
-			fs.setExpression(evalExpr(forStatement.getConditionExpression(), TypeEnum.BOOLEAN).get(0));
-			fs.updaters().addAll(evalExpr(forStatement.getIterationExpression()));
+			List<Expression> inits = evaluateForInitializer(forStatement.getInitializerStatement());
+			Expression expr = evalExpr(forStatement.getConditionExpression(), TypeEnum.BOOLEAN).get(0);
+			List<Expression> updaters = evalExpr(forStatement.getIterationExpression());
+			
+			if (inits != null)
+				fs.initializers().addAll(inits);
+			if (expr != null)
+				fs.setExpression(expr);
+			if (updaters.get(0) != null)
+				fs.updaters().addAll(updaters);
+
 			fs.setBody(evalStmt(forStatement.getBody()).get(0));
+
 			ret.add(fs);
 		}
 		else if (statement instanceof IASTIfStatement)
@@ -2971,6 +2989,9 @@ public class SourceConverterStage2
 
 	private TypeEnum expressionGetType(IASTExpression expr) throws DOMException
 	{
+		if (expr == null || expr.getExpressionType() == null)
+			return TypeEnum.BOOLEAN; // FIXME..
+		
 		return getTypeEnum(expr.getExpressionType());
 	}
 
