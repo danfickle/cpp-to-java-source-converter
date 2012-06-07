@@ -274,6 +274,8 @@ import org.eclipse.text.edits.TextEdit;
  * Anonymous stuff. TICK.
  * - Anonymous enums. TICK.
  * - Anonymous classes, unions, structs. TICK.
+ * Switch not working. TICK.
+ * Fix wrong type for anon classes (nested).
  */
 
 /**
@@ -2763,12 +2765,50 @@ public class SourceConverterStage2
 			IASTSwitchStatement switchStatement = (IASTSwitchStatement)statement;
 			print("Switch");
 
-			if (switchStatement instanceof ICPPASTSwitchStatement)
-				;//evaluate(((ICPPASTSwitchStatement)switchStatement).getControllerDeclaration());
-
 			SwitchStatement swt = ast.newSwitchStatement();
-			swt.setExpression(evalExpr(switchStatement.getControllerExpression()).get(0));
-			evalStmt(switchStatement.getBody()); // TODO
+			
+			if (switchStatement instanceof ICPPASTSwitchStatement &&
+				((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration() != null)
+			{
+				ICPPASTSwitchStatement cppSwitch = (ICPPASTSwitchStatement) switchStatement;
+
+				List<VariableDeclarationFragment> frags = getDeclarationFragments(cppSwitch.getControllerDeclaration());
+				frags.get(0).setInitializer(null);
+				VariableDeclarationStatement decl = ast.newVariableDeclarationStatement(frags.get(0));
+
+				Type jType = evaluateDeclarationReturnTypes(cppSwitch.getControllerDeclaration()).get(0);
+				decl.setType(jType);
+				ret.add(decl);
+
+				Assignment assign = ast.newAssignment();
+				assign.setOperator(Assignment.Operator.ASSIGN);
+				SimpleName nm = ast.newSimpleName(frags.get(0).getName().getIdentifier());
+				assign.setLeftHandSide(nm);
+
+				List<Expression> exprs = evaluateDeclarationReturnInitializers(cppSwitch.getControllerDeclaration());
+				assign.setRightHandSide(exprs.get(0));
+
+				swt.setExpression(assign);
+			}
+			else
+			{
+				swt.setExpression(evalExpr(switchStatement.getControllerExpression()).get(0));
+			}
+
+			if (switchStatement.getBody() instanceof IASTCompoundStatement)
+			{
+				IASTCompoundStatement compound = (IASTCompoundStatement) switchStatement.getBody();
+				
+				for (IASTStatement stmt : compound.getStatements())
+				{
+					swt.statements().addAll(evalStmt(stmt));
+				}
+			}
+			else
+			{
+				swt.statements().addAll(evalStmt(switchStatement.getBody()));
+			}
+			
 			ret.add(swt);
 		}
 		else if (statement instanceof IASTWhileStatement)

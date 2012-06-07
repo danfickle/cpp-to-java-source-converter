@@ -238,6 +238,14 @@ class test : public foo {
 				return foo7;
 		}
 
+		// Test switch with declaration statement...
+		switch (int decl = 1)
+		{
+			case 1:
+				decl += 5;
+				break;
+		}
+
 		// Test -> operator...
 		foo6->func_with_defaults_and_definition(100);
 
