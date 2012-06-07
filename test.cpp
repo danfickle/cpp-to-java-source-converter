@@ -256,6 +256,32 @@ class test : public foo {
 		return sd[2];
 	}
 
+	void func5()
+	{
+		int i = 0;
+
+		// Test condition statements without braces...
+		if (true)
+			i += 5;
+
+		while (false)
+			i -= 10;
+
+		for (i = 0; i < 20; i++)
+			i--;
+
+		switch (i)
+			case 1:
+			return;
+			case 2:
+			i++;
+
+		if (true)
+			for ( ; ; )
+				while (true) ;
+	}
+
+
 	// Test a union...
 	union test_union
 	{
