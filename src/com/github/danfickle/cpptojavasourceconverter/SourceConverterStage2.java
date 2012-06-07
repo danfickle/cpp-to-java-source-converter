@@ -276,7 +276,9 @@ import org.eclipse.text.edits.TextEdit;
  * - Anonymous classes, unions, structs. TICK.
  * Switch not working. TICK.
  * Fix wrong type for anon classes (nested).
- * Fix empty stuff in for statement.
+ * Fix empty stuff in for statement. TICK.
+ * Fix comma operator.
+ * Fix new[] and delete[].
  */
 
 /**
@@ -1988,7 +1990,12 @@ public class SourceConverterStage2
 			ICPPASTDeleteExpression deleteExpression = (ICPPASTDeleteExpression)expression;
 			print("delete");
 
-			evalExpr(deleteExpression.getOperand());
+			Expression cls = evalExpr(deleteExpression.getOperand()).get(0);
+
+			MethodInvocation method = ast.newMethodInvocation();
+			method.setExpression(cls);
+			method.setName(ast.newSimpleName("destruct"));
+			ret.add(method);
 		}
 		else if (expression instanceof ICPPASTNewExpression)
 		{
@@ -2384,7 +2391,7 @@ public class SourceConverterStage2
 				replace = "__PROBLEM__";
 		}
 		else if (name.startsWith("~"))
-			replace = name.replace("~", "destruct_");
+			replace = "destruct";
 		else if (name.equals("bool"))
 			replace = "Boolean";
 		else if (name.equals("byte"))
@@ -2693,7 +2700,7 @@ public class SourceConverterStage2
 			List<Expression> inits = evaluateForInitializer(forStatement.getInitializerStatement());
 			Expression expr = evalExpr(forStatement.getConditionExpression(), TypeEnum.BOOLEAN).get(0);
 			List<Expression> updaters = evalExpr(forStatement.getIterationExpression());
-			
+
 			if (inits != null)
 				fs.initializers().addAll(inits);
 			if (expr != null)

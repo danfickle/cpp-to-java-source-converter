@@ -74,6 +74,8 @@ class foo
 {
 public:
 	foo() { }
+	~foo() { }
+
 	foo(int i) {
 		// Test use of anonymous enums values
 		// and assigning enum values to int...
@@ -271,14 +273,30 @@ class test : public foo {
 			i--;
 
 		switch (i)
+		{
 			case 1:
 			return;
 			case 2:
 			i++;
+		}
 
 		if (true)
 			for ( ; ; )
 				while (true) ;
+
+		// Test for statement with comma operator...
+		for (int k = 0; k < 10, k--;k++)
+			k *= 10;
+
+		// Test new statement...
+		foo * ptr1 = new foo;
+		foo * ptr2 = new foo(100);
+		foo * ptr3 = new foo[100];
+
+		// Test delete statement...
+		delete ptr1;
+		delete ptr2;
+		delete [] ptr3;
 	}
 
 
