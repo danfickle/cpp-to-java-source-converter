@@ -307,6 +307,13 @@ class test : public foo {
 		foo foos_array2[50][20];
 	}
 
+	void func6(foo a)
+	{
+		// Test stack object creation in method argument...
+		func6(foo(1));
+	}
+
+
 	// Test arrays as class fields...
 	foo foo_bar_array[10];
 	foo foo_baz_array[10][25];

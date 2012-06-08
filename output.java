@@ -1,7 +1,7 @@
 package yourpackage;
 
 class Globals {
-	class class_outside_namespace implements HasDestructor {
+	class class_outside_namespace implements CppType {
 		byte a;
 		char b;
 		short c;
@@ -15,10 +15,16 @@ class Globals {
 
 	class_outside_namespace cls1 = new class_outside_namespace();
 	int variable;
-	AnonClass3 anon_class3 = new AnonClass3();
+	AnonClass3 anon_class3 = new MISSING();
+	foo foo_bar_top_level = new foo();
+	foo[] foo_bar_array_top_level1 = CreateHelper.allocateArray(foo.class, 10);
+	foo[][] foo_bar_array_top_level2 = CreateHelper.allocateArray(foo.class,
+			10, 40);
+	int[] array_top_level1 = new int[10];
+	byte[][] array_top_level2 = new byte[20][5];
 }
 
-class CppString implements HasDestructor {
+class CppString implements CppType {
 	int m_count;
 
 	public CppString(int i) {
@@ -26,8 +32,8 @@ class CppString implements HasDestructor {
 	}
 }
 
-class mypair<T> implements HasDestructor {
-	T[] values;
+class mypair<T> implements CppType {
+	T[] values = CreateHelper.allocateArray(T.class, 2);
 
 	public mypair(T first, T second) {
 		values[0].op_assign(first);
@@ -35,12 +41,12 @@ class mypair<T> implements HasDestructor {
 	}
 }
 
-class HashMap<T, V> implements HasDestructor {
+class HashMap<T, V> implements CppType {
 	T one = new T();
 	V two = new V();
 }
 
-class CT<V, T> implements HasDestructor {
+class CT<V, T> implements CppType {
 	HashMap<V, Integer> three = new HashMap<V, Integer>();
 	T one = new T();
 	V two = new V();
@@ -86,7 +92,7 @@ enum AnonEnum1 {
 	}
 }
 
-class foo implements HasDestructor {
+class foo implements CppType {
 	public foo() {
 	}
 
@@ -119,7 +125,7 @@ class foo implements HasDestructor {
 	}
 }
 
-class test extends foo implements HasDestructor {
+class test extends foo implements CppType {
 	enum test_enum {
 		val1(0), val2(1020), val3((1020) + 1), val4(1045);
 		final int val;
@@ -144,23 +150,23 @@ class test extends foo implements HasDestructor {
 		}
 	}
 
-	class AnonClass0 implements HasDestructor {
+	class AnonClass0 implements CppType {
 		int a;
 		int b;
 	}
 
-	AnonClass0 anon_class1 = new AnonClass0();
-	AnonClass0 anon_class2 = new AnonClass0();
+	AnonClass0 anon_class1 = new MISSING();
+	AnonClass0 anon_class2;
 
-	class AnonClass1 implements HasDestructor {
+	class AnonClass1 implements CppType {
 		int c;
 		int d;
 	}
 
-	AnonClass1 anon_class3 = new AnonClass1();
-	AnonClass1 anon_class4 = new AnonClass1();
+	AnonClass1 anon_class3 = new MISSING();
+	AnonClass1 anon_class4;
 
-	class subby implements HasDestructor {
+	class subby implements CppType {
 		int k;
 	}
 
@@ -183,9 +189,11 @@ class test extends foo implements HasDestructor {
 	public int func3(foo a,foo b,Ptr<foo> c,foo d,foo e,RefInteger f){
 		foo j;
 		while ((j=b) != null){}
-		foo l;if ((l=b) != null){}
+		foo l;
+		if ((l=b) != null){}
 		for (foo a5=b;(a5) != null;a5=b){}
-		while ((b) != null){}if ((b) != null){}
+		while ((b) != null){}
+		if ((b) != null){}
 		for (int i=0;i < 10;i++){
 			for (i=1;i < 5;i++){
 				break;
@@ -207,10 +215,7 @@ class test extends foo implements HasDestructor {
 	}
 	
 	public foo func4(int a, int b, short c) {
-		foo[] sd = new foo[15];
-		for (int gen___i0 = 0; gen___i0 < sd.length; gen__i0++) {
-			sd[gen___i0] = new foo();
-		}
+		foo[] sd = CreateHelper.allocateArray(foo.class, 15);
 		foo foo1;
 		Ptr<foo> foo2;
 		foo foo3 = new foo(sd[1]);
@@ -267,21 +272,35 @@ class test extends foo implements HasDestructor {
 			k *= 10;
 		foo ptr1 = new foo();
 		foo ptr2 = new foo(100);
-		foo ptr3 = new foo();
+		foo ptr3 = CreateHelper.allocateArray(foo.class, 100);
 		DestructHelper.destructItems(ptr1);
 		DestructHelper.destructItems(ptr2);
 		DestructHelper.destructArray(ptr3);
+		int[] basic = new int[100];
+		short[][] basic2 = new short[5][10];
+		foo[] foos_array = CreateHelper.allocateArray(foo.class, 45 + 2);
+		foo[][] foos_array2 = CreateHelper.allocateArray(foo.class, 50, 20);
 	}
+
+	public void func6(foo a) {
+		func6(new foo(1));
+	}
+
+	foo[] foo_bar_array = CreateHelper.allocateArray(foo.class, 10);
+	foo[][] foo_baz_array = CreateHelper.allocateArray(foo.class, 10, 25);
+	int[] basic_array = new int[1];
+	int[][] not_so_basic_array = new int[5][7];
+	foo foo_bar = new foo();
 
 	/**
 	 * @union
 	 */
-	class test_union implements HasDestructor {
+	class test_union implements CppType {
 		int a;
 		float b;
 	}
 
-	class test_struct implements HasDestructor {
+	class test_struct implements CppType {
 		int a;
 		int b;
 	}
@@ -290,16 +309,16 @@ class test extends foo implements HasDestructor {
 /**
  * @union
  */
-class test_union2 implements HasDestructor {
+class test_union2 implements CppType {
 	short a;
 	short b;
 }
 
-class AnonClass2 implements HasDestructor {
-	class AnonClass3 implements HasDestructor {
+class AnonClass2 implements CppType {
+	class AnonClass3 implements CppType {
 		int a;
 	}
 
-	AnonClass3 anon_class1 = new AnonClass3();
-	AnonClass3 anon_class2 = new AnonClass3();
+	AnonClass3 anon_class1 = new MISSING();
+	AnonClass3 anon_class2;
 }
