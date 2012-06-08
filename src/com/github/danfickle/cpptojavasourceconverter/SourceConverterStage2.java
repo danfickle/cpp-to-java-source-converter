@@ -1365,14 +1365,29 @@ public class SourceConverterStage2
 					else if (type == TypeEnum.ARRAY)
 					{
 						print("Found array");
-						ArrayCreation create = ast.newArrayCreation();
-						create.setType((ArrayType) cppToJavaType(var.getType()));
-						List<Expression> sizeExprs = getArraySizeExpressions(var.getType());
-						create.dimensions().addAll(sizeExprs);
-						ret.add(ret.size() - 1, create);
 
 						if (getTypeEnum(getArrayBaseType(var.getType())) == TypeEnum.OTHER)
-							generateObjectArrayInitializer(var, sizeExprs.size());
+						{
+							MethodInvocation method = ast.newMethodInvocation();
+							method.setExpression(ast.newSimpleName("CreateHelper"));
+							method.setName(ast.newSimpleName("allocateArray"));
+
+							TypeLiteral tl = ast.newTypeLiteral();
+							tl.setType(cppToJavaType(getArrayBaseType(var.getType())));
+						
+							method.arguments().add(tl);
+							List<Expression> sizeExprs = getArraySizeExpressions(var.getType());
+							method.arguments().addAll(sizeExprs);
+							ret.add(ret.size() - 1, method);
+						}
+						else
+						{
+							ArrayCreation create = ast.newArrayCreation();
+							create.setType((ArrayType) cppToJavaType(var.getType()));
+							List<Expression> sizeExprs = getArraySizeExpressions(var.getType());
+							create.dimensions().addAll(sizeExprs);
+							ret.add(ret.size() - 1, create);
+						}
 					}
 					else
 					{
@@ -1399,94 +1414,6 @@ public class SourceConverterStage2
 		}
 
 		return ret;
-	}
-	
-	private void generateObjectArrayInitializer(IVariable var, int arrayDimensionCount) throws DOMException {
-
-		ForStatement forStmtParent = null;
-		ForStatement forStmtRoot = null;
-
-		for (int j = 0; j < arrayDimensionCount; j++)
-		{
-			ForStatement forStmt = ast.newForStatement();
-			VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
-			frag.setName(ast.newSimpleName("gen___i" + j));
-			frag.setInitializer(ast.newNumberLiteral("0"));
-			VariableDeclarationExpression expr = ast.newVariableDeclarationExpression(frag);
-			expr.setType(ast.newPrimitiveType(PrimitiveType.INT));
-			forStmt.initializers().add(expr);
-
-			InfixExpression infix = ast.newInfixExpression();
-			infix.setLeftOperand(ast.newSimpleName("gen___i" + j));
-			infix.setOperator(InfixExpression.Operator.LESS);
-			FieldAccess fld = ast.newFieldAccess();
-			fld.setName(ast.newSimpleName("length"));
-			if (forStmtRoot == null)									
-			{
-				fld.setExpression(ast.newSimpleName(var.getName()));
-			}
-			else
-			{
-				ArrayAccess arr = ast.newArrayAccess();											
-				arr.setArray(ast.newSimpleName(var.getName()));
-				arr.setIndex(ast.newSimpleName("gen___i" + 0));
-
-				for (int k = 1; k < j; k++)
-				{
-					ArrayAccess arr2 = ast.newArrayAccess();
-					arr2.setArray(arr);
-					arr2.setIndex(ast.newSimpleName("gen___i" + k));
-					arr = arr2;
-				}
-				fld.setExpression(arr);
-			}
-
-
-			infix.setRightOperand(fld);
-			//infix.setRightOperand(getArraySizeExpressions(var.getType()).get(0));
-			forStmt.setExpression(infix);
-
-			PostfixExpression postfix = ast.newPostfixExpression();
-			postfix.setOperand(ast.newSimpleName("gen__i" + j));
-			postfix.setOperator(PostfixExpression.Operator.INCREMENT);
-			forStmt.updaters().add(postfix);
-
-			Block forBlk = ast.newBlock();
-			ClassInstanceCreation create2 = ast.newClassInstanceCreation();
-			create2.setType(cppToJavaType(getArrayBaseType(var.getType())));
-			Assignment assign = ast.newAssignment();
-			//			ArrayAccess arrayAccess = ast.newArrayAccess();
-			//			arrayAccess.setIndex(ast.newSimpleName("gen___i" + j));
-			//			arrayAccess.setArray(ast.newSimpleName(var.getName()));
-
-			Expression arrayAccess = ast.newSimpleName(var.getName());
-			for (int m = 0; m < arrayDimensionCount; m++)
-			{
-				ArrayAccess arr3 = ast.newArrayAccess();
-				arr3.setArray(arrayAccess);
-				arr3.setIndex(ast.newSimpleName("gen___i" + m));
-				arrayAccess = arr3;
-			}
-
-			assign.setLeftHandSide(arrayAccess);
-			assign.setOperator(Assignment.Operator.ASSIGN);
-			assign.setRightHandSide(create2);
-			ExpressionStatement estmt = ast.newExpressionStatement(assign);
-			forBlk.statements().add(estmt);
-			forStmt.setBody(forBlk);
-
-			if (forStmtParent != null)
-				forStmtParent.setBody(forStmt);
-
-			forStmtParent = forStmt;
-
-			if (forStmtRoot == null)
-				forStmtRoot = forStmt;
-
-		}
-		stmtQueue.add(forStmtRoot);
-
-
 	}
 	
 	/**

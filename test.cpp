@@ -297,6 +297,14 @@ class test : public foo {
 		delete ptr1;
 		delete ptr2;
 		delete [] ptr3;
+
+		// Test arrays of basic types on the stack...
+		int basic[100];
+		short basic2[5][10];
+
+		// Test arrays of composite types on the stack...
+		foo foos_array[45 + 2];
+		foo foos_array2[50][20];
 	}
 
 
