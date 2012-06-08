@@ -209,6 +209,7 @@ import org.eclipse.jdt.core.dom.ParameterizedType;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PrimitiveType;
 import org.eclipse.jdt.core.dom.TagElement;
+import org.eclipse.jdt.core.dom.TypeLiteral;
 import org.eclipse.jdt.core.dom.InfixExpression.Operator;
 import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -1236,7 +1237,8 @@ public class SourceConverterStage2
 			tyd.typeParameters().addAll(templateParamsQueue);			
 			templateParamsQueue.clear();
 			
-			tyd.superInterfaceTypes().add(ast.newSimpleType(ast.newSimpleName("HasDestructor")));
+			tyd.superInterfaceTypes().add(ast.newSimpleType(ast.newSimpleName("CppType")));
+			
 			if (compositeTypeSpecifier instanceof ICPPASTCompositeTypeSpecifier)
 			{
 				ICPPASTCompositeTypeSpecifier cppCompositeTypeSpecifier = (ICPPASTCompositeTypeSpecifier)compositeTypeSpecifier;
@@ -2017,26 +2019,51 @@ public class SourceConverterStage2
 			ICPPASTNewExpression newExpression = (ICPPASTNewExpression)expression;
 			print("new");
 
-			ClassInstanceCreation create = ast.newClassInstanceCreation();
-			//create.setExpression(evaluate(newExpression.getPlacement()))
-			create.setType(evalTypeId(newExpression.getTypeId()));
+			if (!newExpression.isArrayAllocation())
+			{
+				ClassInstanceCreation create = ast.newClassInstanceCreation();
+				//create.setExpression(evaluate(newExpression.getPlacement()))
+				create.setType(evalTypeId(newExpression.getTypeId()));
 
-			if (newExpression.getNewInitializer() == null)
-			{
-				/* Do nothing. */
-			}
-			else if (newExpression.getNewInitializer() instanceof IASTExpressionList)
-			{
-				for (IASTExpression arg : ((IASTExpressionList) newExpression.getNewInitializer()).getExpressions())
+				if (newExpression.getNewInitializer() == null)
 				{
-					create.arguments().addAll(evalExpr(arg));
+					/* Do nothing. */
 				}
+				else if (newExpression.getNewInitializer() instanceof IASTExpressionList)
+				{
+					for (IASTExpression arg : ((IASTExpressionList) newExpression.getNewInitializer()).getExpressions())
+					{
+						create.arguments().addAll(evalExpr(arg));
+					}
+				}
+				else if (newExpression.getNewInitializer() instanceof IASTExpression)
+				{
+					create.arguments().addAll(evalExpr((IASTExpression) newExpression.getNewInitializer()));
+				}
+				ret.add(create);
 			}
-			else if (newExpression.getNewInitializer() instanceof IASTExpression)
+			else
 			{
-				create.arguments().addAll(evalExpr((IASTExpression) newExpression.getNewInitializer()));
+				// Generates CreateHelper.allocateArray(X.class, arraySize)
+				// with an extra arraySize for each dimension...
+				Type tp = evalTypeId(newExpression.getTypeId());
+
+				MethodInvocation method = ast.newMethodInvocation();
+				method.setExpression(ast.newSimpleName("CreateHelper"));
+				method.setName(ast.newSimpleName("allocateArray"));
+
+				TypeLiteral tl = ast.newTypeLiteral();
+				tl.setType(tp);
+				
+				method.arguments().add(tl);
+				
+				for (IASTExpression arraySize : newExpression.getNewTypeIdArrayExpressions())
+				{
+					method.arguments().add(evalExpr(arraySize).get(0));
+				}
+
+				ret.add(method);
 			}
-			ret.add(create);
 		}
 		else if (expression instanceof ICPPASTSimpleTypeConstructorExpression)
 		{
