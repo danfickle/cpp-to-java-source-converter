@@ -193,6 +193,7 @@ import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.ContinueStatement;
 import org.eclipse.jdt.core.dom.DoStatement;
 import org.eclipse.jdt.core.dom.EmptyStatement;
+import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.Expression;
@@ -1235,7 +1236,7 @@ public class SourceConverterStage2
 			tyd.typeParameters().addAll(templateParamsQueue);			
 			templateParamsQueue.clear();
 			
-			
+			tyd.superInterfaceTypes().add(ast.newSimpleType(ast.newSimpleName("HasDestructor")));
 			if (compositeTypeSpecifier instanceof ICPPASTCompositeTypeSpecifier)
 			{
 				ICPPASTCompositeTypeSpecifier cppCompositeTypeSpecifier = (ICPPASTCompositeTypeSpecifier)compositeTypeSpecifier;
@@ -1990,12 +1991,26 @@ public class SourceConverterStage2
 			ICPPASTDeleteExpression deleteExpression = (ICPPASTDeleteExpression)expression;
 			print("delete");
 
-			Expression cls = evalExpr(deleteExpression.getOperand()).get(0);
-
-			MethodInvocation method = ast.newMethodInvocation();
-			method.setExpression(cls);
-			method.setName(ast.newSimpleName("destruct"));
-			ret.add(method);
+			if (!deleteExpression.isVectored())
+			{
+				// Call DestructHelper.destructArray(array)...
+				Expression cls = evalExpr(deleteExpression.getOperand()).get(0);
+				MethodInvocation method = ast.newMethodInvocation();
+				method.setExpression(ast.newSimpleName("DestructHelper"));
+				method.setName(ast.newSimpleName("destructItems"));
+				method.arguments().add(cls);
+				ret.add(method);
+			}
+			else
+			{
+				// Call DestructHelper.destructItems(ptr)...
+				MethodInvocation method = ast.newMethodInvocation();
+				method.setExpression(ast.newSimpleName("DestructHelper"));
+				method.setName(ast.newSimpleName("destructArray"));
+				Expression cls = evalExpr(deleteExpression.getOperand()).get(0);
+				method.arguments().add(cls);
+				ret.add(method);
+			}
 		}
 		else if (expression instanceof ICPPASTNewExpression)
 		{
