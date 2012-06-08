@@ -311,6 +311,40 @@ class test : public foo {
 	{
 		// Test stack object creation in method argument...
 		func6(foo(1));
+
+		// Test destructor calls at end brace...
+		{
+			foo foo_bar;
+		}
+		
+		if (true)
+		{
+			foo foo_bar;
+		}
+
+		while (true)
+		{
+			foo foo_bar;
+		}
+
+		switch (1)
+		{
+			case 1:
+			{
+				foo foo_bar;
+			}
+		}
+
+		do
+		{
+			foo foo_bar;
+		} while (false);
+
+
+
+
+
+
 	}
 
 

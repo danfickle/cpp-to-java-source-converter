@@ -16,6 +16,7 @@ import java.io.PrintWriter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -247,12 +248,12 @@ import org.eclipse.text.edits.TextEdit;
  * pointers. TICK.
  * references. TICK.
  * templates.
- * destructors.
+ * destructors. PARTIAL.
  * enums. TICK.
  * variable declarations inside while, if. TICK.
  * != null, != 0, etc... for return, variable assignment, etc. TICK.
  * order of evaluation.
- * -- operator overloading. TICK.
+ * -- operator overloading. 
  * default arguments. TICK.
  * bit fields. TICK, need mask and shift calculation.
  * array initializers. TICK.
@@ -281,7 +282,10 @@ import org.eclipse.text.edits.TextEdit;
  * Fix empty stuff in for statement. TICK.
  * Fix comma operator.
  * Fix new[] and delete[]. TICK.
- * Call destructors on return or end brace.
+ * Call destructors on return or end brace. PARTIAL
+ * Add static modifier to nested classes.
+ * Deal with typedef.
+ * 
  */
 
 /**
@@ -379,8 +383,10 @@ public class SourceConverterStage2
 
 		method.parameters().addAll(evalParameters(funcBinding));
 
+		//m_variableStack.push(new ArrayList<CppVar>());
 		method.setBody((Block) evalStmt(func.getBody()).get(0));
-
+		//m_variableStack.pop();
+		
 		if (func instanceof ICPPASTFunctionDefinition)
 		{
 			// Now check for C++ constructor initializers...
@@ -928,6 +934,41 @@ public class SourceConverterStage2
 		return ret;
 	}
 
+	private List<IType> evaluateDeclarationReturnCppTypes(IASTDeclaration declaration) throws DOMException
+	{
+		List<IType> ret = new ArrayList<IType>();
+
+		if (declaration instanceof IASTSimpleDeclaration)
+		{
+			IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration)declaration;
+			print("simple declaration");
+
+			if (simpleDeclaration.getDeclarators().length > 0)
+			{
+				for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
+				{
+					IBinding binding  = decl.getName().resolveBinding();
+
+					if (binding instanceof IVariable)
+					{
+						ret.add(((IVariable) binding).getType());
+					}
+				}
+			}
+		}
+		else if (declaration instanceof IASTProblemDeclaration)
+		{
+			IASTProblemDeclaration p = (IASTProblemDeclaration) declaration;
+			printerr("Problem declaration" + p.getProblem().getMessageWithLocation());
+			exitOnError();
+		}
+		else
+		{
+			printerr("Unexpected declaration type here: " + declaration.getClass().getCanonicalName());
+			exitOnError();
+		}
+		return ret;
+	}
 
 
 	private Type evaluateDeclSpecifierReturnType(IASTDeclSpecifier declSpecifier) throws DOMException
@@ -2524,6 +2565,56 @@ public class SourceConverterStage2
 
 		return frags;
 	}
+
+	static class CppVar
+	{
+		boolean isArray;
+		Expression expr;
+	};
+	
+	private void generateDestructorCall(List<CppVar> names, Block block)
+	{
+		if (names.isEmpty())
+			return;
+
+		boolean containsArray = false;
+		for (CppVar cppVar : names)
+		{
+			if (cppVar.isArray)
+				containsArray = true;
+		}
+
+		if (containsArray)
+		{
+			for (int i = names.size() - 1; i >= 0; i--)
+			{
+				MethodInvocation method = ast.newMethodInvocation();
+				method.setExpression(ast.newSimpleName("DestructHelper"));
+
+				if (names.get(i).isArray)
+					method.setName(ast.newSimpleName("destructArray"));
+				else
+					method.setName(ast.newSimpleName("destructItems"));
+
+				method.arguments().add(names.get(i).expr);
+				block.statements().add(ast.newExpressionStatement(method));
+			}
+		}
+		else
+		{
+			MethodInvocation method = ast.newMethodInvocation();
+			method.setExpression(ast.newSimpleName("DestructHelper"));
+			method.setName(ast.newSimpleName("destructItems"));
+
+			for (CppVar nm : names)
+			{
+				method.arguments().add(nm.expr);
+			}
+			block.statements().add(ast.newExpressionStatement(method));
+		}
+
+	}
+	
 	
 	/**
 	 * Attempts to convert the given C++ statement to one or more Java statements.
@@ -2598,13 +2689,15 @@ public class SourceConverterStage2
 			IASTCompoundStatement compoundStatement = (IASTCompoundStatement)statement;
 			print("Compound");
 
+			m_variableStack.push(new ArrayList<CppVar>());
 			Block block = ast.newBlock();
 			for (IASTStatement childStatement : compoundStatement.getStatements())
 				block.statements().addAll(evalStmt(childStatement));
 
 			block.statements().addAll(stmtQueue);
 			stmtQueue.clear();
-
+			List<CppVar> names = m_variableStack.pop();
+			generateDestructorCall(names, block);
 			ret.add(block);
 		}
 		else if (statement instanceof IASTDeclarationStatement)
@@ -2621,6 +2714,25 @@ public class SourceConverterStage2
 				ret.add(decl);
 			}
 
+			List<IType> cppTypes = evaluateDeclarationReturnCppTypes(declarationStatement.getDeclaration());
+			List<SimpleName> names = evaluateDeclarationReturnNames(declarationStatement.getDeclaration());
+			int i = 0;
+			for (IType cppType : cppTypes)
+			{
+				if (getTypeEnum(cppType) == TypeEnum.OTHER ||
+					(getTypeEnum(cppType) == TypeEnum.ARRAY &&
+					!(getArrayBaseType(cppType) instanceof IBasicType))) 
+				{
+					CppVar cppVar = new CppVar();
+					cppVar.expr = names.get(i);
+					cppVar.isArray = getTypeEnum(cppType) == TypeEnum.ARRAY;
+					m_variableStack.peekFirst().add(cppVar);
+					i++;
+				}
+			}
+			
+			
+			
 			ret.addAll(stmtQueue);
 			stmtQueue.clear();
 
@@ -2938,7 +3050,8 @@ public class SourceConverterStage2
 		POINTER,
 		OTHER,
 		ARRAY,
-		ANY
+		ANY,
+		REFERENCE
 	};
 
 	/**
@@ -2989,6 +3102,9 @@ public class SourceConverterStage2
 
 		if (type instanceof IArrayType)
 			return TypeEnum.ARRAY;
+		
+		if (type instanceof ICPPReferenceType)
+			return TypeEnum.REFERENCE;
 
 		return TypeEnum.OTHER;
 	}
@@ -3264,6 +3380,8 @@ public class SourceConverterStage2
 	private int m_anonClassCount = 0;
 	
 	private HashMap<String, String> m_anonEnumMap = new HashMap<String, String>();
+	
+	private Deque<List<CppVar>> m_variableStack = new ArrayDeque<List<CppVar>>();
 	
 	/**
 	 * Traverses the AST of the given translation unit

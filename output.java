@@ -218,7 +218,7 @@ class test extends foo implements CppType {
 		foo[] sd = CreateHelper.allocateArray(foo.class, 15);
 		foo foo1;
 		Ptr<foo> foo2;
-		foo foo3 = new foo(sd[1]);
+		foo foo3 = sd[1];
 		foo foo4 = new foo(1, 2);
 		foo foo5 = new foo(foo4);
 		foo foo6 = this;
@@ -244,6 +244,10 @@ class test extends foo implements CppType {
 		foo6.func_with_defaults_and_definition(100);
 		(foo6).func_with_defaults_and_definition(100, 2);
 		return new foo(sd[2]);
+		DestructHelper.destructItems(foo7);
+		DestructHelper.destructItems(foo5);
+		DestructHelper.destructItems(foo4);
+		DestructHelper.destructArray(sd);
 	}
 
 	public foo func4(int a, int b) {
@@ -280,10 +284,34 @@ class test extends foo implements CppType {
 		short[][] basic2 = new short[5][10];
 		foo[] foos_array = CreateHelper.allocateArray(foo.class, 45 + 2);
 		foo[][] foos_array2 = CreateHelper.allocateArray(foo.class, 50, 20);
+		DestructHelper.destructArray(foos_array2);
+		DestructHelper.destructArray(foos_array);
 	}
 
 	public void func6(foo a) {
 		func6(new foo(1));
+		{
+			foo foo_bar = new foo();
+			DestructHelper.destructItems(foo_bar);
+		}
+		if (true) {
+			foo foo_bar = new foo();
+			DestructHelper.destructItems(foo_bar);
+		}
+		while (true) {
+			foo foo_bar = new foo();
+			DestructHelper.destructItems(foo_bar);
+		}
+		switch (1) {
+		case 1: {
+			foo foo_bar = new foo();
+			DestructHelper.destructItems(foo_bar);
+		}
+		}
+		do {
+			foo foo_bar = new foo();
+			DestructHelper.destructItems(foo_bar);
+		} while (false);
 	}
 
 	foo[] foo_bar_array = CreateHelper.allocateArray(foo.class, 10);
