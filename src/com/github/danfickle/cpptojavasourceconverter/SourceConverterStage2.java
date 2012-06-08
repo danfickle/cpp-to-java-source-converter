@@ -280,7 +280,8 @@ import org.eclipse.text.edits.TextEdit;
  * Fix wrong type for anon classes (nested).
  * Fix empty stuff in for statement. TICK.
  * Fix comma operator.
- * Fix new[] and delete[].
+ * Fix new[] and delete[]. TICK.
+ * Call destructors on return or end brace.
  */
 
 /**
@@ -533,26 +534,19 @@ public class SourceConverterStage2
 	/**
 	 * Generates a Java field, given a C++ field.
 	 */
-	private void generateField(IBinding binding, IASTDeclarator declarator) throws DOMException
+	private void generateField(IBinding binding, IASTDeclarator declarator, Expression init) throws DOMException
 	{
 		IField ifield = (IField) binding;
 
 		VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
 		frag.setName(ast.newSimpleName(ifield.getName()));
 		
-		if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER)
+		if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER ||
+			getTypeEnum(ifield.getType()) == TypeEnum.ARRAY)
 		{
-			ClassInstanceCreation create = ast.newClassInstanceCreation();
-
-			if (ifield.getType().toString().isEmpty())
-				create.setType(ast.newSimpleType(ast.newSimpleName("AnonClass" + (m_anonClassCount - 1))));
-			else
-				create.setType(cppToJavaType(ifield.getType()));
-			
-			frag.setInitializer(create);
+			frag.setInitializer(init);
 		}
 
-		//frag.setInitializer(evaluate(declarator.getInitializer()).get(0));
 		FieldDeclaration field = ast.newFieldDeclaration(frag);
 
 		if (ifield.getType().toString().isEmpty())
@@ -567,26 +561,19 @@ public class SourceConverterStage2
 	/**
 	 * Generates a Java field, given a C++ variable.
 	 */
-	private void generateVariable(IBinding binding, IASTDeclarator declarator) throws DOMException
+	private void generateVariable(IBinding binding, IASTDeclarator declarator, Expression init) throws DOMException
 	{
 		IVariable ifield = (IVariable) binding;
 
 		VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
 		frag.setName(ast.newSimpleName(ifield.getName()));
 		
-		if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER)
+		if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER ||
+			getTypeEnum(ifield.getType()) == TypeEnum.ARRAY)
 		{
-			ClassInstanceCreation create = ast.newClassInstanceCreation();
-
-			if (ifield.getType().toString().isEmpty())
-				create.setType(ast.newSimpleType(ast.newSimpleName("AnonClass" + (m_anonClassCount - 1))));
-			else
-				create.setType(cppToJavaType(ifield.getType()));
-			
-			frag.setInitializer(create);
+			frag.setInitializer(init);
 		}
 
-		//frag.setInitializer(evaluate(declarator.getInitializer()).get(0));
 		FieldDeclaration field = ast.newFieldDeclaration(frag);
 
 		if (ifield.getType().toString().isEmpty())
@@ -629,6 +616,9 @@ public class SourceConverterStage2
 			IASTSimpleDeclaration simple = (IASTSimpleDeclaration) declaration;
 			evalDeclSpecifier(simple.getDeclSpecifier());
 
+			List<Expression> exprs = evaluateDeclarationReturnInitializers(simple);
+			int i = 0;
+
 			for (IASTDeclarator declarator : simple.getDeclarators())
 			{
 				IBinding binding = declarator.getName().resolveBinding();
@@ -643,7 +633,7 @@ public class SourceConverterStage2
 				else if (binding instanceof IField)
 				{
 					print("standard field");
-					generateField(binding, declarator);
+					generateField(binding, declarator, exprs.get(i));
 				}
 				else if (binding instanceof IFunction &&
 						declarator instanceof IASTFunctionDeclarator)
@@ -652,13 +642,13 @@ public class SourceConverterStage2
 				}
 				else if (binding instanceof IVariable)
 				{
-					generateVariable(binding, declarator);
+					generateVariable(binding, declarator, exprs.get(i));
 				}
 				else
 				{
 					printerr("Unsupported declarator: " + declarator.getClass().getCanonicalName() + ":" + binding.getClass().getName());
 				}
-				// TODO subclasses here.
+				i++;
 			}
 		}
 		else if (declaration instanceof ICPPASTNamespaceDefinition)

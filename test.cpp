@@ -307,6 +307,14 @@ class test : public foo {
 		foo foos_array2[50][20];
 	}
 
+	// Test arrays as class fields...
+	foo foo_bar_array[10];
+	foo foo_baz_array[10][25];
+	int basic_array[1];
+	int not_so_basic_array[5][7];
+
+	// Test object at class level...
+	foo foo_bar;
 
 	// Test a union...
 	union test_union
@@ -335,6 +343,18 @@ class
 	class { int a; } anon_class1, anon_class2;
 } anon_class3;
 
-
 };
+
+using namespace mynamespace;
+// Test top level objects and arrays...
+foo foo_bar_top_level;
+foo foo_bar_array_top_level1[10];
+foo foo_bar_array_top_level2[10][40];
+int array_top_level1[10];
+char array_top_level2[20][5];
+
+
+
+
+
 
