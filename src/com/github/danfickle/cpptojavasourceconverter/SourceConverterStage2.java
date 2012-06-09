@@ -289,7 +289,8 @@ import org.eclipse.text.edits.TextEdit;
  * Copy/delete constructor being called on references.
  * Inject stack creation at top of method. TICK.
  * Add arguments to stack.
- * 
+ * Call destruct directly on delete variables. TICK.
+ * Cleanup cleanup mechanism for classes.
  */
 
 /**
@@ -2037,17 +2038,15 @@ public class SourceConverterStage2
 
 			if (!deleteExpression.isVectored())
 			{
-				// Call DestructHelper.destructArray(array)...
-				Expression cls = evalExpr(deleteExpression.getOperand()).get(0);
+				// Call ptr.destruct()...				
 				MethodInvocation method = ast.newMethodInvocation();
-				method.setExpression(ast.newSimpleName("DestructHelper"));
-				method.setName(ast.newSimpleName("destructItems"));
-				method.arguments().add(cls);
+				method.setExpression(evalExpr(deleteExpression.getOperand()).get(0));
+				method.setName(ast.newSimpleName("destruct"));
 				ret.add(method);
 			}
 			else
 			{
-				// Call DestructHelper.destructItems(ptr)...
+				// Call DestructHelper.destructArray(array)...
 				MethodInvocation method = ast.newMethodInvocation();
 				method.setExpression(ast.newSimpleName("DestructHelper"));
 				method.setName(ast.newSimpleName("destructArray"));
