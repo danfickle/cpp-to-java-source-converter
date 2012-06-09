@@ -286,6 +286,9 @@ import org.eclipse.text.edits.TextEdit;
  * Add static modifier to nested classes.
  * Deal with typedef.
  * Copy constructor not always being called.
+ * Copy/delete constructor being called on references.
+ * Inject stack creation at top of method.
+ * Add arguments to stack.
  * 
  */
 
@@ -384,9 +387,16 @@ public class SourceConverterStage2
 
 		method.parameters().addAll(evalParameters(funcBinding));
 
-		//m_variableStack.push(new ArrayList<CppVar>());
+		m_localVariableCount = 0;
+		m_localVariableId = 0;
 		method.setBody((Block) evalStmt(func.getBody()).get(0));
-		//m_variableStack.pop();
+
+		
+		
+		
+		
+		
+		
 		
 		if (func instanceof ICPPASTFunctionDefinition)
 		{
@@ -1440,13 +1450,34 @@ public class SourceConverterStage2
 						ClassInstanceCreation create = ast.newClassInstanceCreation();
 						create.setType(cppToJavaType(var.getType()));
 						create.arguments().addAll(evaluate(decl.getInitializer()));
-						ret.add(ret.size() - 1, create);
+
+						MethodInvocation meth = ast.newMethodInvocation();
+						meth.setExpression(ast.newSimpleName("StackHelper"));
+						meth.setName(ast.newSimpleName("addItem"));
+						meth.arguments().add(create);
+						meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId++)));
+						meth.arguments().add(ast.newSimpleName("__stack"));
+						ret.add(ret.size() - 1, meth);
 					}
 					else if (type == TypeEnum.ARRAY)
 					{
 						print("Found array");
 						Expression ex = generateArrayCreationExpression(var.getType(), getArraySizeExpressions(var.getType()));
-						ret.add(ret.size() - 1, ex);
+
+						TypeEnum te = getTypeEnum(getArrayBaseType(var.getType()));
+						
+						if (te == TypeEnum.OTHER || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER)
+						{
+							MethodInvocation meth = ast.newMethodInvocation();
+							meth.setExpression(ast.newSimpleName("StackHelper"));
+							meth.setName(ast.newSimpleName("addItem"));
+							meth.arguments().add(ex);
+							meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId++)));
+							meth.arguments().add(ast.newSimpleName("__stack"));
+							ret.add(ret.size() - 1, meth);
+						}
+						else
+							ret.add(ret.size() - 1, ex);
 					}
 					else
 					{
@@ -2596,57 +2627,6 @@ public class SourceConverterStage2
 		return frags;
 	}
 
-	static class CppVar
-	{
-		boolean isArray;
-		Expression expr;
-	};
-	
-	private void generateDestructorCall(List<CppVar> names, Block block)
-	{
-		if (names.isEmpty())
-			return;
-
-		boolean containsArray = false;
-		for (CppVar cppVar : names)
-		{
-			if (cppVar.isArray)
-				containsArray = true;
-		}
-
-		if (containsArray)
-		{
-			for (int i = names.size() - 1; i >= 0; i--)
-			{
-				MethodInvocation method = ast.newMethodInvocation();
-				method.setExpression(ast.newSimpleName("DestructHelper"));
-
-				if (names.get(i).isArray)
-					method.setName(ast.newSimpleName("destructArray"));
-				else
-					method.setName(ast.newSimpleName("destructItems"));
-
-				method.arguments().add(ast.newSimpleName(names.get(i).expr.toString()));
-
-				block.statements().add(ast.newExpressionStatement(method));
-			}
-		}
-		else
-		{
-			MethodInvocation method = ast.newMethodInvocation();
-			method.setExpression(ast.newSimpleName("DestructHelper"));
-			method.setName(ast.newSimpleName("destructItems"));
-
-			for (CppVar nm : names)
-			{
-				method.arguments().add(ast.newSimpleName(nm.expr.toString()));
-			}
-			block.statements().add(ast.newExpressionStatement(method));
-		}
-
-	}
-	
-	
 	/**
 	 * Attempts to convert the given C++ statement to one or more Java statements.
 	 */
@@ -2720,15 +2700,27 @@ public class SourceConverterStage2
 			IASTCompoundStatement compoundStatement = (IASTCompoundStatement)statement;
 			print("Compound");
 
-			m_variableStack.push(new ArrayList<CppVar>());
+			m_localVariableStack.push(m_localVariableId);
 			Block block = ast.newBlock();
 			for (IASTStatement childStatement : compoundStatement.getStatements())
 				block.statements().addAll(evalStmt(childStatement));
 
 			block.statements().addAll(stmtQueue);
 			stmtQueue.clear();
-			List<CppVar> names = m_variableStack.pop();
-			generateDestructorCall(names, block);
+
+			int id = m_localVariableStack.pop();
+			
+			if (!block.statements().isEmpty() && !(block.statements().get(block.statements().size() - 1) instanceof ReturnStatement))
+			{
+				MethodInvocation meth = ast.newMethodInvocation();
+				meth.setExpression(ast.newSimpleName("StackHelper"));
+				meth.setName(ast.newSimpleName("cleanup"));
+				meth.arguments().add(ast.newNullLiteral());
+				meth.arguments().add(ast.newSimpleName("__stack"));
+				meth.arguments().add(ast.newNumberLiteral(String.valueOf(id)));
+				block.statements().add(ast.newExpressionStatement(meth));
+			}
+
 			ret.add(block);
 		}
 		else if (statement instanceof IASTDeclarationStatement)
@@ -2745,33 +2737,8 @@ public class SourceConverterStage2
 				ret.add(decl);
 			}
 
-			List<IType> cppTypes = evaluateDeclarationReturnCppTypes(declarationStatement.getDeclaration());
-			List<SimpleName> names = evaluateDeclarationReturnNames(declarationStatement.getDeclaration());
-			int i = 0;
-			for (IType cppType : cppTypes)
-			{
-				if (getTypeEnum(cppType) == TypeEnum.OTHER ||
-					(getTypeEnum(cppType) == TypeEnum.ARRAY &&
-					!(getArrayBaseType(cppType) instanceof IBasicType))) 
-				{
-					CppVar cppVar = new CppVar();
-					cppVar.expr = names.get(i);
-					cppVar.isArray = getTypeEnum(cppType) == TypeEnum.ARRAY;
-					m_variableStack.peekFirst().add(cppVar);
-					i++;
-				}
-			}
-			
-			
-			
 			ret.addAll(stmtQueue);
 			stmtQueue.clear();
-
-			//			for (int i = 1; i < frags.size(); i++)
-			//				decl.fragments().add(frags.get(i));
-			//
-			//decl.setType(declarationStatement.getDeclaration()))
-			//			decl.setType(evaluateDeclarationReturnTypes(declarationStatement.getDeclaration()));
 		}
 		else if (statement instanceof IASTDoStatement)
 		{
@@ -2868,23 +2835,13 @@ public class SourceConverterStage2
 			IASTReturnStatement returnStatement = (IASTReturnStatement)statement;
 			print("return");
 
-			Block blk = ast.newBlock();
-
+			MethodInvocation method = ast.newMethodInvocation();
+			method.setExpression(ast.newSimpleName("StackHelper"));
+			method.setName(ast.newSimpleName("cleanup"));
 			ReturnStatement ret2 = ast.newReturnStatement();
-
-			Assignment retAssign = null;
+			
 			if (returnStatement.getReturnValue() != null)
 			{
-				ret2.setExpression(ast.newSimpleName("ret__"));
-				retAssign = ast.newAssignment();
-
-				VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
-				frag.setName(ast.newSimpleName("ret__"));
-				VariableDeclarationExpression decl = ast.newVariableDeclarationExpression(frag);
-				decl.setType(cppToJavaType(returnStatement.getReturnValue().getExpressionType()));
-
-				retAssign.setLeftHandSide(decl);
-			
 				if (returnStatement.getReturnValue() != null &&
 					((returnStatement.getReturnValue().getExpressionType() instanceof ICompositeType ||
 					(returnStatement.getReturnValue().getExpressionType() instanceof IQualifierType &&
@@ -2894,26 +2851,28 @@ public class SourceConverterStage2
 					ClassInstanceCreation create = ast.newClassInstanceCreation();
 					create.arguments().add(evalExpr(returnStatement.getReturnValue()).get(0));
 					create.setType(cppToJavaType(returnStatement.getReturnValue().getExpressionType()));
-					retAssign.setRightHandSide(create);
+					method.arguments().add(create);
 				}
 				else
 				{
-					retAssign.setRightHandSide(evalExpr(returnStatement.getReturnValue()).get(0));
-				}
+					method.arguments().add(evalExpr(returnStatement.getReturnValue()).get(0));
+				}	
+
+				method.arguments().add(ast.newSimpleName("__stack"));
+				method.arguments().add(ast.newNumberLiteral(String.valueOf(0)));
+				ret2.setExpression(method);
+				ret.add(ret2);
 			}
-
-			if (retAssign != null)
-				blk.statements().add(ast.newExpressionStatement(retAssign));
-
-			
-
-			for (List<CppVar> vars : m_variableStack)
+			else
 			{
-				generateDestructorCall(vars, blk);
+				Block blk = ast.newBlock();
+				method.arguments().add(ast.newNullLiteral());
+				method.arguments().add(ast.newSimpleName("__stack"));
+				method.arguments().add(ast.newNumberLiteral(String.valueOf(0)));
+				blk.statements().add(ast.newExpressionStatement(method));
+				blk.statements().add(ret2);
+				ret.add(blk);
 			}
-
-			blk.statements().add(ret2);
-			ret.add(blk);
 		}
 		else if (statement instanceof IASTSwitchStatement)
 		{
@@ -3457,7 +3416,9 @@ public class SourceConverterStage2
 	
 	private HashMap<String, String> m_anonEnumMap = new HashMap<String, String>();
 	
-	private Deque<List<CppVar>> m_variableStack = new ArrayDeque<List<CppVar>>();
+	private int m_localVariableCount;
+	private int m_localVariableId;
+	private Deque<Integer> m_localVariableStack = new ArrayDeque<Integer>();
 	
 	/**
 	 * Traverses the AST of the given translation unit
