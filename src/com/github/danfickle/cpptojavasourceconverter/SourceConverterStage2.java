@@ -285,6 +285,7 @@ import org.eclipse.text.edits.TextEdit;
  * Call destructors on return or end brace. PARTIAL
  * Add static modifier to nested classes.
  * Deal with typedef.
+ * Copy constructor not always being called.
  * 
  */
 
@@ -573,12 +574,7 @@ public class SourceConverterStage2
 
 		VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
 		frag.setName(ast.newSimpleName(ifield.getName()));
-		
-		if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER ||
-			getTypeEnum(ifield.getType()) == TypeEnum.ARRAY)
-		{
-			frag.setInitializer(init);
-		}
+		frag.setInitializer(init);
 
 		FieldDeclaration field = ast.newFieldDeclaration(frag);
 
@@ -969,7 +965,6 @@ public class SourceConverterStage2
 		}
 		return ret;
 	}
-
 
 	private Type evaluateDeclSpecifierReturnType(IASTDeclSpecifier declSpecifier) throws DOMException
 	{
@@ -1362,6 +1357,60 @@ public class SourceConverterStage2
 		}
 	}
 	
+	private Expression generateArrayCreationExpression(IType tp, List<Expression> sizeExprs) throws DOMException
+	{
+		Type jtp = null;
+		boolean isBasic = false;
+		
+		if ((getTypeEnum(tp) == TypeEnum.ARRAY))
+		{
+			jtp = cppToJavaType(getArrayBaseType(tp));
+			TypeEnum te = getTypeEnum(getArrayBaseType(tp));
+			isBasic = te == TypeEnum.BOOLEAN || te == TypeEnum.CHAR || te == TypeEnum.NUMBER; 
+		}
+		else if ((getTypeEnum(tp) == TypeEnum.POINTER))
+		{
+			jtp = cppToJavaType(getPointerBaseType(tp));
+			TypeEnum te = getTypeEnum(getPointerBaseType(tp));
+			isBasic = te == TypeEnum.BOOLEAN || te == TypeEnum.CHAR || te == TypeEnum.NUMBER; 
+		}
+		else
+		{
+			printerr("unexpected type here: " + tp.getClass().getCanonicalName());
+			System.exit(-1);
+		}
+
+		if (!isBasic)
+		{
+			MethodInvocation method = ast.newMethodInvocation();
+			method.setExpression(ast.newSimpleName("CreateHelper"));
+			method.setName(ast.newSimpleName("allocateArray"));
+			
+			TypeLiteral tl = ast.newTypeLiteral();
+			tl.setType(jtp);
+		
+			method.arguments().add(tl);
+			method.arguments().addAll(sizeExprs);
+			return method;
+		}
+		else
+		{
+			ArrayCreation create = ast.newArrayCreation();
+			if ((jtp instanceof ArrayType))
+			{
+				create.setType((ArrayType) jtp);
+			}
+			else
+			{
+				ArrayType arr = ast.newArrayType(jtp);
+				create.setType(arr);
+			}
+			
+			create.dimensions().addAll(sizeExprs);
+			return create;
+		}
+	}
+	
 	/**
 	 * Given a declaration, returns a list of initializer expressions.
 	 * Eg. int a = 1, b = 2, c; will return [1, 2, null].
@@ -1386,7 +1435,7 @@ public class SourceConverterStage2
 				{
 					IVariable var = (IVariable) binding;
 					TypeEnum type = getTypeEnum(var.getType());
-					if (type == TypeEnum.OTHER)
+					if (type == TypeEnum.OTHER || type == TypeEnum.REFERENCE)
 					{
 						ClassInstanceCreation create = ast.newClassInstanceCreation();
 						create.setType(cppToJavaType(var.getType()));
@@ -1396,29 +1445,8 @@ public class SourceConverterStage2
 					else if (type == TypeEnum.ARRAY)
 					{
 						print("Found array");
-
-						if (getTypeEnum(getArrayBaseType(var.getType())) == TypeEnum.OTHER)
-						{
-							MethodInvocation method = ast.newMethodInvocation();
-							method.setExpression(ast.newSimpleName("CreateHelper"));
-							method.setName(ast.newSimpleName("allocateArray"));
-
-							TypeLiteral tl = ast.newTypeLiteral();
-							tl.setType(cppToJavaType(getArrayBaseType(var.getType())));
-						
-							method.arguments().add(tl);
-							List<Expression> sizeExprs = getArraySizeExpressions(var.getType());
-							method.arguments().addAll(sizeExprs);
-							ret.add(ret.size() - 1, method);
-						}
-						else
-						{
-							ArrayCreation create = ast.newArrayCreation();
-							create.setType((ArrayType) cppToJavaType(var.getType()));
-							List<Expression> sizeExprs = getArraySizeExpressions(var.getType());
-							create.dimensions().addAll(sizeExprs);
-							ret.add(ret.size() - 1, create);
-						}
+						Expression ex = generateArrayCreationExpression(var.getType(), getArraySizeExpressions(var.getType()));
+						ret.add(ret.size() - 1, ex);
 					}
 					else
 					{
@@ -1979,48 +2007,50 @@ public class SourceConverterStage2
 
 			if (!newExpression.isArrayAllocation())
 			{
-				ClassInstanceCreation create = ast.newClassInstanceCreation();
-				//create.setExpression(evaluate(newExpression.getPlacement()))
-				create.setType(evalTypeId(newExpression.getTypeId()));
-
-				if (newExpression.getNewInitializer() == null)
+				boolean isBasic = false;
+				if (getTypeEnum(newExpression.getExpressionType()) == TypeEnum.POINTER)
 				{
-					/* Do nothing. */
-				}
-				else if (newExpression.getNewInitializer() instanceof IASTExpressionList)
-				{
-					for (IASTExpression arg : ((IASTExpressionList) newExpression.getNewInitializer()).getExpressions())
+					TypeEnum teBase = getTypeEnum(getPointerBaseType(newExpression.getExpressionType()));
+					
+					if (teBase == TypeEnum.CHAR || teBase == TypeEnum.NUMBER || teBase == TypeEnum.BOOLEAN)
 					{
-						create.arguments().addAll(evalExpr(arg));
+						ret.add(ast.newNumberLiteral("0"));
+						isBasic = true;
 					}
 				}
-				else if (newExpression.getNewInitializer() instanceof IASTExpression)
+				if (!isBasic)
 				{
-					create.arguments().addAll(evalExpr((IASTExpression) newExpression.getNewInitializer()));
+					ClassInstanceCreation create = ast.newClassInstanceCreation();
+					//create.setExpression(evaluate(newExpression.getPlacement()))
+					create.setType(evalTypeId(newExpression.getTypeId()));
+
+					if (newExpression.getNewInitializer() == null)
+					{
+						/* Do nothing. */
+					}
+					else if (newExpression.getNewInitializer() instanceof IASTExpressionList)
+					{
+						for (IASTExpression arg : ((IASTExpressionList) newExpression.getNewInitializer()).getExpressions())
+						{
+							create.arguments().addAll(evalExpr(arg));
+						}
+					}
+					else if (newExpression.getNewInitializer() instanceof IASTExpression)
+					{
+						create.arguments().addAll(evalExpr((IASTExpression) newExpression.getNewInitializer()));
+					}
+					ret.add(create);
 				}
-				ret.add(create);
 			}
 			else
 			{
-				// Generates CreateHelper.allocateArray(X.class, arraySize)
-				// with an extra arraySize for each dimension...
-				Type tp = evalTypeId(newExpression.getTypeId());
-
-				MethodInvocation method = ast.newMethodInvocation();
-				method.setExpression(ast.newSimpleName("CreateHelper"));
-				method.setName(ast.newSimpleName("allocateArray"));
-
-				TypeLiteral tl = ast.newTypeLiteral();
-				tl.setType(tp);
-				
-				method.arguments().add(tl);
-				
+				List<Expression> sizeExprs = new ArrayList<Expression>();
 				for (IASTExpression arraySize : newExpression.getNewTypeIdArrayExpressions())
 				{
-					method.arguments().add(evalExpr(arraySize).get(0));
+					sizeExprs.add(evalExpr(arraySize).get(0));
 				}
-
-				ret.add(method);
+				Expression ex = generateArrayCreationExpression(newExpression.getExpressionType(), sizeExprs);
+				ret.add(ex);
 			}
 		}
 		else if (expression instanceof ICPPASTSimpleTypeConstructorExpression)
@@ -2989,7 +3019,8 @@ public class SourceConverterStage2
 			infix.setLeftOperand(paren);
 
 			if (expType == TypeEnum.OTHER ||
-				expType == TypeEnum.POINTER)
+				expType == TypeEnum.POINTER ||
+				expType == TypeEnum.REFERENCE)
 			{
 				infix.setRightOperand(ast.newNullLiteral());
 			}
@@ -3126,7 +3157,23 @@ public class SourceConverterStage2
 		return arr.getType();
 	}
 
+	/**
+	 * Gets the base type of a pointer.
+	 * @return CDT IType of pointer.
+	 */
+	private IType getPointerBaseType(IType type) throws DOMException
+	{
+		IPointerType arr = (IPointerType) type;
 
+		while (arr.getType() instanceof IPointerType)
+		{
+			IPointerType arr2 = (IPointerType) arr.getType();
+			arr = arr2;
+		}
+
+		return arr.getType();
+	}
+	
 	/**
 	 * Gets the expressions for the array sizes.
 	 * Eg. int a[1][2 + 5] returns a list containing expressions

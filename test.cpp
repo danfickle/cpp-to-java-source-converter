@@ -394,8 +394,10 @@ foo foo_bar_array_top_level2[10][40];
 int array_top_level1[10];
 char array_top_level2[20][5];
 
-
-
-
+// Test initializing variables...
+int top_level_int = 5;
+foo top_level_foo(3);
+int * top_level_ptr = new int;
+int * top_level_ptr2 = new int[25];
 
 
