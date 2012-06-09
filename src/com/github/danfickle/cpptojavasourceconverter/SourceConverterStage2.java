@@ -2626,7 +2626,8 @@ public class SourceConverterStage2
 				else
 					method.setName(ast.newSimpleName("destructItems"));
 
-				method.arguments().add(names.get(i).expr);
+				method.arguments().add(ast.newSimpleName(names.get(i).expr.toString()));
+
 				block.statements().add(ast.newExpressionStatement(method));
 			}
 		}
@@ -2638,7 +2639,7 @@ public class SourceConverterStage2
 
 			for (CppVar nm : names)
 			{
-				method.arguments().add(nm.expr);
+				method.arguments().add(ast.newSimpleName(nm.expr.toString()));
 			}
 			block.statements().add(ast.newExpressionStatement(method));
 		}
@@ -2867,24 +2868,52 @@ public class SourceConverterStage2
 			IASTReturnStatement returnStatement = (IASTReturnStatement)statement;
 			print("return");
 
+			Block blk = ast.newBlock();
+
 			ReturnStatement ret2 = ast.newReturnStatement();
 
-			if (returnStatement.getReturnValue() != null &&
+			Assignment retAssign = null;
+			if (returnStatement.getReturnValue() != null)
+			{
+				ret2.setExpression(ast.newSimpleName("ret__"));
+				retAssign = ast.newAssignment();
+
+				VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
+				frag.setName(ast.newSimpleName("ret__"));
+				VariableDeclarationExpression decl = ast.newVariableDeclarationExpression(frag);
+				decl.setType(cppToJavaType(returnStatement.getReturnValue().getExpressionType()));
+
+				retAssign.setLeftHandSide(decl);
+			
+				if (returnStatement.getReturnValue() != null &&
 					((returnStatement.getReturnValue().getExpressionType() instanceof ICompositeType ||
-							(returnStatement.getReturnValue().getExpressionType() instanceof IQualifierType &&
-									((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)) &&
-									!(evalExpr(returnStatement.getReturnValue()).get(0) instanceof ClassInstanceCreation)))
-			{
-				ClassInstanceCreation create = ast.newClassInstanceCreation();
-				create.arguments().add(evalExpr(returnStatement.getReturnValue()).get(0));
-				create.setType(cppToJavaType(returnStatement.getReturnValue().getExpressionType()));
-				ret2.setExpression(create);
+					(returnStatement.getReturnValue().getExpressionType() instanceof IQualifierType &&
+					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)) &&
+					!(evalExpr(returnStatement.getReturnValue()).get(0) instanceof ClassInstanceCreation)))
+				{
+					ClassInstanceCreation create = ast.newClassInstanceCreation();
+					create.arguments().add(evalExpr(returnStatement.getReturnValue()).get(0));
+					create.setType(cppToJavaType(returnStatement.getReturnValue().getExpressionType()));
+					retAssign.setRightHandSide(create);
+				}
+				else
+				{
+					retAssign.setRightHandSide(evalExpr(returnStatement.getReturnValue()).get(0));
+				}
 			}
-			else
+
+			if (retAssign != null)
+				blk.statements().add(ast.newExpressionStatement(retAssign));
+
+			
+
+			for (List<CppVar> vars : m_variableStack)
 			{
-				ret2.setExpression(evalExpr(returnStatement.getReturnValue()).get(0));
+				generateDestructorCall(vars, blk);
 			}
-			ret.add(ret2);
+
+			blk.statements().add(ret2);
+			ret.add(blk);
 		}
 		else if (statement instanceof IASTSwitchStatement)
 		{

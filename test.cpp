@@ -302,9 +302,16 @@ class test : public foo {
 		int basic[100];
 		short basic2[5][10];
 
+		if (false)
+			// Test return statement for void function...
+			return;
+
 		// Test arrays of composite types on the stack...
 		foo foos_array[45 + 2];
 		foo foos_array2[50][20];
+
+		// Test a new statement with variable declaration...
+		int * p = new int[2], r;
 	}
 
 	void func6(foo a)

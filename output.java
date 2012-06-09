@@ -22,6 +22,10 @@ class Globals {
 			10, 40);
 	int[] array_top_level1 = new int[10];
 	byte[][] array_top_level2 = new byte[20][5];
+	int top_level_int = 5;
+	foo top_level_foo = new foo(3);
+	PtrInteger top_level_ptr = 0;
+	PtrInteger top_level_ptr2 = new int[25];
 }
 
 class CppString implements CppType {
@@ -117,7 +121,10 @@ class foo implements CppType {
 
 	public int func_with_defaults_and_definition(int one, int two) {
 		two = 4;
-		return two;
+		{
+			int ret__ = two;
+			return ret__;
+		}
 	}
 
 	public int func_with_defaults_and_definition(int one) {
@@ -183,14 +190,16 @@ class test extends foo implements CppType {
 
 	public int func2() {
 		test_with_bit_field = 8;
-		return test_with_bit_field;
+		{
+			int ret__ = test_with_bit_field;
+			return ret__;
+		}
 	}
 
 	public int func3(foo a,foo b,Ptr<foo> c,foo d,foo e,RefInteger f){
 		foo j;
 		while ((j=b) != null){}
-		foo l;
-		if ((l=b) != null){}
+		foo l;if ((l=b) != null){}
 		for (foo a5=b;(a5) != null;a5=b){}
 		while ((b) != null){}
 		if ((b) != null){}
@@ -211,14 +220,14 @@ class test extends foo implements CppType {
 		foo ptr8;
 		ptr7=a;
 		ptr8=ptr7;
-		return 1072;
+		{int ret__=1072;return ret__;}
 	}
 	
 	public foo func4(int a, int b, short c) {
 		foo[] sd = CreateHelper.allocateArray(foo.class, 15);
 		foo foo1;
 		Ptr<foo> foo2;
-		foo foo3 = sd[1];
+		foo foo3 = new foo(sd[1]);
 		foo foo4 = new foo(1, 2);
 		foo foo5 = new foo(foo4);
 		foo foo6 = this;
@@ -232,8 +241,14 @@ class test extends foo implements CppType {
 		case 1:
 		case 2:
 			break;
-		default:
-			return new foo(foo7);
+		default: {
+			foo ret__ = new foo(foo7);
+			DestructHelper.destructItems(foo7);
+			DestructHelper.destructItems(foo5);
+			DestructHelper.destructItems(foo4);
+			DestructHelper.destructArray(sd);
+			return ret__;
+		}
 		}
 		int decl;
 		switch (decl = 1) {
@@ -243,7 +258,14 @@ class test extends foo implements CppType {
 		}
 		foo6.func_with_defaults_and_definition(100);
 		(foo6).func_with_defaults_and_definition(100, 2);
-		return new foo(sd[2]);
+		{
+			foo ret__ = new foo(sd[2]);
+			DestructHelper.destructItems(foo7);
+			DestructHelper.destructItems(foo5);
+			DestructHelper.destructItems(foo4);
+			DestructHelper.destructArray(sd);
+			return ret__;
+		}
 		DestructHelper.destructItems(foo7);
 		DestructHelper.destructItems(foo5);
 		DestructHelper.destructItems(foo4);
@@ -263,8 +285,9 @@ class test extends foo implements CppType {
 		for (i = 0; i < 20; i++)
 			i--;
 		switch (i) {
-		case 1:
+		case 1: {
 			return;
+		}
 		case 2:
 			i++;
 		}
@@ -282,8 +305,13 @@ class test extends foo implements CppType {
 		DestructHelper.destructArray(ptr3);
 		int[] basic = new int[100];
 		short[][] basic2 = new short[5][10];
+		if (false) {
+			return;
+		}
 		foo[] foos_array = CreateHelper.allocateArray(foo.class, 45 + 2);
 		foo[][] foos_array2 = CreateHelper.allocateArray(foo.class, 50, 20);
+		PtrInteger p = new int[2];
+		int r;
 		DestructHelper.destructArray(foos_array2);
 		DestructHelper.destructArray(foos_array);
 	}
