@@ -287,7 +287,7 @@ import org.eclipse.text.edits.TextEdit;
  * Deal with typedef.
  * Copy constructor not always being called.
  * Copy/delete constructor being called on references.
- * Inject stack creation at top of method.
+ * Inject stack creation at top of method. TICK.
  * Add arguments to stack.
  * 
  */
@@ -387,26 +387,30 @@ public class SourceConverterStage2
 
 		method.parameters().addAll(evalParameters(funcBinding));
 		
-		m_localVariableCount = 0;
-		m_localVariableId = 0;
+		m_localVariableMaxId = -1;
+		m_localVariableId = -1;
 		method.setBody((Block) evalStmt(func.getBody()).get(0));
-		Block blk = method.getBody();
 
-		ArrayCreation arrayCreate = ast.newArrayCreation();
-		ArrayType tp = ast.newArrayType(ast.newSimpleType(ast.newSimpleName("Object")));
-		arrayCreate.setType(tp);
-		arrayCreate.dimensions().add(ast.newNumberLiteral(String.valueOf(m_localVariableCount)));
-		VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
-		frag.setName(ast.newSimpleName("__stack"));
-		frag.setInitializer(arrayCreate);
-		VariableDeclarationStatement stmt2 = ast.newVariableDeclarationStatement(frag);
-		ArrayType tp2 = ast.newArrayType(ast.newSimpleType(ast.newSimpleName("Object")));
-		stmt2.setType(tp2);
+		if (m_localVariableMaxId != -1)
+		{
+			Block blk = method.getBody();
+
+			ArrayCreation arrayCreate = ast.newArrayCreation();
+			ArrayType tp = ast.newArrayType(ast.newSimpleType(ast.newSimpleName("Object")));
+			arrayCreate.setType(tp);
+			arrayCreate.dimensions().add(ast.newNumberLiteral(String.valueOf(m_localVariableMaxId + 1)));
+			VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
+			frag.setName(ast.newSimpleName("__stack"));
+			frag.setInitializer(arrayCreate);
+			VariableDeclarationStatement stmt2 = ast.newVariableDeclarationStatement(frag);
+			ArrayType tp2 = ast.newArrayType(ast.newSimpleType(ast.newSimpleName("Object")));
+			stmt2.setType(tp2);
+
+			blk.statements().add(0, stmt2);
+		}
 		
-		blk.statements().add(0, stmt2);
-		
-		m_localVariableCount = 0;
-		m_localVariableId = 0;
+		m_localVariableMaxId = -1;
+		m_localVariableId = -1;
 
 		if (func instanceof ICPPASTFunctionDefinition)
 		{
@@ -1465,8 +1469,13 @@ public class SourceConverterStage2
 						meth.setExpression(ast.newSimpleName("StackHelper"));
 						meth.setName(ast.newSimpleName("addItem"));
 						meth.arguments().add(create);
-						meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId++)));
-						m_localVariableCount++;
+						meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId + 1)));
+
+						m_localVariableId++;
+						if (m_localVariableId > m_localVariableMaxId)
+							m_localVariableMaxId = m_localVariableId;
+
+						
 						meth.arguments().add(ast.newSimpleName("__stack"));
 						ret.add(ret.size() - 1, meth);
 					}
@@ -1483,8 +1492,12 @@ public class SourceConverterStage2
 							meth.setExpression(ast.newSimpleName("StackHelper"));
 							meth.setName(ast.newSimpleName("addItem"));
 							meth.arguments().add(ex);
-							meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId++)));
-							m_localVariableCount++;
+							meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId + 1)));
+
+							m_localVariableId++;
+							if (m_localVariableId > m_localVariableMaxId)
+								m_localVariableMaxId = m_localVariableId;
+							
 							meth.arguments().add(ast.newSimpleName("__stack"));
 							ret.add(ret.size() - 1, meth);
 						}
@@ -2720,19 +2733,23 @@ public class SourceConverterStage2
 			block.statements().addAll(stmtQueue);
 			stmtQueue.clear();
 
-			int id = m_localVariableStack.pop();
+			int temp = m_localVariableStack.pop();
 			
-			if (!block.statements().isEmpty() && !(block.statements().get(block.statements().size() - 1) instanceof ReturnStatement))
+			if (!block.statements().isEmpty() && 
+				!(block.statements().get(block.statements().size() - 1) instanceof ReturnStatement) &&
+				m_localVariableId != -1)
 			{
 				MethodInvocation meth = ast.newMethodInvocation();
 				meth.setExpression(ast.newSimpleName("StackHelper"));
 				meth.setName(ast.newSimpleName("cleanup"));
 				meth.arguments().add(ast.newNullLiteral());
 				meth.arguments().add(ast.newSimpleName("__stack"));
-				meth.arguments().add(ast.newNumberLiteral(String.valueOf(id)));
+				meth.arguments().add(ast.newNumberLiteral(String.valueOf(temp + 1)));
 				block.statements().add(ast.newExpressionStatement(meth));
 			}
 
+			m_localVariableId = temp;
+			
 			ret.add(block);
 		}
 		else if (statement instanceof IASTDeclarationStatement)
@@ -2863,27 +2880,42 @@ public class SourceConverterStage2
 					ClassInstanceCreation create = ast.newClassInstanceCreation();
 					create.arguments().add(evalExpr(returnStatement.getReturnValue()).get(0));
 					create.setType(cppToJavaType(returnStatement.getReturnValue().getExpressionType()));
-					method.arguments().add(create);
+					
+					if (m_localVariableId != -1)
+						method.arguments().add(create);
+					else
+						ret2.setExpression(create);
 				}
 				else
 				{
-					method.arguments().add(evalExpr(returnStatement.getReturnValue()).get(0));
+					if (m_localVariableId != -1)
+						method.arguments().add(evalExpr(returnStatement.getReturnValue()).get(0));
+					else
+						ret2.setExpression(evalExpr(returnStatement.getReturnValue()).get(0));
 				}	
 
-				method.arguments().add(ast.newSimpleName("__stack"));
-				method.arguments().add(ast.newNumberLiteral(String.valueOf(0)));
-				ret2.setExpression(method);
+				if (m_localVariableId != -1)
+				{
+					method.arguments().add(ast.newSimpleName("__stack"));
+					method.arguments().add(ast.newNumberLiteral(String.valueOf(0)));
+					ret2.setExpression(method);
+				}
 				ret.add(ret2);
 			}
 			else
 			{
-				Block blk = ast.newBlock();
-				method.arguments().add(ast.newNullLiteral());
-				method.arguments().add(ast.newSimpleName("__stack"));
-				method.arguments().add(ast.newNumberLiteral(String.valueOf(0)));
-				blk.statements().add(ast.newExpressionStatement(method));
-				blk.statements().add(ret2);
-				ret.add(blk);
+				if (m_localVariableId != -1)
+				{
+					Block blk = ast.newBlock();
+					method.arguments().add(ast.newNullLiteral());
+					method.arguments().add(ast.newSimpleName("__stack"));
+					method.arguments().add(ast.newNumberLiteral(String.valueOf(0)));
+					blk.statements().add(ast.newExpressionStatement(method));
+					blk.statements().add(ret2);
+					ret.add(blk);
+				}
+				else
+					ret.add(ret2);
 			}
 		}
 		else if (statement instanceof IASTSwitchStatement)
@@ -3428,7 +3460,7 @@ public class SourceConverterStage2
 	
 	private HashMap<String, String> m_anonEnumMap = new HashMap<String, String>();
 	
-	private int m_localVariableCount;
+	private int m_localVariableMaxId;
 	private int m_localVariableId;
 	private Deque<Integer> m_localVariableStack = new ArrayDeque<Integer>();
 	

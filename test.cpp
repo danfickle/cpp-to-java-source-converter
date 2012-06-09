@@ -347,11 +347,21 @@ class test : public foo {
 			foo foo_bar;
 		} while (false);
 
+		// Nested...
+		if (true)
+		{
+			foo foo_bar;
 
+			while (true)
+			{
+				foo foo_baz;
 
-
-
-
+				for ( ; ; )
+				{
+					foo foo_bug;
+				}
+			}
+		}
 	}
 
 
