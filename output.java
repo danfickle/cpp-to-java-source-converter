@@ -14,7 +14,7 @@ class Globals {
 	}
 
 	class_outside_namespace cls1 = StackHelper.addItem(
-			new class_outside_namespace(), 0, __stack);
+			new class_outside_namespace(), 1, __stack);
 	int variable;
 	AnonClass3 anon_class3 = StackHelper.addItem(new MISSING(), 5, __stack);
 	foo foo_bar_top_level = StackHelper.addItem(new foo(), 6, __stack);
@@ -35,7 +35,6 @@ class CppString implements CppType {
 
 	public CppString(int i) {
 		m_count = i;
-		Object[] __stack = new Object[0];
 	}
 }
 
@@ -44,10 +43,8 @@ class mypair<T> implements CppType {
 			__stack);
 
 	public mypair(T first, T second) {
-		Object[] __stack = new Object[0];
 		values[0].op_assign(first);
 		values[1].op_assign(second);
-		StackHelper.cleanup(null, __stack, 0);
 	}
 }
 
@@ -105,22 +102,17 @@ enum AnonEnum1 {
 
 class foo implements CppType {
 	public foo() {
-		Object[] __stack = new Object[0];
 	}
 
 	public void destruct() {
-		Object[] __stack = new Object[0];
 	}
 
 	public foo(int i) {
-		Object[] __stack = new Object[0];
 		i = AnonEnum0.value1.val;
 		i = AnonEnum1.value4.val;
-		StackHelper.cleanup(null, __stack, 0);
 	}
 
 	public foo(int i, short t) {
-		Object[] __stack = new Object[0];
 	}
 
 	public int func_with_defaults1(int one) {
@@ -132,9 +124,8 @@ class foo implements CppType {
 	}
 
 	public int func_with_defaults_and_definition(int one, int two) {
-		Object[] __stack = new Object[0];
 		two = 4;
-		return StackHelper.cleanup(two, __stack, 0);
+		return two;
 	}
 
 	public int func_with_defaults_and_definition(int one) {
@@ -199,13 +190,11 @@ class test extends foo implements CppType {
 	}
 
 	public int func2() {
-		Object[] __stack = new Object[0];
 		test_with_bit_field = 8;
-		return StackHelper.cleanup(test_with_bit_field, __stack, 0);
+		return test_with_bit_field;
 	}
 
 	public int func3(foo a,foo b,Ptr<foo> c,foo d,foo e,RefInteger f){
-		Object[] __stack=new Object[0];
 		foo j;
 		while ((j=b) != null){}
 		foo l;
@@ -216,10 +205,8 @@ class test extends foo implements CppType {
 		for (int i=0;i < 10;i++){
 			for (i=1;i < 5;i++){
 				break;
-				StackHelper.cleanup(null,__stack,0);
 			}
 			continue;
-			StackHelper.cleanup(null,__stack,0);
 		}
 		int i=test_enum.val1.val + test_enum.val2.val;
 		PtrByte ptr1;
@@ -232,9 +219,9 @@ class test extends foo implements CppType {
 		foo ptr8;
 		ptr7=a;
 		ptr8=ptr7;
-		return StackHelper.cleanup(1072,__stack,0);
+		return 1072;
 	}
-
+	
 	public foo func4(int a, int b, short c) {
 		Object[] __stack = new Object[5];
 		foo[] sd = StackHelper.addItem(
@@ -283,10 +270,8 @@ class test extends foo implements CppType {
 		for (i = 0; i < 20; i++)
 			i--;
 		switch (i) {
-		case 1: {
-			StackHelper.cleanup(null, __stack, 0);
+		case 1:
 			return;
-		}
 		case 2:
 			i++;
 		}
@@ -304,10 +289,8 @@ class test extends foo implements CppType {
 		DestructHelper.destructArray(ptr3);
 		int[] basic = new int[100];
 		short[][] basic2 = new short[5][10];
-		if (false) {
-			StackHelper.cleanup(null, __stack, 0);
+		if (false)
 			return;
-		}
 		foo[] foos_array = StackHelper.addItem(
 				CreateHelper.allocateArray(foo.class, 45 + 2), 0, __stack);
 		foo[][] foos_array2 = StackHelper.addItem(
@@ -318,31 +301,42 @@ class test extends foo implements CppType {
 	}
 
 	public void func6(foo a) {
-		Object[] __stack = new Object[5];
+		Object[] __stack = new Object[3];
 		func6(new foo(1));
 		{
 			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
 			StackHelper.cleanup(null, __stack, 0);
 		}
 		if (true) {
-			foo foo_bar = StackHelper.addItem(new foo(), 1, __stack);
-			StackHelper.cleanup(null, __stack, 1);
+			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
+			StackHelper.cleanup(null, __stack, 0);
 		}
 		while (true) {
-			foo foo_bar = StackHelper.addItem(new foo(), 2, __stack);
-			StackHelper.cleanup(null, __stack, 2);
+			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
+			StackHelper.cleanup(null, __stack, 0);
 		}
 		switch (1) {
 		case 1: {
-			foo foo_bar = StackHelper.addItem(new foo(), 3, __stack);
-			StackHelper.cleanup(null, __stack, 3);
+			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
+			StackHelper.cleanup(null, __stack, 0);
 		}
 		}
 		do {
-			foo foo_bar = StackHelper.addItem(new foo(), 4, __stack);
-			StackHelper.cleanup(null, __stack, 4);
+			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
+			StackHelper.cleanup(null, __stack, 0);
 		} while (false);
-		StackHelper.cleanup(null, __stack, 0);
+		if (true) {
+			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
+			while (true) {
+				foo foo_baz = StackHelper.addItem(new foo(), 1, __stack);
+				for (;;) {
+					foo foo_bug = StackHelper.addItem(new foo(), 2, __stack);
+					StackHelper.cleanup(null, __stack, 2);
+				}
+				StackHelper.cleanup(null, __stack, 1);
+			}
+			StackHelper.cleanup(null, __stack, 0);
+		}
 	}
 
 	foo[] foo_bar_array = StackHelper.addItem(
