@@ -386,18 +386,28 @@ public class SourceConverterStage2
 			method.setConstructor(true);
 
 		method.parameters().addAll(evalParameters(funcBinding));
-
+		
 		m_localVariableCount = 0;
 		m_localVariableId = 0;
 		method.setBody((Block) evalStmt(func.getBody()).get(0));
+		Block blk = method.getBody();
 
+		ArrayCreation arrayCreate = ast.newArrayCreation();
+		ArrayType tp = ast.newArrayType(ast.newSimpleType(ast.newSimpleName("Object")));
+		arrayCreate.setType(tp);
+		arrayCreate.dimensions().add(ast.newNumberLiteral(String.valueOf(m_localVariableCount)));
+		VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
+		frag.setName(ast.newSimpleName("__stack"));
+		frag.setInitializer(arrayCreate);
+		VariableDeclarationStatement stmt2 = ast.newVariableDeclarationStatement(frag);
+		ArrayType tp2 = ast.newArrayType(ast.newSimpleType(ast.newSimpleName("Object")));
+		stmt2.setType(tp2);
 		
+		blk.statements().add(0, stmt2);
 		
-		
-		
-		
-		
-		
+		m_localVariableCount = 0;
+		m_localVariableId = 0;
+
 		if (func instanceof ICPPASTFunctionDefinition)
 		{
 			// Now check for C++ constructor initializers...
@@ -1456,6 +1466,7 @@ public class SourceConverterStage2
 						meth.setName(ast.newSimpleName("addItem"));
 						meth.arguments().add(create);
 						meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId++)));
+						m_localVariableCount++;
 						meth.arguments().add(ast.newSimpleName("__stack"));
 						ret.add(ret.size() - 1, meth);
 					}
@@ -1473,6 +1484,7 @@ public class SourceConverterStage2
 							meth.setName(ast.newSimpleName("addItem"));
 							meth.arguments().add(ex);
 							meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId++)));
+							m_localVariableCount++;
 							meth.arguments().add(ast.newSimpleName("__stack"));
 							ret.add(ret.size() - 1, meth);
 						}
