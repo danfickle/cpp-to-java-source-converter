@@ -4,17 +4,24 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.eclipse.cdt.core.dom.ast.IVariable;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ArrayCreation;
 import org.eclipse.jdt.core.dom.ArrayType;
+import org.eclipse.jdt.core.dom.Assignment;
+import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.NumberLiteral;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
+import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleType;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
+import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
 
 class JASTHelper
 {
@@ -23,6 +30,125 @@ class JASTHelper
 	JASTHelper(AST mast)
 	{
 		ast = mast;
+	}
+
+	class ClassCreate
+	{
+		ClassInstanceCreation create = ast.newClassInstanceCreation();
+		
+		ClassCreate type(Type tp)
+		{
+			create.setType(tp);
+			return this;
+		}
+
+		ClassCreate withAll(List<Expression> exprs)
+		{
+			create.arguments().addAll(exprs);
+			return this;
+		}
+
+		ClassCreate with(Expression expr)
+		{
+			create.arguments().add(expr);
+			return this;
+		}
+		
+		ClassInstanceCreation toAST()
+		{
+			return create;
+		}
+	}
+	
+	class AssignExpr
+	{
+		Assignment ass = ast.newAssignment();
+		
+		AssignExpr left(Expression expr)
+		{
+			ass.setLeftHandSide(expr);
+			return this;
+		}
+
+		AssignExpr right(Expression expr)
+		{
+			ass.setRightHandSide(expr);
+			return this;
+		}
+		
+		AssignExpr op(Assignment.Operator op)
+		{
+			ass.setOperator(op);
+			return this;
+		}
+		
+		Assignment toAST()
+		{
+			return ass;
+		}
+	}
+	class InfixExpr
+	{
+		InfixExpression infix = ast.newInfixExpression();
+		
+		InfixExpr left(Expression expr)
+		{
+			infix.setLeftOperand(expr);
+			return this;
+		}
+
+		InfixExpr right(Expression expr)
+		{
+			infix.setRightOperand(expr);
+			return this;
+		}
+		
+		InfixExpr op(InfixExpression.Operator op)
+		{
+			infix.setOperator(op);
+			return this;
+		}
+		
+		InfixExpression toAST()
+		{
+			return infix;
+		}
+	}
+	
+	class MethodDecl 
+	{
+		MethodDeclaration methodDef = ast.newMethodDeclaration();
+	
+		MethodDecl name(String nm)
+		{
+			methodDef.setName(ast.newSimpleName(nm));
+			return this;
+		}
+
+		MethodDecl returnType(Type tp)
+		{
+			methodDef.setReturnType2(tp);
+			return this;
+		}
+		
+		MethodDecl setStatic(boolean set)
+		{
+			if (set)
+				methodDef.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
+			return this;
+		}
+		
+		MethodDecl setCtor(boolean set)
+		{
+			if (set)
+				methodDef.setConstructor(true);
+			return this;
+		}
+		
+		MethodDeclaration toAST()
+		{
+			return methodDef;
+		}
 	}
 	
 	/**
@@ -171,6 +297,26 @@ class JASTHelper
 		return new VariableDeclarationStmt();
 	}
 	
+	MethodDecl newMethodDecl()
+	{
+		return new MethodDecl();
+	}
+	
+	InfixExpr newInfix()
+	{
+		return new InfixExpr();
+	}
+	
+	AssignExpr newAssign()
+	{
+		return new AssignExpr();
+	}
+	
+	ClassCreate newClassCreate()
+	{
+		return new ClassCreate();
+	}
+	
 	NumberLiteral newNumber(int num)
 	{
 		return ast.newNumberLiteral(String.valueOf(num));
@@ -179,5 +325,22 @@ class JASTHelper
 	SimpleType newType(String tp)
 	{
 		return ast.newSimpleType(ast.newSimpleName(tp));
+	}
+	
+	ReturnStatement newReturn(Expression ret)
+	{
+		ReturnStatement retStmt = ast.newReturnStatement();
+		
+		if (ret != null)
+			retStmt.setExpression(ret);
+		
+		return retStmt;
+	}
+	
+	ParenthesizedExpression newParen(Expression enclose)
+	{
+		ParenthesizedExpression paren = ast.newParenthesizedExpression();
+		paren.setExpression(enclose);
+		return paren;
 	}
 }

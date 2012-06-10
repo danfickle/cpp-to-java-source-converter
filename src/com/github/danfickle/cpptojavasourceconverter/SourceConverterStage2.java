@@ -291,6 +291,7 @@ import org.eclipse.text.edits.TextEdit;
  * Add arguments to stack.
  * Call destruct directly on delete variables. TICK.
  * Cleanup cleanup mechanism for classes.
+ * static function with default arguments.
  */
 
 /**
@@ -305,7 +306,7 @@ public class SourceConverterStage2
 	 * For example:
 	 *   int func_with_defaults(int one, int two = 5);
 	 * would generate:
-	 * 	 public int func_with_defaults(int one) {
+	 * 	 int func_with_defaults(int one) {
 	 *	     return func_with_defaults(one, 5);
 	 *   }
 	 */
@@ -318,15 +319,14 @@ public class SourceConverterStage2
 			if (defaultValues.get(k) == null)
 				break;
 
-			MethodDeclaration methodDef = ast.newMethodDeclaration();
-			methodDef.setName(ast.newSimpleName(getSimpleName(func.getName())));
-			methodDef.setReturnType2(evalReturnType(funcBinding));
-			methodDef.modifiers().add(ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
-			
+			JASTHelper.MethodDecl methodDef = jast.newMethodDecl()
+					.name(getSimpleName(func.getName()))
+					.returnType(evalReturnType(funcBinding));
+
 			List<SingleVariableDeclaration> list = evalParameters(funcBinding);
 
 			for (int k2 = 0; k2 < k; k2++)
-				methodDef.parameters().add(list.get(k2));
+				methodDef.toAST().parameters().add(list.get(k2));
 
 			Block funcBlockDef = ast.newBlock();
 			JASTHelper.Method method = jast.newMethod()
@@ -341,25 +341,16 @@ public class SourceConverterStage2
 				method.with(vals.get(k4));
 
 			if (evalReturnType(funcBinding).toString().equals("void"))
-			{
 				funcBlockDef.statements().add(ast.newExpressionStatement(method.toAST()));
-			}
 			else
-			{
-				ReturnStatement ret2 = ast.newReturnStatement();
-				ret2.setExpression(method.toAST());
-				funcBlockDef.statements().add(ret2);
-			}
+				funcBlockDef.statements().add(jast.newReturn(method.toAST()));
 
-			methodDef.setBody(funcBlockDef);
+			methodDef.toAST().setBody(funcBlockDef);
 			
-			if (decl != null)
-				decl.bodyDeclarations().add(methodDef);
-			else
-			{
+			if (decl == null)
 				decl = currentDeclarations.get(getQualifiedPart(func.getName()));
-				decl.bodyDeclarations().add(methodDef);
-			}
+
+			decl.bodyDeclarations().add(methodDef.toAST());
 		}
 	}
 	
@@ -371,30 +362,25 @@ public class SourceConverterStage2
 		IASTFunctionDefinition func = (IASTFunctionDefinition) declaration;
 		IBinding funcBinding = func.getDeclarator().getName().resolveBinding();
 		
-		MethodDeclaration method = ast.newMethodDeclaration();
-		method.setName(ast.newSimpleName(getSimpleName(func.getDeclarator().getName())));
-
-		if (((IFunction) funcBinding).isStatic())
-			method.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
-
-		// We make everything public for simplicity...
-		method.modifiers().add(ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+		JASTHelper.MethodDecl method = jast.newMethodDecl()
+				.name(getSimpleName(func.getDeclarator().getName()))
+				.setStatic(((IFunction) funcBinding).isStatic())
+				.returnType(evalReturnType(funcBinding));
 		
-		method.setReturnType2(evalReturnType(funcBinding));
-
 		// Only constructors and destructors can be missing a return type...
-		if (method.getReturnType2() == null && !method.getName().getIdentifier().contains("destruct"))
-			method.setConstructor(true);
+		if (method.toAST().getReturnType2() == null &&
+			!method.toAST().getName().getIdentifier().contains("destruct"))
+			method.setCtor(true);
 
-		method.parameters().addAll(evalParameters(funcBinding));
+		method.toAST().parameters().addAll(evalParameters(funcBinding));
 		
 		m_localVariableMaxId = -1;
 		m_localVariableId = -1;
-		method.setBody((Block) evalStmt(func.getBody()).get(0));
+		method.toAST().setBody((Block) evalStmt(func.getBody()).get(0));
 
 		if (m_localVariableMaxId != -1)
 		{
-			Block blk = method.getBody();
+			Block blk = method.toAST().getBody();
 
 			ArrayCreation arrayCreate = jast.newArray()
 						.onType("Object")
@@ -407,36 +393,35 @@ public class SourceConverterStage2
 
 			blk.statements().add(0, stmt2);
 		}
-		
-		m_localVariableMaxId = -1;
-		m_localVariableId = -1;
 
 		if (func instanceof ICPPASTFunctionDefinition)
 		{
 			// Now check for C++ constructor initializers...
 			ICPPASTFunctionDefinition funcCpp = (ICPPASTFunctionDefinition) func;
 			ICPPASTConstructorChainInitializer[] chains = funcCpp.getMemberInitializers();
+
 			if (chains != null && chains.length != 0)
 			{
 				int start = 0;
 				for (ICPPASTConstructorChainInitializer chain : chains)
 				{
-					Assignment assign = ast.newAssignment();
-					assign.setLeftHandSide(ast.newSimpleName(getSimpleName(chain.getMemberInitializerId())));
+					JASTHelper.AssignExpr assign = jast.newAssign();
+					assign.left(ast.newSimpleName(getSimpleName(chain.getMemberInitializerId())));
 
 					// We may have to call a constructor... 
 					if ((chain.getMemberInitializerId().resolveBinding() instanceof IVariable &&
 						((IVariable)chain.getMemberInitializerId().resolveBinding()).getType() instanceof ICompositeType) &&
 						!(evalExpr(chain.getInitializerValue()).get(0) instanceof ClassInstanceCreation))
 					{
-						ClassInstanceCreation create = ast.newClassInstanceCreation();
-						create.setType(cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()));
-						create.arguments().addAll(evalExpr(chain.getInitializerValue()));
-						assign.setRightHandSide(create);
+						ClassInstanceCreation create = jast.newClassCreate()
+								.type(cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()))
+								.withAll(evalExpr(chain.getInitializerValue())).toAST();
+
+						assign.right(create);
 					}
 					else if (chain.getInitializerValue() != null)
 					{
-						assign.setRightHandSide(evalExpr(chain.getInitializerValue()).get(0));
+						assign.right(evalExpr(chain.getInitializerValue()).get(0));
 					}
 					else
 					{
@@ -444,8 +429,7 @@ public class SourceConverterStage2
 					}
 					
 					// Add assignment statements to start of generated method...
-					ExpressionStatement stmt = ast.newExpressionStatement(assign);
-					method.getBody().statements().add(start, stmt);
+					method.toAST().getBody().statements().add(start, ast.newExpressionStatement(assign.toAST()));
 					start++;
 				}
 			}
@@ -453,7 +437,6 @@ public class SourceConverterStage2
 
 		// Now add the method to the appropriate class declaration...
 		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(func.getDeclarator().getName()));
-
 
 		if (decl == null)
 		{
@@ -469,7 +452,7 @@ public class SourceConverterStage2
 			currentDeclarations.put(getQualifiedPart(func.getDeclarator().getName()), decl);
 		}
 		
-		decl.bodyDeclarations().add(method);		
+		decl.bodyDeclarations().add(method.toAST());		
 		
 		// Use this if you want to generate additional
 		// functions for default arguments...
@@ -481,11 +464,11 @@ public class SourceConverterStage2
 	 * For example:
 	 *   int test_with_bit_field : 1;
 	 * would generate:
-	 * 	 public int get__test_with_bit_field()
+	 * 	 int get__test_with_bit_field()
 	 *   {
 	 *	   return __bitfields & 1;
 	 *   }
-	 *   public void set__test_with_bit_field(int val)
+	 *   void set__test_with_bit_field(int val)
 	 *   {
 	 *     __bitfields &= ~1;
 	 *	   __bitfields |= (val << 0) & 1;
@@ -495,70 +478,68 @@ public class SourceConverterStage2
 	{
 		IField ifield = (IField) binding;
 
-		MethodDeclaration methodBit = ast.newMethodDeclaration();
-		methodBit.setReturnType2(cppToJavaType(ifield.getType()));
-		methodBit.setName(ast.newSimpleName("get__" + ifield.getName()));
-		methodBit.modifiers().add(ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+		JASTHelper.MethodDecl methodBit = jast.newMethodDecl()
+				.returnType(cppToJavaType(ifield.getType()))
+				.name("get__" + ifield.getName());
+
+		InfixExpression infix = jast.newInfix()
+				.left(ast.newSimpleName("__bitfields"))
+				.right(jast.newNumber(1))
+				.op(InfixExpression.Operator.AND).toAST();
 		
-		ReturnStatement ret = ast.newReturnStatement();
-		InfixExpression infix = ast.newInfixExpression();
-		infix.setRightOperand(ast.newNumberLiteral(String.valueOf(1)));
-		infix.setLeftOperand(ast.newSimpleName("__bitfields"));
-		infix.setOperator(InfixExpression.Operator.AND);
-		ret.setExpression(infix);
+		ReturnStatement ret = jast.newReturn(infix);
 
 		Block funcBlock = ast.newBlock();
 		funcBlock.statements().add(ret);
-		methodBit.setBody(funcBlock);
+		methodBit.toAST().setBody(funcBlock);
 
 		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(declarator.getName()));
-		decl.bodyDeclarations().add(methodBit);
+		decl.bodyDeclarations().add(methodBit.toAST());
 
-		MethodDeclaration methodSet = ast.newMethodDeclaration();
-		methodSet.setReturnType2(ast.newPrimitiveType(PrimitiveType.VOID));
-		methodSet.setName(ast.newSimpleName("set__" + ifield.getName()));
-		methodSet.modifiers().add(ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+		JASTHelper.MethodDecl methodSet = jast.newMethodDecl()
+				.returnType(ast.newPrimitiveType(PrimitiveType.VOID))
+				.name("set__" + ifield.getName());
 		
 		SingleVariableDeclaration var = ast.newSingleVariableDeclaration();
 		var.setType(cppToJavaType(ifield.getType()));
 		var.setName(ast.newSimpleName("val"));
-		methodSet.parameters().add(var);
+		methodSet.toAST().parameters().add(var);
 
 		PrefixExpression prefix = ast.newPrefixExpression();
 		prefix.setOperator(PrefixExpression.Operator.COMPLEMENT);
 		prefix.setOperand(ast.newNumberLiteral(String.valueOf(1)));
 
-		Assignment assign = ast.newAssignment();
-		assign.setLeftHandSide(ast.newSimpleName("__bitfields"));
-		assign.setRightHandSide(prefix);
-		assign.setOperator(Assignment.Operator.BIT_AND_ASSIGN);
+		Assignment assign = jast.newAssign()
+				.left(ast.newSimpleName("__bitfields"))
+				.right(prefix)
+				.op(Assignment.Operator.BIT_AND_ASSIGN).toAST();
+				
 		ExpressionStatement exprStmt = ast.newExpressionStatement(assign);
 
-		InfixExpression shift = ast.newInfixExpression();
-		shift.setLeftOperand(ast.newSimpleName("val"));
-		shift.setRightOperand(ast.newNumberLiteral(String.valueOf(0)));
-		shift.setOperator(InfixExpression.Operator.LEFT_SHIFT);
+		InfixExpression shift = jast.newInfix()
+				.left(ast.newSimpleName("val"))
+				.right(jast.newNumber(0))
+				.op(InfixExpression.Operator.LEFT_SHIFT).toAST();
 
-		ParenthesizedExpression paren = ast.newParenthesizedExpression();
-		paren.setExpression(shift);
+		ParenthesizedExpression paren = jast.newParen(shift);
 
-		InfixExpression mask = ast.newInfixExpression();
-		mask.setLeftOperand(paren);
-		mask.setRightOperand(ast.newNumberLiteral(String.valueOf(1)));
-		mask.setOperator(InfixExpression.Operator.AND);
+		InfixExpression mask = jast.newInfix()
+				.left(paren)
+				.right(jast.newNumber(1))
+				.op(InfixExpression.Operator.AND).toAST();
 
-		Assignment orequal = ast.newAssignment();
-		orequal.setLeftHandSide(ast.newSimpleName("__bitfields"));
-		orequal.setRightHandSide(mask);
-		orequal.setOperator(Assignment.Operator.BIT_OR_ASSIGN);
+		Assignment orequal = jast.newAssign()
+				.left(ast.newSimpleName("__bitfields"))
+				.right(mask)
+				.op(Assignment.Operator.BIT_OR_ASSIGN).toAST();
 
 		Block funcBlockSet = ast.newBlock();
 		funcBlockSet.statements().add(exprStmt);
 		funcBlockSet.statements().add(ast.newExpressionStatement(orequal));
-		methodSet.setBody(funcBlockSet);
+		methodSet.toAST().setBody(funcBlockSet);
 
 		TypeDeclaration decl2 = currentDeclarations.get(getQualifiedPart(declarator.getName()));
-		decl2.bodyDeclarations().add(methodSet);
+		decl2.bodyDeclarations().add(methodSet.toAST());
 	}
 	
 	/**
@@ -1137,18 +1118,19 @@ public class SourceConverterStage2
 			}
 			else if (lastValue != null)
 			{
-				ParenthesizedExpression paren = ast.newParenthesizedExpression();
-				paren.setExpression(evalExpr(lastValue).get(0));
-				InfixExpression plus = ast.newInfixExpression();
-				plus.setLeftOperand(paren);
-				plus.setOperator(InfixExpression.Operator.PLUS);
-				plus.setRightOperand(ast.newNumberLiteral(String.valueOf(sinceLastValue)));
+				ParenthesizedExpression paren = jast.newParen(evalExpr(lastValue).get(0));
+
+				InfixExpression plus = jast.newInfix()
+						.left(paren)
+						.right(jast.newNumber(sinceLastValue))
+						.op(InfixExpression.Operator.PLUS).toAST();
+
 				enumc.arguments().add(plus);
 				sinceLastValue++;
 			}
 			else
 			{
-				enumc.arguments().add(ast.newNumberLiteral(String.valueOf(i)));
+				enumc.arguments().add(jast.newNumber(i));
 			}
 		}
 
@@ -1168,11 +1150,13 @@ public class SourceConverterStage2
 		var2.setName(ast.newSimpleName("enumVal"));
 		var2.modifiers().add(ast.newModifier(ModifierKeyword.FINAL_KEYWORD));
 		con.parameters().add(var2);
-		Assignment expr = ast.newAssignment();
-		expr.setLeftHandSide(ast.newSimpleName("val"));
-		expr.setRightHandSide(ast.newSimpleName("enumVal"));
-		expr.setOperator(Assignment.Operator.ASSIGN);
+
+		Assignment expr = jast.newAssign()
+				.left(ast.newSimpleName("val"))
+				.right(ast.newSimpleName("enumVal"))
+				.op(Assignment.Operator.ASSIGN).toAST();
 		ExpressionStatement exprStmt = ast.newExpressionStatement(expr);
+
 		Block conblk = ast.newBlock();
 		conblk.statements().add(exprStmt);
 		con.setBody(conblk);
@@ -1212,12 +1196,13 @@ public class SourceConverterStage2
 			}
 			else if (lastValue != null)
 			{
-				ParenthesizedExpression paren = ast.newParenthesizedExpression();
-				paren.setExpression(evalExpr(lastValue).get(0));
-				InfixExpression plus = ast.newInfixExpression();
-				plus.setLeftOperand(paren);
-				plus.setOperator(InfixExpression.Operator.PLUS);
-				plus.setRightOperand(ast.newNumberLiteral(String.valueOf(sinceLastValue)));
+				ParenthesizedExpression paren = jast.newParen(evalExpr(lastValue).get(0));
+				
+				InfixExpression plus = jast.newInfix()
+						.left(paren)
+						.right(jast.newNumber(sinceLastValue))
+						.op(InfixExpression.Operator.PLUS).toAST();
+
 				cs.setExpression(plus);
 				sinceLastValue++;
 			}
@@ -1226,15 +1211,17 @@ public class SourceConverterStage2
 				cs.setExpression(ast.newNumberLiteral(String.valueOf(i)));
 			}
 
-			ReturnStatement ret = ast.newReturnStatement();
-			ret.setExpression(ast.newSimpleName(getSimpleName(enumerators[i].getName())));
+			ReturnStatement ret = jast.newReturn(ast.newSimpleName(getSimpleName(enumerators[i].getName())));
 			switchStmt.statements().add(ret);
 		}
 
 		ThrowStatement throwStmt = ast.newThrowStatement();
-		ClassInstanceCreation create = ast.newClassInstanceCreation();
-		create.setType(ast.newSimpleType(ast.newSimpleName("ClassCastException")));
+
+		ClassInstanceCreation create = jast.newClassCreate()
+				.type(ast.newSimpleType(ast.newSimpleName("ClassCastException"))).toAST();
+				
 		throwStmt.setExpression(create);
+
 		SwitchCase def = ast.newSwitchCase();
 		def.setExpression(null);
 		switchStmt.statements().add(def);
@@ -1458,9 +1445,9 @@ public class SourceConverterStage2
 					TypeEnum type = getTypeEnum(var.getType());
 					if (type == TypeEnum.OTHER || type == TypeEnum.REFERENCE)
 					{
-						ClassInstanceCreation create = ast.newClassInstanceCreation();
-						create.setType(cppToJavaType(var.getType()));
-						create.arguments().addAll(evaluate(decl.getInitializer()));
+						ClassInstanceCreation create = jast.newClassCreate()
+								.type(cppToJavaType(var.getType()))
+								.withAll(evaluate(decl.getInitializer())).toAST();
 
 						MethodInvocation meth = jast.newMethod()
 								.on("StackHelper").call("addItem")
@@ -1748,10 +1735,10 @@ public class SourceConverterStage2
 					Assignment ass = ast.newAssignment();
 					if (!(evalExpr(binaryExpression.getOperand2()).get(0) instanceof ClassInstanceCreation))
 					{
-						ClassInstanceCreation create = ast.newClassInstanceCreation();
-						Type tp = cppToJavaType(bind.getParameters()[0].getType());
-						create.setType(tp);
-						create.arguments().add(evalExpr(binaryExpression.getOperand2()).get(0));
+						ClassInstanceCreation create = jast.newClassCreate()
+								.type(cppToJavaType(bind.getParameters()[0].getType()))
+								.with(evalExpr(binaryExpression.getOperand2()).get(0)).toAST();
+
 						ass.setRightHandSide(create);
 					}
 					else
@@ -1776,18 +1763,20 @@ public class SourceConverterStage2
 			}
 			else if (isAssignmentExpression(binaryExpression.getOperator()))
 			{
-				Assignment assign = ast.newAssignment();
-				assign.setLeftHandSide(evalExpr(binaryExpression.getOperand1()).get(0));
-				assign.setRightHandSide(evalExpr(binaryExpression.getOperand2()).get(0));
-				assign.setOperator(evaluateBinaryAssignmentOperator(binaryExpression.getOperator()));
+				Assignment assign = jast.newAssign()
+						.left(evalExpr(binaryExpression.getOperand1()).get(0))
+						.right(evalExpr(binaryExpression.getOperand2()).get(0))
+						.op(evaluateBinaryAssignmentOperator(binaryExpression.getOperator())).toAST();
+
 				ret.add(assign);
 			}
 			else
 			{
-				InfixExpression infix = ast.newInfixExpression();
-				infix.setLeftOperand(evalExpr(binaryExpression.getOperand1(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY).get(0));
-				infix.setRightOperand(evalExpr(binaryExpression.getOperand2(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY).get(0));
-				infix.setOperator(evaluateBinaryOperator(binaryExpression.getOperator()));
+				InfixExpression infix = jast.newInfix()
+						.left(evalExpr(binaryExpression.getOperand1(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY).get(0))
+						.right(evalExpr(binaryExpression.getOperand2(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY).get(0))
+						.op(evaluateBinaryOperator(binaryExpression.getOperator())).toAST();
+
 				ret.add(infix);
 			}
 		}
@@ -1995,8 +1984,7 @@ public class SourceConverterStage2
 			}
 			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
 			{
-				ParenthesizedExpression paren = ast.newParenthesizedExpression();
-				paren.setExpression(evalExpr(unaryExpression.getOperand()).get(0));
+				ParenthesizedExpression paren = jast.newParen(evalExpr(unaryExpression.getOperand()).get(0));
 				ret.add(paren);
 			}
 			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_star)
@@ -2820,13 +2808,12 @@ public class SourceConverterStage2
 				decl.setType(jType);
 				ret.add(decl);
 
-				Assignment assign = ast.newAssignment();
-				assign.setOperator(Assignment.Operator.ASSIGN);
-				SimpleName nm = ast.newSimpleName(frags.get(0).getName().getIdentifier());
-				assign.setLeftHandSide(nm);
-
 				List<Expression> exprs = evaluateDeclarationReturnInitializers(cppIf.getConditionDeclaration());
-				assign.setRightHandSide(exprs.get(0));
+
+				Assignment assign = jast.newAssign()
+						.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
+						.right(exprs.get(0))
+						.op(Assignment.Operator.ASSIGN).toAST();
 
 				IASTExpression expr = evalDeclarationReturnFirstInitializerExpression(cppIf.getConditionDeclaration());
 				Expression finalExpr = makeExpressionBoolean(assign, expr);
@@ -2867,9 +2854,9 @@ public class SourceConverterStage2
 					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)) &&
 					!(evalExpr(returnStatement.getReturnValue()).get(0) instanceof ClassInstanceCreation)))
 				{
-					ClassInstanceCreation create = ast.newClassInstanceCreation();
-					create.arguments().add(evalExpr(returnStatement.getReturnValue()).get(0));
-					create.setType(cppToJavaType(returnStatement.getReturnValue().getExpressionType()));
+					ClassInstanceCreation create = jast.newClassCreate()
+							.type(cppToJavaType(returnStatement.getReturnValue().getExpressionType()))
+							.with(evalExpr(returnStatement.getReturnValue()).get(0)).toAST();
 					
 					if (m_localVariableId != -1)
 						method.with(create);
@@ -2927,13 +2914,12 @@ public class SourceConverterStage2
 				decl.setType(jType);
 				ret.add(decl);
 
-				Assignment assign = ast.newAssignment();
-				assign.setOperator(Assignment.Operator.ASSIGN);
-				SimpleName nm = ast.newSimpleName(frags.get(0).getName().getIdentifier());
-				assign.setLeftHandSide(nm);
-
 				List<Expression> exprs = evaluateDeclarationReturnInitializers(cppSwitch.getControllerDeclaration());
-				assign.setRightHandSide(exprs.get(0));
+				
+				Assignment assign = jast.newAssign()
+						.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
+						.right(exprs.get(0))
+						.op(Assignment.Operator.ASSIGN).toAST();
 
 				swt.setExpression(assign);
 			}
@@ -2978,18 +2964,15 @@ public class SourceConverterStage2
 				decl.setType(jType);
 				ret.add(decl);
 				
-				Assignment assign = ast.newAssignment();
-				assign.setOperator(Assignment.Operator.ASSIGN);
-				SimpleName nm = ast.newSimpleName(frags.get(0).getName().getIdentifier());
-				assign.setLeftHandSide(nm);
-
 				List<Expression> exprs = evaluateDeclarationReturnInitializers(cppWhile.getConditionDeclaration());
-				assign.setRightHandSide(exprs.get(0));
+				
+				Assignment assign = jast.newAssign()
+						.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
+						.right(exprs.get(0))
+						.op(Assignment.Operator.ASSIGN).toAST();
 
 				IASTExpression expr = evalDeclarationReturnFirstInitializerExpression(cppWhile.getConditionDeclaration());
-				
 				Expression finalExpr = makeExpressionBoolean(assign, expr);
-				
 				whs.setExpression(finalExpr);
 			}
 			else
@@ -3033,11 +3016,11 @@ public class SourceConverterStage2
 		if (expType != TypeEnum.BOOLEAN)
 		{
 			// We enclose the non-boolean expression in brackets to be safe...
-			ParenthesizedExpression paren = ast.newParenthesizedExpression();
-			paren.setExpression(exp);
-			InfixExpression infix = ast.newInfixExpression();
-			infix.setOperator(InfixExpression.Operator.NOT_EQUALS);
-			infix.setLeftOperand(paren);
+			ParenthesizedExpression paren = jast.newParen(exp);
+
+			InfixExpression infix = jast.newInfix()
+					.left(paren)
+					.op(InfixExpression.Operator.NOT_EQUALS).toAST();
 
 			if (expType == TypeEnum.OTHER ||
 				expType == TypeEnum.POINTER ||
@@ -3053,9 +3036,7 @@ public class SourceConverterStage2
 			}
 			else if (expType == TypeEnum.NUMBER)
 			{
-				NumberLiteral num = ast.newNumberLiteral();
-				num.setToken("0");
-				infix.setRightOperand(num);
+				infix.setRightOperand(jast.newNumber(0));
 			}
 			return infix;
 		}
