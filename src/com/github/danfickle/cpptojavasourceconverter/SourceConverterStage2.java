@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -561,7 +562,7 @@ public class SourceConverterStage2
 		FieldDeclaration field = ast.newFieldDeclaration(frag);
 
 		if (ifield.getType().toString().isEmpty())
-			field.setType(ast.newSimpleType(ast.newSimpleName("AnonClass" + (m_anonClassCount - 1))));
+			field.setType(jast.newType("AnonClass" + (m_anonClassCount - 1)));
 		else
 			field.setType(cppToJavaType(ifield.getType()));
 
@@ -583,7 +584,7 @@ public class SourceConverterStage2
 		FieldDeclaration field = ast.newFieldDeclaration(frag);
 
 		if (ifield.getType().toString().isEmpty())
-			field.setType(ast.newSimpleType(ast.newSimpleName("AnonClass" + (m_anonClassCount - 1))));
+			field.setType(jast.newType("AnonClass" + (m_anonClassCount - 1)));
 		else
 			field.setType(cppToJavaType(ifield.getType()));
 
@@ -1027,7 +1028,7 @@ public class SourceConverterStage2
 			IASTNamedTypeSpecifier namedTypeSpecifier = (IASTNamedTypeSpecifier)declSpecifier;
 			print("named type");
 
-			return ast.newSimpleType(ast.newSimpleName(getSimpleName(namedTypeSpecifier.getName())));
+			return jast.newType(getSimpleName(namedTypeSpecifier.getName()));
 
 			//			if (declSpecifier instanceof ICPPASTNamedTypeSpecifier)
 			//			{
@@ -1167,7 +1168,7 @@ public class SourceConverterStage2
 		method.setName(ast.newSimpleName("fromValue"));
 		method.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
 
-		method.setReturnType2(ast.newSimpleType(ast.newSimpleName(finalName)));
+		method.setReturnType2(jast.newType(finalName));
 
 		SingleVariableDeclaration var3 = ast.newSingleVariableDeclaration();
 		var3.setType(ast.newPrimitiveType(PrimitiveType.INT));
@@ -1218,7 +1219,7 @@ public class SourceConverterStage2
 		ThrowStatement throwStmt = ast.newThrowStatement();
 
 		ClassInstanceCreation create = jast.newClassCreate()
-				.type(ast.newSimpleType(ast.newSimpleName("ClassCastException"))).toAST();
+				.type(jast.newType("ClassCastException")).toAST();
 				
 		throwStmt.setExpression(create);
 
@@ -1273,7 +1274,7 @@ public class SourceConverterStage2
 			tyd.typeParameters().addAll(templateParamsQueue);			
 			templateParamsQueue.clear();
 			
-			tyd.superInterfaceTypes().add(ast.newSimpleType(ast.newSimpleName("CppType")));
+			tyd.superInterfaceTypes().add(jast.newType("CppType"));
 			
 			if (compositeTypeSpecifier instanceof ICPPASTCompositeTypeSpecifier)
 			{
@@ -1281,7 +1282,7 @@ public class SourceConverterStage2
 
 				if (cppCompositeTypeSpecifier.getBaseSpecifiers() != null && cppCompositeTypeSpecifier.getBaseSpecifiers().length != 0)
 				{
-					tyd.setSuperclassType(ast.newSimpleType(ast.newSimpleName(getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName()))));
+					tyd.setSuperclassType(jast.newType(getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName())));
 				}
 				
 //				for (ICPPASTBaseSpecifier base : cppCompositeTypeSpecifier.getBaseSpecifiers())
@@ -1840,7 +1841,7 @@ public class SourceConverterStage2
 
 				ClassInstanceCreation create = ast.newClassInstanceCreation();
 				//create.setExpression(evaluate(newExpression.getPlacement()))
-				create.setType(ast.newSimpleType(ast.newSimpleName(con.getName())));
+				create.setType(jast.newType(con.getName()));
 
 				if (functionCallExpression.getParameterExpression() instanceof IASTExpressionList)
 				{
@@ -2651,8 +2652,26 @@ public class SourceConverterStage2
 		{
 			// IASTBreakStatement breakStatement = (IASTBreakStatement) statement;
 			print("break");
+			
+			Block blk = ast.newBlock();
 			BreakStatement brk = ast.newBreakStatement();
-			ret.add(brk);
+
+			int temp = findLastLoopId();
+printerr("temp = " + temp);
+			if (m_localVariableId != -1)
+			{
+				MethodInvocation meth = jast.newMethod()
+						.on("StackHelper")
+						.call("cleanup")
+						.with(ast.newNullLiteral())
+						.with("__stack")
+						.with(temp + 1).toAST();
+
+				blk.statements().add(ast.newExpressionStatement(meth));
+			}
+
+			blk.statements().add(brk);
+			ret.add(blk);
 		}
 		else if (statement instanceof IASTCaseStatement)
 		{
@@ -2702,7 +2721,9 @@ public class SourceConverterStage2
 			IASTCompoundStatement compoundStatement = (IASTCompoundStatement)statement;
 			print("Compound");
 
-			m_localVariableStack.push(m_localVariableId);
+			m_localVariableStack.push(new StackVar(m_localVariableId, m_isLoop));
+			m_isLoop = false;
+			
 			Block block = ast.newBlock();
 			for (IASTStatement childStatement : compoundStatement.getStatements())
 				block.statements().addAll(evalStmt(childStatement));
@@ -2710,7 +2731,7 @@ public class SourceConverterStage2
 			block.statements().addAll(stmtQueue);
 			stmtQueue.clear();
 
-			int temp = m_localVariableStack.pop();
+			int temp = m_localVariableStack.pop().id;
 			
 			if (!block.statements().isEmpty() && 
 				!(block.statements().get(block.statements().size() - 1) instanceof ReturnStatement) &&
@@ -2784,8 +2805,10 @@ public class SourceConverterStage2
 			if (updaters.get(0) != null)
 				fs.updaters().addAll(updaters);
 
+			m_isLoop = true;
 			fs.setBody(evalStmt(forStatement.getBody()).get(0));
-
+			m_isLoop = false;
+			
 			ret.add(fs);
 		}
 		else if (statement instanceof IASTIfStatement)
@@ -3266,7 +3289,7 @@ public class SourceConverterStage2
 			IBasicType basic = (IBasicType) type;
 			
 			if (needBoxed)
-				return ast.newSimpleType(ast.newSimpleName(evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned())));
+				return jast.newType(evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned()));
 			return evaluateSimpleType(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 		}
 		else if (type instanceof IArrayType)
@@ -3278,7 +3301,7 @@ public class SourceConverterStage2
 		else if (type instanceof ICompositeType)
 		{
 			ICompositeType comp = (ICompositeType) type;
-			Type simple = ast.newSimpleType(ast.newSimpleName(getSimpleType(comp.getName())));
+			Type simple = jast.newType(getSimpleType(comp.getName()));
 
 			printerr(comp.getClass().getCanonicalName());
 			
@@ -3307,7 +3330,7 @@ public class SourceConverterStage2
 
 			if (ptrCount == 2)
 			{
-				ParameterizedType paramType = ast.newParameterizedType(ast.newSimpleType(ast.newSimpleName("Ptr")));
+				ParameterizedType paramType = ast.newParameterizedType(jast.newType("Ptr"));
 				paramType.typeArguments().add(cppToJavaType(((IPointerType)pointer.getType()).getType()));
 				return paramType;
 			}
@@ -3320,7 +3343,7 @@ public class SourceConverterStage2
 					basic = (IBasicType) pointer.getType();
 
 				String basicStr = evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
-				SimpleType simpleType = ast.newSimpleType(ast.newSimpleName("Ptr" + basicStr));
+				SimpleType simpleType = jast.newType("Ptr" + basicStr);
 				return simpleType;
 			}
 			else if (ptrCount == 1)
@@ -3346,13 +3369,13 @@ public class SourceConverterStage2
 					basic = (IBasicType) ref.getType();
 
 				String basicStr = evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
-				SimpleType simpleType = ast.newSimpleType(ast.newSimpleName("Ref" + basicStr));
+				SimpleType simpleType = jast.newType("Ref" + basicStr);
 				return simpleType;
 			}
 			else
 			{
-				ParameterizedType paramType = ast.newParameterizedType(ast.newSimpleType(ast.newSimpleName("Ref")));    		  
-				paramType.typeArguments().add(cppToJavaType(ref.getType(), false, true));    		  
+				ParameterizedType paramType = ast.newParameterizedType(jast.newType("Ref"));    		  
+				paramType.typeArguments().add(cppToJavaType(ref.getType(), false, true));  		  
 				return paramType;
 			}
 		}
@@ -3366,7 +3389,7 @@ public class SourceConverterStage2
 			IProblemBinding prob = (IProblemBinding) type;
 			printerr("PROBLEM:" + prob.getMessage() + prob.getFileName() + prob.getLineNumber());
 
-			return ast.newSimpleType(ast.newSimpleName("PROBLEM__"));
+			return jast.newType("PROBLEM__");
 		}
 		else if (type instanceof ITypedef)
 		{
@@ -3376,25 +3399,25 @@ public class SourceConverterStage2
 		else if (type instanceof IEnumeration)
 		{
 			IEnumeration enumeration = (IEnumeration) type;
-			return ast.newSimpleType(ast.newSimpleName(getSimpleType(enumeration.getName())));
+			return jast.newType(getSimpleType(enumeration.getName()));
 		}
 		else if (type instanceof IFunctionType)
 		{
 			IFunctionType func = (IFunctionType) type;
-			return ast.newSimpleType(ast.newSimpleName("FunctionPointer"));
+			return jast.newType("FunctionPointer");
 		}
 		else if (type instanceof IProblemType)
 		{
 			IProblemType prob = (IProblemType)type; 
 			printerr("Problem type: " + prob.getMessage());
 			//exitOnError();
-			return ast.newSimpleType(ast.newSimpleName("PROBLEM"));
+			return jast.newType("PROBLEM");
 		}
 		else if (type instanceof ICPPTemplateTypeParameter)
 		{
 			ICPPTemplateTypeParameter template = (ICPPTemplateTypeParameter) type;
 			print("template type");
-			return ast.newSimpleType(ast.newSimpleName(template.toString()));
+			return jast.newType(template.toString());
 		}
 		else if (type != null)
 		{
@@ -3410,6 +3433,16 @@ public class SourceConverterStage2
 		return bitfields.contains(complete);
 	}
 
+	private int findLastLoopId()
+	{
+		for (StackVar sv : m_localVariableStack)
+			if (sv.isLoop)
+				return sv.id;
+		
+		return -1;
+	}
+	
+	
 	// The Java AST. We need this to create AST nodes...
 	private AST ast;
 	
@@ -3434,7 +3467,22 @@ public class SourceConverterStage2
 	
 	private int m_localVariableMaxId;
 	private int m_localVariableId;
-	private Deque<Integer> m_localVariableStack = new ArrayDeque<Integer>();
+
+	static class StackVar
+	{
+		StackVar(int idi, boolean isloop)
+		{
+			isLoop = isloop;
+			id = idi;
+		}
+
+		final boolean isLoop;
+		final int id;
+	}
+	
+	private Deque<StackVar> m_localVariableStack = new ArrayDeque<StackVar>();
+	
+	private boolean m_isLoop = false;
 	
 	/**
 	 * Traverses the AST of the given translation unit

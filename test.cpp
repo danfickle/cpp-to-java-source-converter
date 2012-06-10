@@ -365,6 +365,45 @@ class test : public foo {
 	}
 
 
+	void func7()
+	{
+		// Test destructor calls on break...
+		for (int i = 0; i < 10; i++)
+		{
+			foo bar;
+
+			if (false)
+				break;
+		}
+
+		// Nothing to cleanup...
+		for (int i = 0; i < 20; i++)
+		{
+			if (true)
+				break;
+
+		}
+
+		// Pre-existing items on stack...
+		foo baz, bug, dog;
+		for (int i = 0; i < 5; i++)
+		{
+			foo house;
+			if (false)
+			{
+				foo car;
+				break;
+			}
+
+		}
+
+
+
+
+	}
+
+
+
 	// Test arrays as class fields...
 	foo foo_bar_array[10];
 	foo foo_baz_array[10][25];
