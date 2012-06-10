@@ -282,11 +282,13 @@ import org.eclipse.text.edits.TextEdit;
  * Copy constructor not always being called.
  * Copy/delete constructor being called on references.
  * Inject stack creation at top of method. TICK.
- * Add arguments to stack.
- * Add return values to stack.
+ * Add arguments to stack. TICK.
+ * Add return values to stack. TICK.
  * Call destruct directly on delete variables. TICK.
  * Cleanup cleanup mechanism for classes.
  * static function with default arguments.
+ * Call cleanup after function call.
+ * Don't cleanup return value.
  */
 
 /**
@@ -1637,6 +1639,13 @@ public class SourceConverterStage2
 		return exprs.get(0);
 	}
 	
+	private Expression eval1Expr(IASTExpression expr, TypeEnum wanted) throws DOMException
+	{
+		List<Expression> exprs = evalExpr(expr, wanted);
+		assert(exprs.size() == 1);
+		return exprs.get(0);
+	}
+	
 	private List<Expression> evalExpr(IASTExpression expression) throws DOMException
 	{
 		return evalExpr(expression, TypeEnum.ANY);
@@ -1762,8 +1771,8 @@ public class SourceConverterStage2
 			else
 			{
 				InfixExpression infix = jast.newInfix()
-						.left(evalExpr(binaryExpression.getOperand1(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY).get(0))
-						.right(evalExpr(binaryExpression.getOperand2(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY).get(0))
+						.left(eval1Expr(binaryExpression.getOperand1(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY))
+						.right(eval1Expr(binaryExpression.getOperand2(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY))
 						.op(evaluateBinaryOperator(binaryExpression.getOperator())).toAST();
 
 				ret.add(infix);
@@ -2644,7 +2653,7 @@ public class SourceConverterStage2
 		return frags;
 	}
 
-	MethodInvocation createCleanupCall(int until)
+	private MethodInvocation createCleanupCall(int until)
 	{
 		MethodInvocation meth = jast.newMethod()
 				.on("StackHelper")
@@ -2662,6 +2671,29 @@ public class SourceConverterStage2
 		return ret.get(0);
 	}
 	
+	private Expression generateDeclarationForWhileIf(IASTDeclaration declaration, List<Statement> ret) throws DOMException
+	{
+		List<VariableDeclarationFragment> frags = getDeclarationFragments(declaration);
+		frags.get(0).setInitializer(null);
+		VariableDeclarationStatement decl = ast.newVariableDeclarationStatement(frags.get(0));
+
+		Type jType = evaluateDeclarationReturnTypes(declaration).get(0);
+		decl.setType(jType);
+		ret.add(decl);
+
+		List<Expression> exprs = evaluateDeclarationReturnInitializers(declaration);
+
+		Assignment assign = jast.newAssign()
+				.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
+				.right(exprs.get(0))
+				.op(Assignment.Operator.ASSIGN).toAST();
+
+		IASTExpression expr = evalDeclarationReturnFirstInitializerExpression(declaration);
+		Expression finalExpr = makeExpressionBoolean(assign, expr);
+		return finalExpr;
+	}
+	
+	
 	/**
 	 * Attempts to convert the given C++ statement to one or more Java statements.
 	 */
@@ -2676,9 +2708,9 @@ public class SourceConverterStage2
 
 			int temp = findLastLoopId();
 
-			if (m_localVariableId != -1)
+			if (temp != -1)
 			{
-				// Cleanup back to the closes loop...
+				// Cleanup back to the closest loop...
 				Block blk = ast.newBlock();
 				blk.statements().add(ast.newExpressionStatement(createCleanupCall(temp + 1)));
 				blk.statements().add(ast.newBreakStatement());
@@ -2701,7 +2733,7 @@ public class SourceConverterStage2
 			print("continue");
 			int temp = findLastLoopId();
 
-			if (m_localVariableId != -1)
+			if (temp != -1)
 			{
 				// Cleanup back to the closest loop...
 				Block blk = ast.newBlock();
@@ -2731,7 +2763,7 @@ public class SourceConverterStage2
 		{
 			// IASTNullStatement nullStatement = (IASTNullStatement) statement;
 			print("Empty statement");
-			ret.add( ast.newEmptyStatement());
+			ret.add(ast.newEmptyStatement());
 		}
 		else if (statement instanceof IASTProblemStatement)
 		{
@@ -2744,6 +2776,7 @@ public class SourceConverterStage2
 			IASTCompoundStatement compoundStatement = (IASTCompoundStatement)statement;
 			print("Compound");
 
+			int temp = m_localVariableId;
 			m_localVariableStack.push(new StackVar(m_localVariableId, m_isLoop));
 			m_isLoop = false;
 			
@@ -2754,11 +2787,11 @@ public class SourceConverterStage2
 			block.statements().addAll(stmtQueue);
 			stmtQueue.clear();
 
-			int temp = m_localVariableStack.pop().id;
-			
-			if (!block.statements().isEmpty() && 
+			if (m_localVariableId != -1 &&
+				!block.statements().isEmpty() && 
 				!(block.statements().get(block.statements().size() - 1) instanceof ReturnStatement) &&
-				m_localVariableId != -1)
+				!(block.statements().get(block.statements().size() - 1) instanceof BreakStatement) &&
+				!(block.statements().get(block.statements().size() - 1) instanceof ContinueStatement))
 			{
 				block.statements().add(ast.newExpressionStatement(createCleanupCall(temp + 1)));
 			}
@@ -2792,8 +2825,7 @@ public class SourceConverterStage2
 			DoStatement dos = ast.newDoStatement();
 			m_isLoop = true;
 			dos.setBody(eval1Stmt(doStatement.getBody()));
-			m_isLoop = false;
-			dos.setExpression(evalExpr(doStatement.getCondition(), TypeEnum.BOOLEAN).get(0));
+			dos.setExpression(eval1Expr(doStatement.getCondition(), TypeEnum.BOOLEAN));
 			ret.add(dos);
 		}
 		else if (statement instanceof IASTExpressionStatement)
@@ -2813,7 +2845,7 @@ public class SourceConverterStage2
 
 			ForStatement fs = ast.newForStatement();
 			List<Expression> inits = evaluateForInitializer(forStatement.getInitializerStatement());
-			Expression expr = evalExpr(forStatement.getConditionExpression(), TypeEnum.BOOLEAN).get(0);
+			Expression expr = eval1Expr(forStatement.getConditionExpression(), TypeEnum.BOOLEAN);
 			List<Expression> updaters = evalExpr(forStatement.getIterationExpression());
 
 			if (inits != null)
@@ -2825,8 +2857,6 @@ public class SourceConverterStage2
 
 			m_isLoop = true;
 			fs.setBody(eval1Stmt(forStatement.getBody()));
-			m_isLoop = false;
-			
 			ret.add(fs);
 		}
 		else if (statement instanceof IASTIfStatement)
@@ -2837,33 +2867,13 @@ public class SourceConverterStage2
 			IfStatement ifs = ast.newIfStatement();
 
 			if (ifStatement instanceof ICPPASTIfStatement &&
-					((ICPPASTIfStatement) ifStatement).getConditionDeclaration() != null)
+				((ICPPASTIfStatement) ifStatement).getConditionDeclaration() != null)
 			{
-				ICPPASTIfStatement cppIf = (ICPPASTIfStatement) ifStatement;
-
-				List<VariableDeclarationFragment> frags = getDeclarationFragments(cppIf.getConditionDeclaration());
-				frags.get(0).setInitializer(null);
-				VariableDeclarationStatement decl = ast.newVariableDeclarationStatement(frags.get(0));
-
-				Type jType = evaluateDeclarationReturnTypes(cppIf.getConditionDeclaration()).get(0);
-				decl.setType(jType);
-				ret.add(decl);
-
-				List<Expression> exprs = evaluateDeclarationReturnInitializers(cppIf.getConditionDeclaration());
-
-				Assignment assign = jast.newAssign()
-						.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
-						.right(exprs.get(0))
-						.op(Assignment.Operator.ASSIGN).toAST();
-
-				IASTExpression expr = evalDeclarationReturnFirstInitializerExpression(cppIf.getConditionDeclaration());
-				Expression finalExpr = makeExpressionBoolean(assign, expr);
-				
-				ifs.setExpression(finalExpr);
+				ifs.setExpression(generateDeclarationForWhileIf(((ICPPASTIfStatement) ifStatement).getConditionDeclaration(), ret));
 			}
 			else
 			{
-				ifs.setExpression(evalExpr(ifStatement.getConditionExpression(), TypeEnum.BOOLEAN).get(0));
+				ifs.setExpression(eval1Expr(ifStatement.getConditionExpression(), TypeEnum.BOOLEAN));
 			}
 
 			ifs.setThenStatement(eval1Stmt(ifStatement.getThenClause()));
@@ -2889,8 +2899,7 @@ public class SourceConverterStage2
 			
 			if (returnStatement.getReturnValue() != null)
 			{
-				if (returnStatement.getReturnValue() != null &&
-					((returnStatement.getReturnValue().getExpressionType() instanceof ICompositeType ||
+				if (((returnStatement.getReturnValue().getExpressionType() instanceof ICompositeType ||
 					(returnStatement.getReturnValue().getExpressionType() instanceof IQualifierType &&
 					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)) &&
 					!(eval1Expr(returnStatement.getReturnValue()) instanceof ClassInstanceCreation)))
@@ -2974,9 +2983,7 @@ public class SourceConverterStage2
 				IASTCompoundStatement compound = (IASTCompoundStatement) switchStatement.getBody();
 				
 				for (IASTStatement stmt : compound.getStatements())
-				{
 					swt.statements().addAll(evalStmt(stmt));
-				}
 			}
 			else
 			{
@@ -2993,35 +3000,16 @@ public class SourceConverterStage2
 			WhileStatement whs = ast.newWhileStatement();
 
 			if (whileStatement instanceof ICPPASTWhileStatement &&
-					((ICPPASTWhileStatement) whileStatement).getConditionDeclaration() != null)
+				((ICPPASTWhileStatement) whileStatement).getConditionDeclaration() != null)
 			{
-				ICPPASTWhileStatement cppWhile = (ICPPASTWhileStatement) whileStatement;
-
-				List<VariableDeclarationFragment> frags = getDeclarationFragments(cppWhile.getConditionDeclaration());
-				frags.get(0).setInitializer(null);
-				VariableDeclarationStatement decl = ast.newVariableDeclarationStatement(frags.get(0));
-
-				Type jType = evaluateDeclarationReturnTypes(cppWhile.getConditionDeclaration()).get(0);
-				decl.setType(jType);
-				ret.add(decl);
-				
-				List<Expression> exprs = evaluateDeclarationReturnInitializers(cppWhile.getConditionDeclaration());
-				
-				Assignment assign = jast.newAssign()
-						.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
-						.right(exprs.get(0))
-						.op(Assignment.Operator.ASSIGN).toAST();
-
-				IASTExpression expr = evalDeclarationReturnFirstInitializerExpression(cppWhile.getConditionDeclaration());
-				Expression finalExpr = makeExpressionBoolean(assign, expr);
-				whs.setExpression(finalExpr);
+				whs.setExpression(generateDeclarationForWhileIf(((ICPPASTWhileStatement)whileStatement).getConditionDeclaration(), ret));
 			}
 			else
 			{
-				whs.setExpression(evalExpr(whileStatement.getCondition(), TypeEnum.BOOLEAN).get(0));
+				whs.setExpression(eval1Expr(whileStatement.getCondition(), TypeEnum.BOOLEAN));
 			}
 
-			whs.setBody(evalStmt(whileStatement.getBody()).get(0));
+			whs.setBody(eval1Stmt(whileStatement.getBody()));
 			ret.add(whs);
 		}
 

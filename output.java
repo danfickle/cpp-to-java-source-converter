@@ -240,10 +240,8 @@ class test extends foo implements CppType {
 		d += 10;
 		switch (d) {
 		case 1:
-		case 2: {
-			StackHelper.cleanup(null, __stack, 0);
+		case 2:
 			break;
-		}
 		default:
 			return StackHelper.cleanup(new foo(foo7), __stack, 0);
 		}
@@ -251,10 +249,7 @@ class test extends foo implements CppType {
 		switch (decl = 1) {
 		case 1:
 			decl += 5;
-			{
-				StackHelper.cleanup(null, __stack, 0);
-				break;
-			}
+			break;
 		}
 		foo6.func_with_defaults_and_definition(100);
 		(foo6).func_with_defaults_and_definition(100, 2);
@@ -284,7 +279,7 @@ class test extends foo implements CppType {
 			for (;;)
 				while (true)
 					;
-		for (int k = 0; (k < 10) != 0; k++)
+		for (int k = 0; k < 10; k++)
 			k *= 10;
 		foo ptr1 = new foo();
 		foo ptr2 = new foo(100);
@@ -306,58 +301,53 @@ class test extends foo implements CppType {
 	}
 
 	void func6(foo a) {
-		Object[] __stack = new Object[3];
-		func6(new foo(1));
+		Object[] __stack = new Object[4];
+		func6(StackHelper.addItem(new foo(1), 0, __stack));
 		{
-			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
-			StackHelper.cleanup(null, __stack, 0);
+			foo foo_bar = StackHelper.addItem(new foo(), 1, __stack);
+			StackHelper.cleanup(null, __stack, 1);
 		}
 		if (true) {
-			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
-			StackHelper.cleanup(null, __stack, 0);
+			foo foo_bar = StackHelper.addItem(new foo(), 1, __stack);
+			StackHelper.cleanup(null, __stack, 1);
 		}
 		while (true) {
-			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
-			StackHelper.cleanup(null, __stack, 0);
+			foo foo_bar = StackHelper.addItem(new foo(), 1, __stack);
+			StackHelper.cleanup(null, __stack, 1);
 		}
 		switch (1) {
 		case 1: {
-			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
-			StackHelper.cleanup(null, __stack, 0);
+			foo foo_bar = StackHelper.addItem(new foo(), 1, __stack);
+			StackHelper.cleanup(null, __stack, 1);
 		}
 		}
 		do {
-			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
-			StackHelper.cleanup(null, __stack, 0);
+			foo foo_bar = StackHelper.addItem(new foo(), 1, __stack);
+			StackHelper.cleanup(null, __stack, 1);
 		} while (false);
 		if (true) {
-			foo foo_bar = StackHelper.addItem(new foo(), 0, __stack);
+			foo foo_bar = StackHelper.addItem(new foo(), 1, __stack);
 			while (true) {
-				foo foo_baz = StackHelper.addItem(new foo(), 1, __stack);
+				foo foo_baz = StackHelper.addItem(new foo(), 2, __stack);
 				for (;;) {
-					foo foo_bug = StackHelper.addItem(new foo(), 2, __stack);
-					StackHelper.cleanup(null, __stack, 2);
+					foo foo_bug = StackHelper.addItem(new foo(), 3, __stack);
+					StackHelper.cleanup(null, __stack, 3);
 				}
-				StackHelper.cleanup(null, __stack, 1);
+				StackHelper.cleanup(null, __stack, 2);
 			}
-			StackHelper.cleanup(null, __stack, 0);
+			StackHelper.cleanup(null, __stack, 1);
 		}
+		StackHelper.cleanup(null, __stack, 0);
 	}
 
 	void func7() {
-		Object[] __stack = new Object[5];
+		Object[] __stack = new Object[6];
 		for (int i = 0; i < 10; i++) {
 			foo bar = StackHelper.addItem(new foo(), 0, __stack);
-			if (false) {
-				StackHelper.cleanup(null, __stack, 0);
+			if (false)
 				break;
-			}
 			if (true) {
-				{
-					StackHelper.cleanup(null, __stack, 0);
-					continue;
-				}
-				StackHelper.cleanup(null, __stack, 1);
+				continue;
 			}
 			StackHelper.cleanup(null, __stack, 0);
 		}
@@ -400,7 +390,17 @@ class test extends foo implements CppType {
 			} while (false);
 			StackHelper.cleanup(null, __stack, 3);
 		}
+		StackHelper.addItem(new foo(1), 3, __stack);
+		func6(StackHelper.addItem(new foo(), 4, __stack));
+		StackHelper.addItem(func8(), 5, __stack);
 		StackHelper.cleanup(null, __stack, 0);
+	}
+
+	foo func8() {
+		Object[] __stack = new Object[2];
+		return StackHelper
+				.cleanup(new foo(StackHelper.addItem(new foo(), 1, __stack)),
+						__stack, 0);
 	}
 
 	foo[] foo_bar_array = StackHelper.addItem(

@@ -285,7 +285,7 @@ class test : public foo {
 				while (true) ;
 
 		// Test for statement with comma operator...
-		for (int k = 0; k < 10, k--;k++)
+		for (int k = 0; k < 10;k++)
 			k *= 10;
 
 		// Test new statement...
@@ -429,7 +429,7 @@ class test : public foo {
 
 	foo func8()
 	{
-		return foo;
+		return foo();
 	}
 
 	// Test arrays as class fields...
@@ -483,5 +483,10 @@ int top_level_int = 5;
 foo top_level_foo(3);
 int * top_level_ptr = new int;
 int * top_level_ptr2 = new int[25];
+
+// Tests TODO
+// comma operator.
+//
+
 
 
