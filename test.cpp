@@ -367,13 +367,18 @@ class test : public foo {
 
 	void func7()
 	{
-		// Test destructor calls on break...
+		// Test destructor calls on break and continue...
 		for (int i = 0; i < 10; i++)
 		{
 			foo bar;
 
 			if (false)
 				break;
+
+			if (true)
+			{
+				continue;
+			}
 		}
 
 		// Nothing to cleanup...
@@ -381,7 +386,8 @@ class test : public foo {
 		{
 			if (true)
 				break;
-
+			else
+				continue;
 		}
 
 		// Pre-existing items on stack...
@@ -394,9 +400,24 @@ class test : public foo {
 				foo car;
 				break;
 			}
-
+			else
+				continue;
 		}
 
+		// Nested loops...
+		while (true)
+		{
+			foo honda;
+			do
+			{
+				foo ferrari;
+
+				if (true)
+					break;
+				else
+					continue;
+			} while (false);
+		}
 
 
 

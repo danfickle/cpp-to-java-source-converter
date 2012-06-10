@@ -169,13 +169,6 @@ import org.eclipse.cdt.core.dom.ast.gnu.cpp.IGPPASTSimpleDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.IGPPBasicType;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.IGPPPointerType;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.IGPPQualifierType;
-import org.eclipse.cdt.internal.core.dom.parser.IASTAmbiguousDeclarator;
-import org.eclipse.cdt.internal.core.dom.parser.IASTAmbiguousExpression;
-import org.eclipse.cdt.internal.core.dom.parser.IASTAmbiguousStatement;
-import org.eclipse.cdt.internal.core.dom.parser.ITypeContainer;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPEnumeration;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.IASTAmbiguousCondition;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ArrayAccess;
@@ -377,7 +370,7 @@ public class SourceConverterStage2
 		
 		m_localVariableMaxId = -1;
 		m_localVariableId = -1;
-		method.toAST().setBody((Block) evalStmt(func.getBody()).get(0));
+		method.toAST().setBody((Block) eval1Stmt(func.getBody()));
 
 		if (m_localVariableMaxId != -1)
 		{
@@ -412,7 +405,7 @@ public class SourceConverterStage2
 					// We may have to call a constructor... 
 					if ((chain.getMemberInitializerId().resolveBinding() instanceof IVariable &&
 						((IVariable)chain.getMemberInitializerId().resolveBinding()).getType() instanceof ICompositeType) &&
-						!(evalExpr(chain.getInitializerValue()).get(0) instanceof ClassInstanceCreation))
+						!(eval1Expr(chain.getInitializerValue()) instanceof ClassInstanceCreation))
 					{
 						ClassInstanceCreation create = jast.newClassCreate()
 								.type(cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()))
@@ -422,7 +415,7 @@ public class SourceConverterStage2
 					}
 					else if (chain.getInitializerValue() != null)
 					{
-						assign.right(evalExpr(chain.getInitializerValue()).get(0));
+						assign.right(eval1Expr(chain.getInitializerValue()));
 					}
 					else
 					{
@@ -1113,13 +1106,13 @@ public class SourceConverterStage2
 
 			if (enumerators[i].getValue() != null)
 			{
-				enumc.arguments().add(evalExpr(enumerators[i].getValue()).get(0));				
+				enumc.arguments().add(eval1Expr(enumerators[i].getValue()));
 				lastValue = enumerators[i].getValue();
 				sinceLastValue = 1;
 			}
 			else if (lastValue != null)
 			{
-				ParenthesizedExpression paren = jast.newParen(evalExpr(lastValue).get(0));
+				ParenthesizedExpression paren = jast.newParen(eval1Expr(lastValue));
 
 				InfixExpression plus = jast.newInfix()
 						.left(paren)
@@ -1191,13 +1184,13 @@ public class SourceConverterStage2
 
 			if (enumerators[i].getValue() != null)
 			{
-				cs.setExpression(evalExpr(enumerators[i].getValue()).get(0));				
+				cs.setExpression(eval1Expr(enumerators[i].getValue()));				
 				lastValue = enumerators[i].getValue();
 				sinceLastValue = 1;
 			}
 			else if (lastValue != null)
 			{
-				ParenthesizedExpression paren = jast.newParen(evalExpr(lastValue).get(0));
+				ParenthesizedExpression paren = jast.newParen(eval1Expr(lastValue));
 				
 				InfixExpression plus = jast.newInfix()
 						.left(paren)
@@ -1460,7 +1453,7 @@ public class SourceConverterStage2
 						if (m_localVariableId > m_localVariableMaxId)
 							m_localVariableMaxId = m_localVariableId;
 						
-						ret.add(ret.size() - 1, meth);
+						ret.set(ret.size() - 1, meth);
 					}
 					else if (type == TypeEnum.ARRAY)
 					{
@@ -1482,16 +1475,16 @@ public class SourceConverterStage2
 							if (m_localVariableId > m_localVariableMaxId)
 								m_localVariableMaxId = m_localVariableId;
 
-							ret.add(ret.size() - 1, meth);
+							ret.set(ret.size() - 1, meth);
 						}
 						else
-							ret.add(ret.size() - 1, ex);
+							ret.set(ret.size() - 1, ex);
 					}
 					else
 					{
 						List<Expression> exprs = evaluate(decl.getInitializer());
 						if (!exprs.isEmpty())
-							ret.add(ret.size() - 1, evaluate(decl.getInitializer()).get(0));	
+							ret.set(ret.size() - 1, evaluate(decl.getInitializer()).get(0));	
 					}
 				}
 			}
@@ -1636,6 +1629,13 @@ public class SourceConverterStage2
 		}
 	}
 
+	private Expression eval1Expr(IASTExpression expr) throws DOMException
+	{
+		List<Expression> exprs = evalExpr(expr);
+		assert(exprs.size() == 1);
+		return exprs.get(0);
+	}
+	
 	private List<Expression> evalExpr(IASTExpression expression) throws DOMException
 	{
 		return evalExpr(expression, TypeEnum.ANY);
@@ -1650,20 +1650,7 @@ public class SourceConverterStage2
 		List<Expression> ret = new ArrayList<Expression>();
 		boolean fNeedBooleans = (wanted == TypeEnum.BOOLEAN);
 
-		if (expression instanceof IASTAmbiguousCondition)
-		{
-			//IASTAmbiguousCondition ambiguousCondition = (IASTAmbiguousCondition) expression;
-			print("Ambiguous condition");
-		}
-		else if (expression instanceof IASTAmbiguousExpression)
-		{
-			IASTAmbiguousExpression ambiguousExpression = (IASTAmbiguousExpression)expression;
-			print("Ambiguous expression");
-
-			for (IASTExpression childExpression : ambiguousExpression.getExpressions())
-				evalExpr(childExpression);
-		}
-		else if (expression instanceof IASTLiteralExpression)
+		if (expression instanceof IASTLiteralExpression)
 		{
 			IASTLiteralExpression literal = (IASTLiteralExpression) expression;
 
@@ -1709,8 +1696,8 @@ public class SourceConverterStage2
 			print("Array subscript");
 
 			ArrayAccess array = ast.newArrayAccess(); 
-			array.setArray(evalExpr(arraySubscriptExpression.getArrayExpression()).get(0));
-			array.setIndex(evalExpr(arraySubscriptExpression.getSubscriptExpression()).get(0));
+			array.setArray(eval1Expr(arraySubscriptExpression.getArrayExpression()));
+			array.setIndex(eval1Expr(arraySubscriptExpression.getSubscriptExpression()));
 			ret.add(array);
 		}
 		else if (expression instanceof IASTBinaryExpression)
@@ -1734,20 +1721,20 @@ public class SourceConverterStage2
 					ICPPMethod bind = (ICPPMethod) ((IASTImplicitNameOwner)expression).getImplicitNames()[0].resolveBinding();
 
 					Assignment ass = ast.newAssignment();
-					if (!(evalExpr(binaryExpression.getOperand2()).get(0) instanceof ClassInstanceCreation))
+					if (!(eval1Expr(binaryExpression.getOperand2()) instanceof ClassInstanceCreation))
 					{
 						ClassInstanceCreation create = jast.newClassCreate()
 								.type(cppToJavaType(bind.getParameters()[0].getType()))
-								.with(evalExpr(binaryExpression.getOperand2()).get(0)).toAST();
+								.with(eval1Expr(binaryExpression.getOperand2())).toAST();
 
 						ass.setRightHandSide(create);
 					}
 					else
 					{
-						ass.setRightHandSide(evalExpr(binaryExpression.getOperand2()).get(0));
+						ass.setRightHandSide(eval1Expr(binaryExpression.getOperand2()));
 					}
 
-					ass.setLeftHandSide(evalExpr(binaryExpression.getOperand1()).get(0));
+					ass.setLeftHandSide(eval1Expr(binaryExpression.getOperand1()));
 					ret.add(ass);
 				}
 				else
@@ -1755,9 +1742,9 @@ public class SourceConverterStage2
 					replace = normalizeName(name);
 
 					MethodInvocation method = jast.newMethod()
-							.on(evalExpr(binaryExpression.getOperand1()).get(0))
+							.on(eval1Expr(binaryExpression.getOperand1()))
 							.call(replace)
-							.with(evalExpr(binaryExpression.getOperand2()).get(0)).toAST();
+							.with(eval1Expr(binaryExpression.getOperand2())).toAST();
 
 					ret.add(method);
 				}
@@ -1765,8 +1752,8 @@ public class SourceConverterStage2
 			else if (isAssignmentExpression(binaryExpression.getOperator()))
 			{
 				Assignment assign = jast.newAssign()
-						.left(evalExpr(binaryExpression.getOperand1()).get(0))
-						.right(evalExpr(binaryExpression.getOperand2()).get(0))
+						.left(eval1Expr(binaryExpression.getOperand1()))
+						.right(eval1Expr(binaryExpression.getOperand2()))
 						.op(evaluateBinaryAssignmentOperator(binaryExpression.getOperator())).toAST();
 
 				ret.add(assign);
@@ -1787,7 +1774,7 @@ public class SourceConverterStage2
 			print("cast");
 
 			CastExpression cast = ast.newCastExpression();
-			cast.setExpression(evalExpr(castExpression.getOperand()).get(0));
+			cast.setExpression(eval1Expr(castExpression.getOperand()));
 			cast.setType(evalTypeId(castExpression.getTypeId()));
 			ret.add(cast);
 		}
@@ -1797,9 +1784,9 @@ public class SourceConverterStage2
 			print("conditional");
 
 			ConditionalExpression conditional = ast.newConditionalExpression();
-			conditional.setExpression(evalExpr(conditionalExpression.getLogicalConditionExpression()).get(0));
-			conditional.setThenExpression(evalExpr(conditionalExpression.getPositiveResultExpression()).get(0));
-			conditional.setElseExpression(evalExpr(conditionalExpression.getNegativeResultExpression()).get(0));
+			conditional.setExpression(eval1Expr(conditionalExpression.getLogicalConditionExpression()));
+			conditional.setThenExpression(eval1Expr(conditionalExpression.getPositiveResultExpression()));
+			conditional.setElseExpression(eval1Expr(conditionalExpression.getNegativeResultExpression()));
 			ret.add(conditional);
 		}
 
@@ -1814,7 +1801,7 @@ public class SourceConverterStage2
 			print(binding.getName());
 			
 			FieldAccess field = ast.newFieldAccess();
-			field.setExpression(evalExpr(fieldReference.getFieldOwner()).get(0));
+			field.setExpression(eval1Expr(fieldReference.getFieldOwner()));
 			field.setName(ast.newSimpleName(getSimpleName(fieldReference.getFieldName())));
 
 			if (binding instanceof IEnumerator)
@@ -1865,7 +1852,7 @@ public class SourceConverterStage2
 				{
 					IASTFieldReference fr = (IASTFieldReference) functionCallExpression.getFunctionNameExpression();
 
-					method.on(evalExpr(fr.getFieldOwner()).get(0))
+					method.on(eval1Expr(fr.getFieldOwner()))
 						.call(getSimpleName(fr.getFieldName()));
 				}
 				else if (functionCallExpression.getFunctionNameExpression() instanceof IASTIdExpression)
@@ -1973,19 +1960,19 @@ public class SourceConverterStage2
 			{
 				PostfixExpression post = ast.newPostfixExpression();
 				post.setOperator(evalUnaryPostfixOperator(unaryExpression.getOperator()));
-				post.setOperand(evalExpr(unaryExpression.getOperand()).get(0));
+				post.setOperand(eval1Expr(unaryExpression.getOperand()));
 				ret.add(post);
 			}
 			else if (isPrefixExpression(unaryExpression.getOperator()))
 			{
 				PrefixExpression pre = ast.newPrefixExpression();
 				pre.setOperator(evalUnaryPrefixOperator(unaryExpression.getOperator()));
-				pre.setOperand(evalExpr(unaryExpression.getOperand()).get(0));
+				pre.setOperand(eval1Expr(unaryExpression.getOperand()));
 				ret.add(pre);
 			}
 			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
 			{
-				ParenthesizedExpression paren = jast.newParen(evalExpr(unaryExpression.getOperand()).get(0));
+				ParenthesizedExpression paren = jast.newParen(eval1Expr(unaryExpression.getOperand()));
 				ret.add(paren);
 			}
 			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_star)
@@ -2022,7 +2009,7 @@ public class SourceConverterStage2
 			{
 				// Call ptr.destruct()...				
 				ret.add(jast.newMethod()
-						.on(evalExpr(deleteExpression.getOperand()).get(0), true)
+						.on(eval1Expr(deleteExpression.getOperand()), true)
 						.call("destruct").toAST());
 			}
 			else
@@ -2081,7 +2068,7 @@ public class SourceConverterStage2
 				List<Expression> sizeExprs = new ArrayList<Expression>();
 				for (IASTExpression arraySize : newExpression.getNewTypeIdArrayExpressions())
 				{
-					sizeExprs.add(evalExpr(arraySize).get(0));
+					sizeExprs.add(eval1Expr(arraySize));
 				}
 				Expression ex = generateArrayCreationExpression(newExpression.getExpressionType(), sizeExprs);
 				ret.add(ex);
@@ -2630,6 +2617,24 @@ public class SourceConverterStage2
 		return frags;
 	}
 
+	MethodInvocation createCleanupCall(int until)
+	{
+		MethodInvocation meth = jast.newMethod()
+				.on("StackHelper")
+				.call("cleanup")
+				.with(ast.newNullLiteral())
+				.with("__stack")
+				.with(until).toAST();		
+		return meth;
+	}
+	
+	private Statement eval1Stmt(IASTStatement stmt) throws DOMException
+	{
+		List<Statement> ret = evalStmt(stmt);
+		assert(ret.size() == 1);
+		return ret.get(0);
+	}
+	
 	/**
 	 * Attempts to convert the given C++ statement to one or more Java statements.
 	 */
@@ -2637,56 +2642,48 @@ public class SourceConverterStage2
 	{
 		List<Statement> ret = new ArrayList<Statement>();
 
-		if (statement instanceof IASTAmbiguousStatement)
-		{
-			IASTAmbiguousStatement ambiguousStatement = (IASTAmbiguousStatement)statement;
-			print("Ambiguous");
-
-			Block blk = ast.newBlock();
-			for (IASTStatement childStatement : ambiguousStatement.getStatements())
-				blk.statements().addAll(evalStmt(childStatement));
-
-			ret.add(blk);
-		}
-		else if (statement instanceof IASTBreakStatement)
+		if (statement instanceof IASTBreakStatement)
 		{
 			// IASTBreakStatement breakStatement = (IASTBreakStatement) statement;
 			print("break");
-			
-			Block blk = ast.newBlock();
-			BreakStatement brk = ast.newBreakStatement();
 
 			int temp = findLastLoopId();
-printerr("temp = " + temp);
+
 			if (m_localVariableId != -1)
 			{
-				MethodInvocation meth = jast.newMethod()
-						.on("StackHelper")
-						.call("cleanup")
-						.with(ast.newNullLiteral())
-						.with("__stack")
-						.with(temp + 1).toAST();
-
-				blk.statements().add(ast.newExpressionStatement(meth));
+				// Cleanup back to the closes loop...
+				Block blk = ast.newBlock();
+				blk.statements().add(ast.newExpressionStatement(createCleanupCall(temp + 1)));
+				blk.statements().add(ast.newBreakStatement());
+				ret.add(blk);
 			}
-
-			blk.statements().add(brk);
-			ret.add(blk);
+			else
+				ret.add(ast.newBreakStatement());
 		}
 		else if (statement instanceof IASTCaseStatement)
 		{
 			IASTCaseStatement caseStatement = (IASTCaseStatement) statement;
 			print("case");
 			SwitchCase cs = ast.newSwitchCase();
-			cs.setExpression(evalExpr(caseStatement.getExpression()).get(0));
+			cs.setExpression(eval1Expr(caseStatement.getExpression()));
 			ret.add(cs);
 		}
 		else if (statement instanceof IASTContinueStatement)
 		{
 			// IASTContinueStatement contStatement = (IASTContinueStatement) statement;
 			print("continue");
-			ContinueStatement con = ast.newContinueStatement();
-			ret.add(con);
+			int temp = findLastLoopId();
+
+			if (m_localVariableId != -1)
+			{
+				// Cleanup back to the closest loop...
+				Block blk = ast.newBlock();
+				blk.statements().add(ast.newExpressionStatement(createCleanupCall(temp + 1)));
+				blk.statements().add(ast.newContinueStatement());
+				ret.add(blk);
+			}
+			else
+				ret.add(ast.newContinueStatement());
 		}
 		else if (statement instanceof IASTDefaultStatement)
 		{
@@ -2706,9 +2703,8 @@ printerr("temp = " + temp);
 		else if (statement instanceof IASTNullStatement)
 		{
 			// IASTNullStatement nullStatement = (IASTNullStatement) statement;
-			print("null");
-			EmptyStatement empty = ast.newEmptyStatement();
-			ret.add(empty);
+			print("Empty statement");
+			ret.add( ast.newEmptyStatement());
 		}
 		else if (statement instanceof IASTProblemStatement)
 		{
@@ -2737,14 +2733,7 @@ printerr("temp = " + temp);
 				!(block.statements().get(block.statements().size() - 1) instanceof ReturnStatement) &&
 				m_localVariableId != -1)
 			{
-				MethodInvocation meth = jast.newMethod()
-						.on("StackHelper")
-						.call("cleanup")
-						.with(ast.newNullLiteral())
-						.with("__stack")
-						.with(temp + 1).toAST();
-
-				block.statements().add(ast.newExpressionStatement(meth));
+				block.statements().add(ast.newExpressionStatement(createCleanupCall(temp + 1)));
 			}
 
 			m_localVariableId = temp;
@@ -2774,7 +2763,9 @@ printerr("temp = " + temp);
 			print("Do");
 
 			DoStatement dos = ast.newDoStatement();
-			dos.setBody(evalStmt(doStatement.getBody()).get(0));
+			m_isLoop = true;
+			dos.setBody(eval1Stmt(doStatement.getBody()));
+			m_isLoop = false;
 			dos.setExpression(evalExpr(doStatement.getCondition(), TypeEnum.BOOLEAN).get(0));
 			ret.add(dos);
 		}
@@ -2783,7 +2774,7 @@ printerr("temp = " + temp);
 			IASTExpressionStatement expressionStatement = (IASTExpressionStatement)statement;
 			print("Expression");
 
-			ret.add(ast.newExpressionStatement(evalExpr(expressionStatement.getExpression()).get(0)));
+			ret.add(ast.newExpressionStatement(eval1Expr(expressionStatement.getExpression())));
 		}
 		else if (statement instanceof IASTForStatement)
 		{
@@ -2806,7 +2797,7 @@ printerr("temp = " + temp);
 				fs.updaters().addAll(updaters);
 
 			m_isLoop = true;
-			fs.setBody(evalStmt(forStatement.getBody()).get(0));
+			fs.setBody(eval1Stmt(forStatement.getBody()));
 			m_isLoop = false;
 			
 			ret.add(fs);
@@ -2848,7 +2839,7 @@ printerr("temp = " + temp);
 				ifs.setExpression(evalExpr(ifStatement.getConditionExpression(), TypeEnum.BOOLEAN).get(0));
 			}
 
-			ifs.setThenStatement(evalStmt(ifStatement.getThenClause()).get(0));
+			ifs.setThenStatement(eval1Stmt(ifStatement.getThenClause()));
 			List<Statement> elseStmts = evalStmt(ifStatement.getElseClause());
 			ifs.setElseStatement(!elseStmts.isEmpty() ? elseStmts.get(0) : null);
 			ret.add(ifs);
@@ -2875,11 +2866,11 @@ printerr("temp = " + temp);
 					((returnStatement.getReturnValue().getExpressionType() instanceof ICompositeType ||
 					(returnStatement.getReturnValue().getExpressionType() instanceof IQualifierType &&
 					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)) &&
-					!(evalExpr(returnStatement.getReturnValue()).get(0) instanceof ClassInstanceCreation)))
+					!(eval1Expr(returnStatement.getReturnValue()) instanceof ClassInstanceCreation)))
 				{
 					ClassInstanceCreation create = jast.newClassCreate()
 							.type(cppToJavaType(returnStatement.getReturnValue().getExpressionType()))
-							.with(evalExpr(returnStatement.getReturnValue()).get(0)).toAST();
+							.with(eval1Expr(returnStatement.getReturnValue())).toAST();
 					
 					if (m_localVariableId != -1)
 						method.with(create);
@@ -2889,9 +2880,9 @@ printerr("temp = " + temp);
 				else
 				{
 					if (m_localVariableId != -1)
-						method.with(evalExpr(returnStatement.getReturnValue()).get(0));
+						method.with(eval1Expr(returnStatement.getReturnValue()));
 					else
-						ret2.setExpression(evalExpr(returnStatement.getReturnValue()).get(0));
+						ret2.setExpression(eval1Expr(returnStatement.getReturnValue()));
 				}	
 
 				if (m_localVariableId != -1)
@@ -3209,12 +3200,12 @@ printerr("temp = " + temp);
 		List<Expression> ret = new ArrayList<Expression>();
 
 		IArrayType arr = (IArrayType) type;
-		ret.add(evalExpr(arr.getArraySizeExpression()).get(0));
+		ret.add(eval1Expr(arr.getArraySizeExpression()));
 
 		while (arr.getType() instanceof IArrayType)
 		{
 			IArrayType arr2 = (IArrayType) arr.getType();
-			ret.add(evalExpr(arr2.getArraySizeExpression()).get(0));
+			ret.add(eval1Expr(arr2.getArraySizeExpression()));
 			arr = arr2;
 		}
 
