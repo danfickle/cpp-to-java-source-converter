@@ -329,25 +329,25 @@ public class SourceConverterStage2
 				methodDef.parameters().add(list.get(k2));
 
 			Block funcBlockDef = ast.newBlock();
-			MethodInvocation methodInvoc = ast.newMethodInvocation();
-			methodInvoc.setName(ast.newSimpleName(getSimpleName(func.getName())));
+			JASTHelper.Method method = jast.newMethod()
+					.call(getSimpleName(func.getName()));
 
 			List<SimpleName> names = getArgumentNames(funcBinding);
 			for (int k3 = 0; k3 < k; k3++)
-				methodInvoc.arguments().add(names.get(k3));
+				method.with(names.get(k3));
 
 			List<Expression> vals = getDefaultValues(func);
 			for (int k4 = k; k4 < defaultValues.size(); k4++)
-				methodInvoc.arguments().add(vals.get(k4));
+				method.with(vals.get(k4));
 
 			if (evalReturnType(funcBinding).toString().equals("void"))
 			{
-				funcBlockDef.statements().add(ast.newExpressionStatement(methodInvoc));
+				funcBlockDef.statements().add(ast.newExpressionStatement(method.toAST()));
 			}
 			else
 			{
 				ReturnStatement ret2 = ast.newReturnStatement();
-				ret2.setExpression(methodInvoc);
+				ret2.setExpression(method.toAST());
 				funcBlockDef.statements().add(ret2);
 			}
 
@@ -1407,16 +1407,14 @@ public class SourceConverterStage2
 
 		if (!isBasic)
 		{
-			MethodInvocation method = ast.newMethodInvocation();
-			method.setExpression(ast.newSimpleName("CreateHelper"));
-			method.setName(ast.newSimpleName("allocateArray"));
-			
 			TypeLiteral tl = ast.newTypeLiteral();
 			tl.setType(jtp);
-		
-			method.arguments().add(tl);
-			method.arguments().addAll(sizeExprs);
-			return method;
+
+			return jast.newMethod()
+					.on("CreateHelper")
+					.call("allocateArray")
+					.with(tl)
+					.withArguments(sizeExprs).toAST();
 		}
 		else
 		{
@@ -1466,18 +1464,16 @@ public class SourceConverterStage2
 						create.setType(cppToJavaType(var.getType()));
 						create.arguments().addAll(evaluate(decl.getInitializer()));
 
-						MethodInvocation meth = ast.newMethodInvocation();
-						meth.setExpression(ast.newSimpleName("StackHelper"));
-						meth.setName(ast.newSimpleName("addItem"));
-						meth.arguments().add(create);
-						meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId + 1)));
+						MethodInvocation meth = jast.newMethod()
+								.on("StackHelper").call("addItem")
+								.with(create)
+								.with(m_localVariableId + 1)
+								.with("__stack").toAST();
 
 						m_localVariableId++;
 						if (m_localVariableId > m_localVariableMaxId)
 							m_localVariableMaxId = m_localVariableId;
-
 						
-						meth.arguments().add(ast.newSimpleName("__stack"));
 						ret.add(ret.size() - 1, meth);
 					}
 					else if (type == TypeEnum.ARRAY)
@@ -1489,17 +1485,17 @@ public class SourceConverterStage2
 						
 						if (te == TypeEnum.OTHER || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER)
 						{
-							MethodInvocation meth = ast.newMethodInvocation();
-							meth.setExpression(ast.newSimpleName("StackHelper"));
-							meth.setName(ast.newSimpleName("addItem"));
-							meth.arguments().add(ex);
-							meth.arguments().add(ast.newNumberLiteral(String.valueOf(m_localVariableId + 1)));
+							MethodInvocation meth = jast.newMethod()
+									.on("StackHelper")
+									.call("addItem")
+									.with(ex)
+									.with(m_localVariableId + 1)
+									.with("__stack").toAST();
 
 							m_localVariableId++;
 							if (m_localVariableId > m_localVariableMaxId)
 								m_localVariableMaxId = m_localVariableId;
-							
-							meth.arguments().add(ast.newSimpleName("__stack"));
+
 							ret.add(ret.size() - 1, meth);
 						}
 						else
@@ -1772,10 +1768,11 @@ public class SourceConverterStage2
 				{
 					replace = normalizeName(name);
 
-					MethodInvocation method = ast.newMethodInvocation();
-					method.setExpression(evalExpr(binaryExpression.getOperand1()).get(0));
-					method.arguments().add(evalExpr(binaryExpression.getOperand2()).get(0));
-					method.setName(ast.newSimpleName(replace));
+					MethodInvocation method = jast.newMethod()
+							.on(evalExpr(binaryExpression.getOperand1()).get(0))
+							.call(replace)
+							.with(evalExpr(binaryExpression.getOperand2()).get(0)).toAST();
+
 					ret.add(method);
 				}
 			}
@@ -1875,13 +1872,13 @@ public class SourceConverterStage2
 			}
 			else
 			{
-				MethodInvocation method = ast.newMethodInvocation();
+				JASTHelper.Method method = jast.newMethod();
 				if (functionCallExpression.getFunctionNameExpression() instanceof IASTFieldReference)
 				{
 					IASTFieldReference fr = (IASTFieldReference) functionCallExpression.getFunctionNameExpression();
 
-					method.setExpression(evalExpr(fr.getFieldOwner()).get(0));
-					method.setName(ast.newSimpleName(getSimpleName(fr.getFieldName())));
+					method.on(evalExpr(fr.getFieldOwner()).get(0))
+						.call(getSimpleName(fr.getFieldName()));
 				}
 				else if (functionCallExpression.getFunctionNameExpression() instanceof IASTIdExpression)
 				{
@@ -1889,11 +1886,10 @@ public class SourceConverterStage2
 
 					if (getSimpleName(id.getName()).equals("max") || getSimpleName(id.getName()).equals("min"))
 					{
-						method.setExpression(ast.newSimpleName("Math"));
+						method.on("Math");
 					}
 
-					//method.setExpression(ast.newSimpleName("Globals"));
-					method.setName(ast.newSimpleName(getSimpleName(id.getName())));
+					method.call(getSimpleName(id.getName()));
 				}
 
 				if (functionCallExpression.getParameterExpression() == null)
@@ -1905,14 +1901,14 @@ public class SourceConverterStage2
 					IASTExpressionList list = (IASTExpressionList) functionCallExpression.getParameterExpression();
 					for (IASTExpression arg : list.getExpressions())
 					{
-						method.arguments().addAll(evalExpr(arg));
+						method.withArguments(evalExpr(arg));
 					}
 				}
 				else if (functionCallExpression.getParameterExpression() instanceof IASTExpression)
 				{
-					method.arguments().addAll(evalExpr(functionCallExpression.getParameterExpression()));
+					method.withArguments(evalExpr(functionCallExpression.getParameterExpression()));
 				}
-				ret.add(method);
+				ret.add(method.toAST());
 			}
 		}
 		else if (expression instanceof IASTIdExpression)
@@ -1923,8 +1919,7 @@ public class SourceConverterStage2
 			if (isBitfield(idExpression.getName()))
 			{
 				print("Got bitifield");
-				MethodInvocation methodGet = ast.newMethodInvocation();
-				methodGet.setName(ast.newSimpleName("get__" + getSimpleName(idExpression.getName())));
+				MethodInvocation methodGet = jast.newMethod().call("get__" + getSimpleName(idExpression.getName())).toAST();
 				ret.add(methodGet);
 			}
 			else
@@ -2039,20 +2034,17 @@ public class SourceConverterStage2
 			if (!deleteExpression.isVectored())
 			{
 				// Call ptr.destruct()...				
-				MethodInvocation method = ast.newMethodInvocation();
-				method.setExpression(evalExpr(deleteExpression.getOperand()).get(0));
-				method.setName(ast.newSimpleName("destruct"));
-				ret.add(method);
+				ret.add(jast.newMethod()
+						.on(evalExpr(deleteExpression.getOperand()).get(0), true)
+						.call("destruct").toAST());
 			}
 			else
 			{
 				// Call DestructHelper.destructArray(array)...
-				MethodInvocation method = ast.newMethodInvocation();
-				method.setExpression(ast.newSimpleName("DestructHelper"));
-				method.setName(ast.newSimpleName("destructArray"));
-				Expression cls = evalExpr(deleteExpression.getOperand()).get(0);
-				method.arguments().add(cls);
-				ret.add(method);
+				ret.add(jast.newMethod()
+						.on("DestructHelper")
+						.call("destructArray")
+						.with(evalExpr(deleteExpression.getOperand()).get(0)).toAST());
 			}
 		}
 		else if (expression instanceof ICPPASTNewExpression)
@@ -2738,12 +2730,13 @@ public class SourceConverterStage2
 				!(block.statements().get(block.statements().size() - 1) instanceof ReturnStatement) &&
 				m_localVariableId != -1)
 			{
-				MethodInvocation meth = ast.newMethodInvocation();
-				meth.setExpression(ast.newSimpleName("StackHelper"));
-				meth.setName(ast.newSimpleName("cleanup"));
-				meth.arguments().add(ast.newNullLiteral());
-				meth.arguments().add(ast.newSimpleName("__stack"));
-				meth.arguments().add(ast.newNumberLiteral(String.valueOf(temp + 1)));
+				MethodInvocation meth = jast.newMethod()
+						.on("StackHelper")
+						.call("cleanup")
+						.with(ast.newNullLiteral())
+						.with("__stack")
+						.with(temp + 1).toAST();
+
 				block.statements().add(ast.newExpressionStatement(meth));
 			}
 
@@ -2863,9 +2856,9 @@ public class SourceConverterStage2
 			IASTReturnStatement returnStatement = (IASTReturnStatement)statement;
 			print("return");
 
-			MethodInvocation method = ast.newMethodInvocation();
-			method.setExpression(ast.newSimpleName("StackHelper"));
-			method.setName(ast.newSimpleName("cleanup"));
+			JASTHelper.Method method = jast.newMethod()
+						.on("StackHelper")
+						.call("cleanup");
 			ReturnStatement ret2 = ast.newReturnStatement();
 			
 			if (returnStatement.getReturnValue() != null)
@@ -2881,23 +2874,22 @@ public class SourceConverterStage2
 					create.setType(cppToJavaType(returnStatement.getReturnValue().getExpressionType()));
 					
 					if (m_localVariableId != -1)
-						method.arguments().add(create);
+						method.with(create);
 					else
 						ret2.setExpression(create);
 				}
 				else
 				{
 					if (m_localVariableId != -1)
-						method.arguments().add(evalExpr(returnStatement.getReturnValue()).get(0));
+						method.with(evalExpr(returnStatement.getReturnValue()).get(0));
 					else
 						ret2.setExpression(evalExpr(returnStatement.getReturnValue()).get(0));
 				}	
 
 				if (m_localVariableId != -1)
 				{
-					method.arguments().add(ast.newSimpleName("__stack"));
-					method.arguments().add(ast.newNumberLiteral(String.valueOf(0)));
-					ret2.setExpression(method);
+					method.with("__stack").with(0);
+					ret2.setExpression(method.toAST());
 				}
 				ret.add(ret2);
 			}
@@ -2906,10 +2898,10 @@ public class SourceConverterStage2
 				if (m_localVariableId != -1)
 				{
 					Block blk = ast.newBlock();
-					method.arguments().add(ast.newNullLiteral());
-					method.arguments().add(ast.newSimpleName("__stack"));
-					method.arguments().add(ast.newNumberLiteral(String.valueOf(0)));
-					blk.statements().add(ast.newExpressionStatement(method));
+					method.with(ast.newNullLiteral())
+						.with("__stack")
+						.with(0);
+					blk.statements().add(ast.newExpressionStatement(method.toAST()));
 					blk.statements().add(ret2);
 					ret.add(blk);
 				}
@@ -3442,6 +3434,8 @@ public class SourceConverterStage2
 	// The Java AST. We need this to create AST nodes...
 	private AST ast;
 	
+	private JASTHelper jast;
+	
 	// The Java CompilationUnit. We add type declarations (classes, enums) to this...
 	private CompilationUnit unit; 
 
@@ -3476,7 +3470,8 @@ public class SourceConverterStage2
 		unit = (CompilationUnit) parser.createAST(null); 
 		unit.recordModifications();
 		ast = unit.getAST(); 
-
+		jast = new JASTHelper(ast);
+		
 		PackageDeclaration packageDeclaration = ast.newPackageDeclaration();
 		unit.setPackage(packageDeclaration);
 		packageDeclaration.setName(ast.newSimpleName("yourpackage")); //TODO
