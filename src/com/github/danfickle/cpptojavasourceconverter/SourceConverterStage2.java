@@ -1823,6 +1823,8 @@ public class SourceConverterStage2
 			IASTFunctionCallExpression functionCallExpression = (IASTFunctionCallExpression)expression;
 			print("function call");
 
+			Expression funcCallExpr;
+			
 			if (functionCallExpression.getFunctionNameExpression() instanceof IASTIdExpression &&
 				((IASTIdExpression) functionCallExpression.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
 			{
@@ -1855,7 +1857,8 @@ public class SourceConverterStage2
 					create.arguments().addAll(evalExpr((IASTExpression) functionCallExpression.getParameterExpression()));
 				}
 
-				ret.add(method);
+				funcCallExpr = (method);
+				ret.add(funcCallExpr);
 			}
 			else
 			{
@@ -1891,7 +1894,26 @@ public class SourceConverterStage2
 				{
 					method.withArguments(evalExpr(functionCallExpression.getParameterExpression()));
 				}
-				ret.add(method.toAST());
+				funcCallExpr = (method.toAST());
+
+				if (getTypeEnum(expression.getExpressionType()) == TypeEnum.OTHER ||
+						getTypeEnum(expression.getExpressionType()) == TypeEnum.ARRAY)
+				{
+					MethodInvocation method2 = jast.newMethod()
+							.on("StackHelper")
+							.call("addItem")
+							.with(funcCallExpr)
+							.with(m_localVariableId + 1)
+							.with("__stack").toAST();
+
+					m_localVariableId++;
+					if (m_localVariableId > m_localVariableMaxId)
+						m_localVariableMaxId = m_localVariableId;	
+
+					ret.add(method2);
+				}
+				else
+					ret.add(funcCallExpr);
 			}
 		}
 		else if (expression instanceof IASTIdExpression)

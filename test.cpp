@@ -419,12 +419,18 @@ class test : public foo {
 			} while (false);
 		}
 
+		// Test creating items with no variable and in function arguments...
 		foo(1);
-
 		func6(foo());
+
+		// Test creating items as a return value from a function...
+		func8();
 	}
 
-
+	foo func8()
+	{
+		return foo;
+	}
 
 	// Test arrays as class fields...
 	foo foo_bar_array[10];
