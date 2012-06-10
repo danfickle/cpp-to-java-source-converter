@@ -5,10 +5,16 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ArrayCreation;
+import org.eclipse.jdt.core.dom.ArrayType;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.NumberLiteral;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
+import org.eclipse.jdt.core.dom.SimpleType;
+import org.eclipse.jdt.core.dom.Type;
+import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
+import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 
 class JASTHelper
 {
@@ -83,7 +89,7 @@ class JASTHelper
 		
 		Method with(int arg)
 		{
-			method.arguments().add(newNumberLiteral(arg));
+			method.arguments().add(newNumber(arg));
 			return this;
 		}
 		
@@ -92,6 +98,56 @@ class JASTHelper
 		{
 			method.arguments().addAll(args);
 			return this;
+		}
+	}
+	
+	class ArrayCreate
+	{
+		ArrayCreation arrayCreate = ast.newArrayCreation();
+		ArrayCreate onType(String tp)
+		{
+			arrayCreate.setType(ast.newArrayType(newType(tp)));
+			return this;
+		}
+		
+		ArrayCreate dim(int num)
+		{
+			arrayCreate.dimensions().add(newNumber(num));
+			return this;
+		}
+
+		ArrayCreation toAST()
+		{
+			return arrayCreate;
+		}
+	}
+	
+	class VariableDeclarationStmt
+	{
+		VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
+		VariableDeclarationStatement stmt = ast.newVariableDeclarationStatement(frag);
+		
+		VariableDeclarationStmt name(String nm)
+		{
+			frag.setName(ast.newSimpleName(nm));
+			return this;
+		}
+
+		VariableDeclarationStmt init(Expression expr)
+		{
+			frag.setInitializer(expr);
+			return this;
+		}
+		
+		VariableDeclarationStmt type(Type tp)
+		{
+			stmt.setType(tp);
+			return this;
+		}
+		
+		VariableDeclarationStatement toAST()
+		{
+			return stmt;
 		}
 	}
 	
@@ -105,9 +161,23 @@ class JASTHelper
 		return new Method();
 	}
 	
-	NumberLiteral newNumberLiteral(int num)
+	ArrayCreate newArray()
+	{
+		return new ArrayCreate();
+	}
+	
+	VariableDeclarationStmt newVarDeclStmt()
+	{
+		return new VariableDeclarationStmt();
+	}
+	
+	NumberLiteral newNumber(int num)
 	{
 		return ast.newNumberLiteral(String.valueOf(num));
 	}
 	
+	SimpleType newType(String tp)
+	{
+		return ast.newSimpleType(ast.newSimpleName(tp));
+	}
 }

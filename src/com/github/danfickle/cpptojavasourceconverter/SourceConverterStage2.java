@@ -396,16 +396,14 @@ public class SourceConverterStage2
 		{
 			Block blk = method.getBody();
 
-			ArrayCreation arrayCreate = ast.newArrayCreation();
-			ArrayType tp = ast.newArrayType(ast.newSimpleType(ast.newSimpleName("Object")));
-			arrayCreate.setType(tp);
-			arrayCreate.dimensions().add(ast.newNumberLiteral(String.valueOf(m_localVariableMaxId + 1)));
-			VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
-			frag.setName(ast.newSimpleName("__stack"));
-			frag.setInitializer(arrayCreate);
-			VariableDeclarationStatement stmt2 = ast.newVariableDeclarationStatement(frag);
-			ArrayType tp2 = ast.newArrayType(ast.newSimpleType(ast.newSimpleName("Object")));
-			stmt2.setType(tp2);
+			ArrayCreation arrayCreate = jast.newArray()
+						.onType("Object")
+						.dim(m_localVariableMaxId + 1).toAST();
+
+			VariableDeclarationStatement stmt2 = jast.newVarDeclStmt()
+					.name("__stack")
+					.init(arrayCreate)
+					.type(ast.newArrayType(jast.newType("Object"))).toAST();
 
 			blk.statements().add(0, stmt2);
 		}
