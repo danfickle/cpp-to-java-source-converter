@@ -33,7 +33,7 @@ class Globals {
 class CppString implements CppType {
 	int m_count;
 
-	public CppString(int i) {
+	CppString(int i) {
 		m_count = i;
 	}
 }
@@ -42,7 +42,7 @@ class mypair<T> implements CppType {
 	T[] values = StackHelper.addItem(CreateHelper.allocateArray(T.class, 2), 0,
 			__stack);
 
-	public mypair(T first, T second) {
+	mypair(T first, T second) {
 		values[0].op_assign(first);
 		values[1].op_assign(second);
 	}
@@ -101,34 +101,34 @@ enum AnonEnum1 {
 }
 
 class foo implements CppType {
-	public foo() {
+	foo() {
 	}
 
-	public void destruct() {
+	void destruct() {
 	}
 
-	public foo(int i) {
+	foo(int i) {
 		i = AnonEnum0.value1.val;
 		i = AnonEnum1.value4.val;
 	}
 
-	public foo(int i, short t) {
+	foo(int i, short t) {
 	}
 
-	public int func_with_defaults1(int one) {
+	int func_with_defaults1(int one) {
 		return func_with_defaults1(one, 5);
 	}
 
-	public void func_with_defaults2() {
+	void func_with_defaults2() {
 		func_with_defaults2(7);
 	}
 
-	public int func_with_defaults_and_definition(int one, int two) {
+	int func_with_defaults_and_definition(int one, int two) {
 		two = 4;
 		return two;
 	}
 
-	public int func_with_defaults_and_definition(int one) {
+	int func_with_defaults_and_definition(int one) {
 		return func_with_defaults_and_definition(one, 3);
 	}
 }
@@ -164,7 +164,7 @@ class test extends foo implements CppType {
 	}
 
 	AnonClass0 anon_class1 = StackHelper.addItem(new MISSING(), 0, __stack);
-	AnonClass0 anon_class2;
+	AnonClass0 anon_class2 = StackHelper.addItem(new MISSING(), 1, __stack);
 
 	class AnonClass1 implements CppType {
 		int c;
@@ -172,7 +172,7 @@ class test extends foo implements CppType {
 	}
 
 	AnonClass1 anon_class3 = StackHelper.addItem(new MISSING(), 2, __stack);
-	AnonClass1 anon_class4;
+	AnonClass1 anon_class4 = StackHelper.addItem(new MISSING(), 3, __stack);
 
 	class subby implements CppType {
 		int k;
@@ -180,21 +180,21 @@ class test extends foo implements CppType {
 
 	foo test_foo_with_init = StackHelper.addItem(new foo(), 4, __stack);
 
-	public int get__test_with_bit_field() {
+	int get__test_with_bit_field() {
 		return __bitfields & 1;
 	}
 
-	public void set__test_with_bit_field(int val) {
+	void set__test_with_bit_field(int val) {
 		__bitfields &= ~1;
 		__bitfields |= (val << 0) & 1;
 	}
 
-	public int func2() {
+	int func2() {
 		test_with_bit_field = 8;
 		return test_with_bit_field;
 	}
 
-	public int func3(foo a,foo b,Ptr<foo> c,foo d,foo e,RefInteger f){
+	int func3(foo a,foo b,Ptr<foo> c,foo d,foo e,RefInteger f){
 		foo j;
 		while ((j=b) != null){}
 		foo l;
@@ -222,7 +222,7 @@ class test extends foo implements CppType {
 		return 1072;
 	}
 	
-	public foo func4(int a, int b, short c) {
+	foo func4(int a, int b, short c) {
 		Object[] __stack = new Object[5];
 		foo[] sd = StackHelper.addItem(
 				CreateHelper.allocateArray(foo.class, 15), 0, __stack);
@@ -240,8 +240,10 @@ class test extends foo implements CppType {
 		d += 10;
 		switch (d) {
 		case 1:
-		case 2:
+		case 2: {
+			StackHelper.cleanup(null, __stack, 0);
 			break;
+		}
 		default:
 			return StackHelper.cleanup(new foo(foo7), __stack, 0);
 		}
@@ -249,18 +251,21 @@ class test extends foo implements CppType {
 		switch (decl = 1) {
 		case 1:
 			decl += 5;
-			break;
+			{
+				StackHelper.cleanup(null, __stack, 0);
+				break;
+			}
 		}
 		foo6.func_with_defaults_and_definition(100);
 		(foo6).func_with_defaults_and_definition(100, 2);
 		return StackHelper.cleanup(new foo(sd[2]), __stack, 0);
 	}
 
-	public foo func4(int a, int b) {
+	foo func4(int a, int b) {
 		return func4(a, b, 55);
 	}
 
-	public void func5() {
+	void func5() {
 		Object[] __stack = new Object[2];
 		int i = 0;
 		if (true)
@@ -284,8 +289,8 @@ class test extends foo implements CppType {
 		foo ptr1 = new foo();
 		foo ptr2 = new foo(100);
 		foo ptr3 = CreateHelper.allocateArray(foo.class, 100);
-		DestructHelper.destructItems(ptr1);
-		DestructHelper.destructItems(ptr2);
+		(ptr1).destruct();
+		(ptr2).destruct();
 		DestructHelper.destructArray(ptr3);
 		int[] basic = new int[100];
 		short[][] basic2 = new short[5][10];
@@ -300,7 +305,7 @@ class test extends foo implements CppType {
 		StackHelper.cleanup(null, __stack, 0);
 	}
 
-	public void func6(foo a) {
+	void func6(foo a) {
 		Object[] __stack = new Object[3];
 		func6(new foo(1));
 		{
@@ -339,6 +344,65 @@ class test extends foo implements CppType {
 		}
 	}
 
+	void func7() {
+		Object[] __stack = new Object[5];
+		for (int i = 0; i < 10; i++) {
+			foo bar = StackHelper.addItem(new foo(), 0, __stack);
+			if (false) {
+				StackHelper.cleanup(null, __stack, 0);
+				break;
+			}
+			if (true) {
+				{
+					StackHelper.cleanup(null, __stack, 0);
+					continue;
+				}
+				StackHelper.cleanup(null, __stack, 1);
+			}
+			StackHelper.cleanup(null, __stack, 0);
+		}
+		for (int i = 0; i < 20; i++) {
+			if (true)
+				break;
+			else
+				continue;
+		}
+		foo baz = StackHelper.addItem(new foo(), 0, __stack);
+		foo bug = StackHelper.addItem(new foo(), 1, __stack);
+		foo dog = StackHelper.addItem(new foo(), 2, __stack);
+		for (int i = 0; i < 5; i++) {
+			foo house = StackHelper.addItem(new foo(), 3, __stack);
+			if (false) {
+				foo car = StackHelper.addItem(new foo(), 4, __stack);
+				{
+					StackHelper.cleanup(null, __stack, 3);
+					break;
+				}
+				StackHelper.cleanup(null, __stack, 4);
+			} else {
+				StackHelper.cleanup(null, __stack, 3);
+				continue;
+			}
+			StackHelper.cleanup(null, __stack, 3);
+		}
+		while (true) {
+			foo honda = StackHelper.addItem(new foo(), 3, __stack);
+			do {
+				foo ferrari = StackHelper.addItem(new foo(), 4, __stack);
+				if (true) {
+					StackHelper.cleanup(null, __stack, 4);
+					break;
+				} else {
+					StackHelper.cleanup(null, __stack, 4);
+					continue;
+				}
+				StackHelper.cleanup(null, __stack, 4);
+			} while (false);
+			StackHelper.cleanup(null, __stack, 3);
+		}
+		StackHelper.cleanup(null, __stack, 0);
+	}
+
 	foo[] foo_bar_array = StackHelper.addItem(
 			CreateHelper.allocateArray(foo.class, 10), 0, __stack);
 	foo[][] foo_baz_array = StackHelper.addItem(
@@ -375,5 +439,5 @@ class AnonClass2 implements CppType {
 	}
 
 	AnonClass3 anon_class1 = StackHelper.addItem(new MISSING(), 3, __stack);
-	AnonClass3 anon_class2;
+	AnonClass3 anon_class2 = StackHelper.addItem(new MISSING(), 4, __stack);
 }
