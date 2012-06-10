@@ -283,6 +283,7 @@ import org.eclipse.text.edits.TextEdit;
  * Copy/delete constructor being called on references.
  * Inject stack creation at top of method. TICK.
  * Add arguments to stack.
+ * Add return values to stack.
  * Call destruct directly on delete variables. TICK.
  * Cleanup cleanup mechanism for classes.
  * static function with default arguments.
@@ -1135,10 +1136,10 @@ public class SourceConverterStage2
 		field.modifiers().add(ast.newModifier(ModifierKeyword.FINAL_KEYWORD));
 		enumd.bodyDeclarations().add(field);
 
-		MethodDeclaration con = ast.newMethodDeclaration();
-		con.setName(ast.newSimpleName(finalName));
-		con.setConstructor(true);
-
+		MethodDeclaration con = jast.newMethodDecl()
+				.name(finalName)
+				.setCtor(true).toAST();
+		
 		SingleVariableDeclaration var2 = ast.newSingleVariableDeclaration();
 		var2.setType(ast.newPrimitiveType(PrimitiveType.INT));
 		var2.setName(ast.newSimpleName("enumVal"));
@@ -1156,12 +1157,12 @@ public class SourceConverterStage2
 		con.setBody(conblk);
 		enumd.bodyDeclarations().add(con);
 
-		MethodDeclaration method = ast.newMethodDeclaration();
-		enumd.bodyDeclarations().add(method);
-		method.setName(ast.newSimpleName("fromValue"));
-		method.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
+		MethodDeclaration method = jast.newMethodDecl()
+				.name("fromValue")
+				.setStatic(true)
+				.returnType(jast.newType(finalName)).toAST();
 
-		method.setReturnType2(jast.newType(finalName));
+		enumd.bodyDeclarations().add(method);
 
 		SingleVariableDeclaration var3 = ast.newSingleVariableDeclaration();
 		var3.setType(ast.newPrimitiveType(PrimitiveType.INT));
@@ -1800,15 +1801,16 @@ public class SourceConverterStage2
 
 			print(binding.getName());
 			
-			FieldAccess field = ast.newFieldAccess();
-			field.setExpression(eval1Expr(fieldReference.getFieldOwner()));
-			field.setName(ast.newSimpleName(getSimpleName(fieldReference.getFieldName())));
+			FieldAccess field = jast.newField()
+					.on(eval1Expr(fieldReference.getFieldOwner()))
+					.field(getSimpleName(fieldReference.getFieldName())).toAST();
 
 			if (binding instanceof IEnumerator)
 			{
-				FieldAccess access = ast.newFieldAccess();
-				access.setExpression(field);
-				access.setName(ast.newSimpleName("val"));
+				FieldAccess access = jast.newField()
+						.on(field)
+						.field("val").toAST();
+
 				ret.add(access);
 			}
 			else
@@ -1822,13 +1824,23 @@ public class SourceConverterStage2
 			print("function call");
 
 			if (functionCallExpression.getFunctionNameExpression() instanceof IASTIdExpression &&
-					((IASTIdExpression) functionCallExpression.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
+				((IASTIdExpression) functionCallExpression.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
 			{
 				ICPPClassType con = (ICPPClassType) ((IASTIdExpression) functionCallExpression.getFunctionNameExpression()).getName().resolveBinding();
 
 				ClassInstanceCreation create = ast.newClassInstanceCreation();
-				//create.setExpression(evaluate(newExpression.getPlacement()))
 				create.setType(jast.newType(con.getName()));
+				
+				MethodInvocation method = jast.newMethod()
+						.on("StackHelper")
+						.call("addItem")
+						.with(create)
+						.with(m_localVariableId + 1)
+						.with("__stack").toAST();
+
+				m_localVariableId++;
+				if (m_localVariableId > m_localVariableMaxId)
+					m_localVariableMaxId = m_localVariableId;
 
 				if (functionCallExpression.getParameterExpression() instanceof IASTExpressionList)
 				{
@@ -1843,7 +1855,7 @@ public class SourceConverterStage2
 					create.arguments().addAll(evalExpr((IASTExpression) functionCallExpression.getParameterExpression()));
 				}
 
-				ret.add(create);
+				ret.add(method);
 			}
 			else
 			{
@@ -1867,11 +1879,7 @@ public class SourceConverterStage2
 					method.call(getSimpleName(id.getName()));
 				}
 
-				if (functionCallExpression.getParameterExpression() == null)
-				{
-					/* Do nothing. */
-				}
-				else if (functionCallExpression.getParameterExpression() instanceof IASTExpressionList)
+				if (functionCallExpression.getParameterExpression() instanceof IASTExpressionList)
 				{
 					IASTExpressionList list = (IASTExpressionList) functionCallExpression.getParameterExpression();
 					for (IASTExpression arg : list.getExpressions())
@@ -1920,16 +1928,18 @@ public class SourceConverterStage2
 					{
 						qual = ast.newQualifiedName(ast.newSimpleName(enumeration), ast.newSimpleName(getSimpleName(idExpression.getName())));
 					}
-					FieldAccess fa = ast.newFieldAccess();
-					fa.setExpression(qual);
-					fa.setName(ast.newSimpleName("val"));
+					FieldAccess fa = jast.newField()
+							.on(qual)
+							.field("val").toAST();
+
 					ret.add(fa);
 				}
 				else if (isEventualPtrOrRef(idExpression.getExpressionType()))
 				{
-					FieldAccess fa = ast.newFieldAccess();
-					fa.setExpression(ast.newSimpleName(getSimpleName(idExpression.getName())));
-					fa.setName(ast.newSimpleName("val"));
+					FieldAccess fa = jast.newField()
+							.on(getSimpleName(idExpression.getName()))
+							.field("val").toAST();
+
 					ret.add(fa);
 				}
 				else
@@ -2018,7 +2028,7 @@ public class SourceConverterStage2
 				ret.add(jast.newMethod()
 						.on("DestructHelper")
 						.call("destructArray")
-						.with(evalExpr(deleteExpression.getOperand()).get(0)).toAST());
+						.with(eval1Expr(deleteExpression.getOperand())).toAST());
 			}
 		}
 		else if (expression instanceof ICPPASTNewExpression)
@@ -2045,31 +2055,26 @@ public class SourceConverterStage2
 					//create.setExpression(evaluate(newExpression.getPlacement()))
 					create.setType(evalTypeId(newExpression.getTypeId()));
 
-					if (newExpression.getNewInitializer() == null)
-					{
-						/* Do nothing. */
-					}
-					else if (newExpression.getNewInitializer() instanceof IASTExpressionList)
+					if (newExpression.getNewInitializer() instanceof IASTExpressionList)
 					{
 						for (IASTExpression arg : ((IASTExpressionList) newExpression.getNewInitializer()).getExpressions())
-						{
 							create.arguments().addAll(evalExpr(arg));
-						}
 					}
 					else if (newExpression.getNewInitializer() instanceof IASTExpression)
 					{
 						create.arguments().addAll(evalExpr((IASTExpression) newExpression.getNewInitializer()));
 					}
+
 					ret.add(create);
 				}
 			}
 			else
 			{
 				List<Expression> sizeExprs = new ArrayList<Expression>();
+
 				for (IASTExpression arraySize : newExpression.getNewTypeIdArrayExpressions())
-				{
 					sizeExprs.add(eval1Expr(arraySize));
-				}
+
 				Expression ex = generateArrayCreationExpression(newExpression.getExpressionType(), sizeExprs);
 				ret.add(ex);
 			}
@@ -2077,7 +2082,7 @@ public class SourceConverterStage2
 		else if (expression instanceof ICPPASTSimpleTypeConstructorExpression)
 		{
 			ICPPASTSimpleTypeConstructorExpression simpleTypeConstructorExpression = (ICPPASTSimpleTypeConstructorExpression)expression;
-			print("simple type constructor");
+			printerr("simple type constructor");
 
 			evalExpr(simpleTypeConstructorExpression.getInitialValue());
 		}

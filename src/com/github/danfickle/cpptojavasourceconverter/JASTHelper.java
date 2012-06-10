@@ -11,6 +11,7 @@ import org.eclipse.jdt.core.dom.ArrayType;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.FieldAccess;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
@@ -30,6 +31,34 @@ class JASTHelper
 	JASTHelper(AST mast)
 	{
 		ast = mast;
+	}
+	
+	class FieldAcc
+	{
+		FieldAccess fa = ast.newFieldAccess();
+		
+		FieldAcc on(String object)
+		{
+			fa.setExpression(ast.newSimpleName(object));
+			return this;
+		}
+
+		FieldAcc on(Expression expr)
+		{
+			fa.setExpression(expr);
+			return this;
+		}
+		
+		FieldAcc field(String nm)
+		{
+			fa.setName(ast.newSimpleName(nm));
+			return this;
+		}
+		
+		FieldAccess toAST()
+		{
+			return fa;
+		}
 	}
 
 	class ClassCreate
@@ -315,6 +344,11 @@ class JASTHelper
 	ClassCreate newClassCreate()
 	{
 		return new ClassCreate();
+	}
+	
+	FieldAcc newField()
+	{
+		return new FieldAcc();
 	}
 	
 	NumberLiteral newNumber(int num)

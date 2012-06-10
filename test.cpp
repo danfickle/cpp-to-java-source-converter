@@ -419,8 +419,9 @@ class test : public foo {
 			} while (false);
 		}
 
+		foo(1);
 
-
+		func6(foo());
 	}
 
 
