@@ -289,6 +289,7 @@ import org.eclipse.text.edits.TextEdit;
  * static function with default arguments.
  * Call cleanup after function call.
  * Don't cleanup return value.
+ * Cleanup before break statement in switch.
  */
 
 /**
@@ -372,8 +373,8 @@ public class SourceConverterStage2
 		method.toAST().parameters().addAll(evalParameters(funcBinding));
 		
 		m_localVariableMaxId = -1;
-		m_localVariableId = -1;
-		method.toAST().setBody((Block) eval1Stmt(func.getBody()));
+		m_nextVariableId = 0;
+		method.toAST().setBody(surround(eval1Stmt(func.getBody())));
 
 		if (m_localVariableMaxId != -1)
 		{
@@ -381,7 +382,7 @@ public class SourceConverterStage2
 
 			ArrayCreation arrayCreate = jast.newArray()
 						.onType("Object")
-						.dim(m_localVariableMaxId + 1).toAST();
+						.dim(m_localVariableMaxId).toAST();
 
 			VariableDeclarationStatement stmt2 = jast.newVarDeclStmt()
 					.name("__stack")
@@ -1416,6 +1417,15 @@ public class SourceConverterStage2
 		}
 	}
 	
+	private MethodInvocation createAddItemCall(Expression item, int id)
+	{
+		return jast.newMethod()
+				.on("StackHelper").call("addItem")
+				.with(item)
+				.with(id)
+				.with("__stack").toAST();
+	}
+	
 	/**
 	 * Given a declaration, returns a list of initializer expressions.
 	 * Eg. int a = 1, b = 2, c; will return [1, 2, null].
@@ -1446,16 +1456,8 @@ public class SourceConverterStage2
 								.type(cppToJavaType(var.getType()))
 								.withAll(evaluate(decl.getInitializer())).toAST();
 
-						MethodInvocation meth = jast.newMethod()
-								.on("StackHelper").call("addItem")
-								.with(create)
-								.with(m_localVariableId + 1)
-								.with("__stack").toAST();
-
-						m_localVariableId++;
-						if (m_localVariableId > m_localVariableMaxId)
-							m_localVariableMaxId = m_localVariableId;
-						
+						MethodInvocation meth = createAddItemCall(create, m_nextVariableId);
+						incrementLocalVariableId();
 						ret.set(ret.size() - 1, meth);
 					}
 					else if (type == TypeEnum.ARRAY)
@@ -1467,17 +1469,8 @@ public class SourceConverterStage2
 						
 						if (te == TypeEnum.OTHER || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER)
 						{
-							MethodInvocation meth = jast.newMethod()
-									.on("StackHelper")
-									.call("addItem")
-									.with(ex)
-									.with(m_localVariableId + 1)
-									.with("__stack").toAST();
-
-							m_localVariableId++;
-							if (m_localVariableId > m_localVariableMaxId)
-								m_localVariableMaxId = m_localVariableId;
-
+							MethodInvocation meth = createAddItemCall(ex, m_nextVariableId);
+							incrementLocalVariableId();
 							ret.set(ret.size() - 1, meth);
 						}
 						else
@@ -1842,16 +1835,8 @@ public class SourceConverterStage2
 				ClassInstanceCreation create = ast.newClassInstanceCreation();
 				create.setType(jast.newType(con.getName()));
 				
-				MethodInvocation method = jast.newMethod()
-						.on("StackHelper")
-						.call("addItem")
-						.with(create)
-						.with(m_localVariableId + 1)
-						.with("__stack").toAST();
-
-				m_localVariableId++;
-				if (m_localVariableId > m_localVariableMaxId)
-					m_localVariableMaxId = m_localVariableId;
+				MethodInvocation method = createAddItemCall(create, m_nextVariableId);
+				incrementLocalVariableId();
 
 				if (functionCallExpression.getParameterExpression() instanceof IASTExpressionList)
 				{
@@ -1908,17 +1893,8 @@ public class SourceConverterStage2
 				if (getTypeEnum(expression.getExpressionType()) == TypeEnum.OTHER ||
 						getTypeEnum(expression.getExpressionType()) == TypeEnum.ARRAY)
 				{
-					MethodInvocation method2 = jast.newMethod()
-							.on("StackHelper")
-							.call("addItem")
-							.with(funcCallExpr)
-							.with(m_localVariableId + 1)
-							.with("__stack").toAST();
-
-					m_localVariableId++;
-					if (m_localVariableId > m_localVariableMaxId)
-						m_localVariableMaxId = m_localVariableId;	
-
+					MethodInvocation method2 = createAddItemCall(funcCallExpr, m_nextVariableId); 
+					incrementLocalVariableId();
 					ret.add(method2);
 				}
 				else
@@ -2693,6 +2669,49 @@ public class SourceConverterStage2
 		return finalExpr;
 	}
 	
+	private boolean isTerminatingStatement(Statement stmt)
+	{
+		if (stmt instanceof BreakStatement ||
+			stmt instanceof ReturnStatement ||
+			stmt instanceof ContinueStatement)
+			return true;
+		
+		if (stmt instanceof Block)
+		{
+			Block blk = (Block) stmt;
+
+			if (!blk.statements().isEmpty() &&
+				isTerminatingStatement((Statement) blk.statements().get(blk.statements().size() - 1)))
+				return true;
+		}
+		
+		return false;
+	}
+	
+	private void startNewCompoundStmt()
+	{
+		m_localVariableStack.push(new StackVar(m_nextVariableId, m_isLoop, m_isSwitch));
+		m_isLoop = false;
+		m_isSwitch = false;
+	}
+	
+	private void endCompoundStmt()
+	{
+		m_localVariableStack.pop();
+	}
+	
+	private Block surround(Statement stmt)
+	{
+		if (!(stmt instanceof Block))
+		{
+			Block blk = ast.newBlock();
+			blk.statements().add(stmt);
+			return blk;
+		}
+		
+		return (Block) stmt;
+	}
+	
 	
 	/**
 	 * Attempts to convert the given C++ statement to one or more Java statements.
@@ -2706,13 +2725,13 @@ public class SourceConverterStage2
 			// IASTBreakStatement breakStatement = (IASTBreakStatement) statement;
 			print("break");
 
-			int temp = findLastLoopId();
+			int temp = findLastSwitchOrLoopId();
 
 			if (temp != -1)
 			{
 				// Cleanup back to the closest loop...
 				Block blk = ast.newBlock();
-				blk.statements().add(ast.newExpressionStatement(createCleanupCall(temp + 1)));
+				blk.statements().add(ast.newExpressionStatement(createCleanupCall(temp)));
 				blk.statements().add(ast.newBreakStatement());
 				ret.add(blk);
 			}
@@ -2737,7 +2756,7 @@ public class SourceConverterStage2
 			{
 				// Cleanup back to the closest loop...
 				Block blk = ast.newBlock();
-				blk.statements().add(ast.newExpressionStatement(createCleanupCall(temp + 1)));
+				blk.statements().add(ast.newExpressionStatement(createCleanupCall(temp)));
 				blk.statements().add(ast.newContinueStatement());
 				ret.add(blk);
 			}
@@ -2774,30 +2793,27 @@ public class SourceConverterStage2
 		else if (statement instanceof IASTCompoundStatement)
 		{
 			IASTCompoundStatement compoundStatement = (IASTCompoundStatement)statement;
-			print("Compound");
+			print("Compound: " + compoundStatement.getRawSignature());
 
-			int temp = m_localVariableId;
-			m_localVariableStack.push(new StackVar(m_localVariableId, m_isLoop));
-			m_isLoop = false;
-			
 			Block block = ast.newBlock();
+			startNewCompoundStmt();
+			
 			for (IASTStatement childStatement : compoundStatement.getStatements())
 				block.statements().addAll(evalStmt(childStatement));
 
 			block.statements().addAll(stmtQueue);
 			stmtQueue.clear();
 
-			if (m_localVariableId != -1 &&
+			int cnt = m_localVariableStack.peek().cnt;
+			m_nextVariableId = m_localVariableStack.pop().id;
+
+			if (cnt != 0 &&
 				!block.statements().isEmpty() && 
-				!(block.statements().get(block.statements().size() - 1) instanceof ReturnStatement) &&
-				!(block.statements().get(block.statements().size() - 1) instanceof BreakStatement) &&
-				!(block.statements().get(block.statements().size() - 1) instanceof ContinueStatement))
+				!isTerminatingStatement((Statement) block.statements().get(block.statements().size() - 1)))
 			{
-				block.statements().add(ast.newExpressionStatement(createCleanupCall(temp + 1)));
+				block.statements().add(ast.newExpressionStatement(createCleanupCall(m_nextVariableId)));
 			}
 
-			m_localVariableId = temp;
-			
 			ret.add(block);
 		}
 		else if (statement instanceof IASTDeclarationStatement)
@@ -2824,7 +2840,7 @@ public class SourceConverterStage2
 
 			DoStatement dos = ast.newDoStatement();
 			m_isLoop = true;
-			dos.setBody(eval1Stmt(doStatement.getBody()));
+			dos.setBody(surround(eval1Stmt(doStatement.getBody())));
 			dos.setExpression(eval1Expr(doStatement.getCondition(), TypeEnum.BOOLEAN));
 			ret.add(dos);
 		}
@@ -2856,7 +2872,7 @@ public class SourceConverterStage2
 				fs.updaters().addAll(updaters);
 
 			m_isLoop = true;
-			fs.setBody(eval1Stmt(forStatement.getBody()));
+			fs.setBody(surround(eval1Stmt(forStatement.getBody())));
 			ret.add(fs);
 		}
 		else if (statement instanceof IASTIfStatement)
@@ -2876,9 +2892,9 @@ public class SourceConverterStage2
 				ifs.setExpression(eval1Expr(ifStatement.getConditionExpression(), TypeEnum.BOOLEAN));
 			}
 
-			ifs.setThenStatement(eval1Stmt(ifStatement.getThenClause()));
+			ifs.setThenStatement(surround(eval1Stmt(ifStatement.getThenClause())));
 			List<Statement> elseStmts = evalStmt(ifStatement.getElseClause());
-			ifs.setElseStatement(!elseStmts.isEmpty() ? elseStmts.get(0) : null);
+			ifs.setElseStatement(!elseStmts.isEmpty() ? surround(elseStmts.get(0)) : null);
 			ret.add(ifs);
 		}
 		else if (statement instanceof IASTLabelStatement)
@@ -2908,20 +2924,20 @@ public class SourceConverterStage2
 							.type(cppToJavaType(returnStatement.getReturnValue().getExpressionType()))
 							.with(eval1Expr(returnStatement.getReturnValue())).toAST();
 					
-					if (m_localVariableId != -1)
+					if (m_nextVariableId != 0)
 						method.with(create);
 					else
 						ret2.setExpression(create);
 				}
 				else
 				{
-					if (m_localVariableId != -1)
+					if (m_nextVariableId != 0)
 						method.with(eval1Expr(returnStatement.getReturnValue()));
 					else
 						ret2.setExpression(eval1Expr(returnStatement.getReturnValue()));
 				}	
 
-				if (m_localVariableId != -1)
+				if (m_nextVariableId != 0)
 				{
 					method.with("__stack").with(0);
 					ret2.setExpression(method.toAST());
@@ -2930,7 +2946,7 @@ public class SourceConverterStage2
 			}
 			else
 			{
-				if (m_localVariableId != -1)
+				if (m_nextVariableId != 0)
 				{
 					Block blk = ast.newBlock();
 					method.with(ast.newNullLiteral())
@@ -2978,12 +2994,17 @@ public class SourceConverterStage2
 				swt.setExpression(evalExpr(switchStatement.getControllerExpression()).get(0));
 			}
 
+			m_isSwitch = true;
 			if (switchStatement.getBody() instanceof IASTCompoundStatement)
 			{
 				IASTCompoundStatement compound = (IASTCompoundStatement) switchStatement.getBody();
+
+				startNewCompoundStmt();
 				
 				for (IASTStatement stmt : compound.getStatements())
 					swt.statements().addAll(evalStmt(stmt));
+				
+				endCompoundStmt();
 			}
 			else
 			{
@@ -3009,7 +3030,8 @@ public class SourceConverterStage2
 				whs.setExpression(eval1Expr(whileStatement.getCondition(), TypeEnum.BOOLEAN));
 			}
 
-			whs.setBody(eval1Stmt(whileStatement.getBody()));
+			m_isLoop = true;
+			whs.setBody(surround(eval1Stmt(whileStatement.getBody())));
 			ret.add(whs);
 		}
 
@@ -3020,7 +3042,7 @@ public class SourceConverterStage2
 
 			TryStatement trys = ast.newTryStatement();
 
-			trys.setBody((Block) evalStmt(tryBlockStatement.getTryBody()));
+			trys.setBody(surround(eval1Stmt(tryBlockStatement.getTryBody())));
 
 			for (ICPPASTCatchHandler catchHandler : tryBlockStatement.getCatchHandlers())
 				trys.catchClauses().add(evaluateCatchClause(catchHandler));
@@ -3441,14 +3463,40 @@ public class SourceConverterStage2
 
 	private int findLastLoopId()
 	{
+		int cnt = 0;
 		for (StackVar sv : m_localVariableStack)
+		{
+			cnt += sv.cnt;
 			if (sv.isLoop)
-				return sv.id;
+				return cnt == 0 ? -1 : sv.id;
+		}
 		
 		return -1;
 	}
 	
+	private int findLastSwitchOrLoopId()
+	{
+		int cnt = 0;
+		for (StackVar sv : m_localVariableStack)
+		{
+			cnt += sv.cnt;
+			if (sv.isSwitch || sv.isLoop)
+				return cnt == 0 ? -1 : sv.id;
+		}
+		return -1;
+	}
 	
+	private void incrementLocalVariableId()
+	{
+		m_nextVariableId++;
+
+		if (m_localVariableStack.peek() != null)
+			m_localVariableStack.peek().cnt++;
+		
+		if (m_nextVariableId > m_localVariableMaxId)
+			m_localVariableMaxId = m_nextVariableId;
+	}
+
 	// The Java AST. We need this to create AST nodes...
 	private AST ast;
 	
@@ -3472,23 +3520,27 @@ public class SourceConverterStage2
 	private HashMap<String, String> m_anonEnumMap = new HashMap<String, String>();
 	
 	private int m_localVariableMaxId;
-	private int m_localVariableId;
+	private int m_nextVariableId;
 
-	static class StackVar
+	private class StackVar
 	{
-		StackVar(int idi, boolean isloop)
+		StackVar(int idi, boolean isloop, boolean isswitch)
 		{
 			isLoop = isloop;
 			id = idi;
+			isSwitch = isswitch;
 		}
 
 		final boolean isLoop;
+		final boolean isSwitch;
 		final int id;
+		int cnt;
 	}
 	
 	private Deque<StackVar> m_localVariableStack = new ArrayDeque<StackVar>();
 	
 	private boolean m_isLoop = false;
+	private boolean m_isSwitch = false;
 	
 	/**
 	 * Traverses the AST of the given translation unit

@@ -419,6 +419,33 @@ class test : public foo {
 			} while (false);
 		}
 
+		// Switch with break...
+		switch (10)
+		{
+			case 5:				
+				break;
+			case 11:
+			{
+				foo foo_in_case;
+				break;
+			}
+		}
+
+		// Switch in loop...
+		while (true)
+		{
+			foo foo_in_while;
+			switch(5)
+			{
+				case 7:
+					break;
+				case 9:
+					continue;
+			}
+		}
+
+
+
 		// Test creating items with no variable and in function arguments...
 		foo(1);
 		func6(foo());
