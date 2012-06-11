@@ -289,7 +289,10 @@ import org.eclipse.text.edits.TextEdit;
  * static function with default arguments.
  * Call cleanup after function call.
  * Don't cleanup return value.
- * Cleanup before break statement in switch.
+ * Cleanup before break statement in switch. TICK.
+ * Top level stuff should be static.
+ * Generate constructor.
+ * Generate destructor.
  */
 
 /**
@@ -620,7 +623,7 @@ public class SourceConverterStage2
 			IASTSimpleDeclaration simple = (IASTSimpleDeclaration) declaration;
 			evalDeclSpecifier(simple.getDeclSpecifier());
 
-			List<Expression> exprs = evaluateDeclarationReturnInitializers(simple);
+			List<Expression> exprs = evaluateDeclarationReturnInitializers(simple, false);
 			int i = 0;
 
 			for (IASTDeclarator declarator : simple.getDeclarators())
@@ -637,7 +640,7 @@ public class SourceConverterStage2
 				else if (binding instanceof IField)
 				{
 					print("standard field");
-					generateField(binding, declarator, exprs.get(i));
+					generateField(binding, declarator, null/* exprs.get(i) */);
 				}
 				else if (binding instanceof IFunction &&
 						declarator instanceof IASTFunctionDeclarator)
@@ -1430,7 +1433,7 @@ public class SourceConverterStage2
 	 * Given a declaration, returns a list of initializer expressions.
 	 * Eg. int a = 1, b = 2, c; will return [1, 2, null].
 	 */
-	private List<Expression> evaluateDeclarationReturnInitializers(IASTDeclaration declaration) throws DOMException
+	private List<Expression> evaluateDeclarationReturnInitializers(IASTDeclaration declaration, boolean wrap) throws DOMException
 	{
 		List<Expression> ret = new ArrayList<Expression>();
 
@@ -1455,10 +1458,15 @@ public class SourceConverterStage2
 						ClassInstanceCreation create = jast.newClassCreate()
 								.type(cppToJavaType(var.getType()))
 								.withAll(evaluate(decl.getInitializer())).toAST();
-
-						MethodInvocation meth = createAddItemCall(create, m_nextVariableId);
-						incrementLocalVariableId();
-						ret.set(ret.size() - 1, meth);
+						
+						if (wrap)
+						{
+							MethodInvocation meth = createAddItemCall(create, m_nextVariableId);
+							incrementLocalVariableId();
+							ret.set(ret.size() - 1, meth);
+						}
+						else
+							ret.set(ret.size() - 1, create);
 					}
 					else if (type == TypeEnum.ARRAY)
 					{
@@ -1467,7 +1475,8 @@ public class SourceConverterStage2
 
 						TypeEnum te = getTypeEnum(getArrayBaseType(var.getType()));
 						
-						if (te == TypeEnum.OTHER || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER)
+						if ((te == TypeEnum.OTHER || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER) &&
+							wrap)
 						{
 							MethodInvocation meth = createAddItemCall(ex, m_nextVariableId);
 							incrementLocalVariableId();
@@ -1824,8 +1833,18 @@ public class SourceConverterStage2
 		{
 			IASTFunctionCallExpression functionCallExpression = (IASTFunctionCallExpression)expression;
 			print("function call");
+printerr(functionCallExpression.getRawSignature() + functionCallExpression.getFileLocation().getStartingLineNumber());
 
-			Expression funcCallExpr;
+try
+{
+	throw new Exception();
+	
+} catch (Exception e)
+{
+	e.printStackTrace();
+}
+
+Expression funcCallExpr;
 			
 			if (functionCallExpression.getFunctionNameExpression() instanceof IASTIdExpression &&
 				((IASTIdExpression) functionCallExpression.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
@@ -2572,7 +2591,7 @@ public class SourceConverterStage2
 			print("declaration");
 
 			List<SimpleName> list = evaluateDeclarationReturnNames(decl.getDeclaration());
-			List<Expression> inits = evaluateDeclarationReturnInitializers(decl.getDeclaration());
+			List<Expression> inits = evaluateDeclarationReturnInitializers(decl.getDeclaration(), true);
 			List<Type> types = evaluateDeclarationReturnTypes(decl.getDeclaration());
 
 			List<Expression> ret = new ArrayList<Expression>();
@@ -2613,7 +2632,7 @@ public class SourceConverterStage2
 	{
 		List<SimpleName> names = evaluateDeclarationReturnNames(decl);
 		List<VariableDeclarationFragment> frags = new ArrayList<VariableDeclarationFragment>();
-		List<Expression> exprs = evaluateDeclarationReturnInitializers(decl);
+		List<Expression> exprs = evaluateDeclarationReturnInitializers(decl, true);
 
 		int j = 0;
 		for (SimpleName nm : names)
@@ -2657,7 +2676,7 @@ public class SourceConverterStage2
 		decl.setType(jType);
 		ret.add(decl);
 
-		List<Expression> exprs = evaluateDeclarationReturnInitializers(declaration);
+		List<Expression> exprs = evaluateDeclarationReturnInitializers(declaration, true);
 
 		Assignment assign = jast.newAssign()
 				.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
@@ -2805,8 +2824,9 @@ public class SourceConverterStage2
 			stmtQueue.clear();
 
 			int cnt = m_localVariableStack.peek().cnt;
-			m_nextVariableId = m_localVariableStack.pop().id;
-
+			m_nextVariableId = m_localVariableStack.peek().id;
+			endCompoundStmt();
+			
 			if (cnt != 0 &&
 				!block.statements().isEmpty() && 
 				!isTerminatingStatement((Statement) block.statements().get(block.statements().size() - 1)))
@@ -2917,8 +2937,8 @@ public class SourceConverterStage2
 			{
 				if (((returnStatement.getReturnValue().getExpressionType() instanceof ICompositeType ||
 					(returnStatement.getReturnValue().getExpressionType() instanceof IQualifierType &&
-					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)) &&
-					!(eval1Expr(returnStatement.getReturnValue()) instanceof ClassInstanceCreation)))
+					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)))) 
+					/* !(eval1Expr(returnStatement.getReturnValue()) instanceof ClassInstanceCreation))) */
 				{
 					ClassInstanceCreation create = jast.newClassCreate()
 							.type(cppToJavaType(returnStatement.getReturnValue().getExpressionType()))
@@ -2980,7 +3000,7 @@ public class SourceConverterStage2
 				decl.setType(jType);
 				ret.add(decl);
 
-				List<Expression> exprs = evaluateDeclarationReturnInitializers(cppSwitch.getControllerDeclaration());
+				List<Expression> exprs = evaluateDeclarationReturnInitializers(cppSwitch.getControllerDeclaration(), true);
 				
 				Assignment assign = jast.newAssign()
 						.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
@@ -3489,7 +3509,7 @@ public class SourceConverterStage2
 	private void incrementLocalVariableId()
 	{
 		m_nextVariableId++;
-
+printerr("Local variable ID:" + m_nextVariableId);
 		if (m_localVariableStack.peek() != null)
 			m_localVariableStack.peek().cnt++;
 		
