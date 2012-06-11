@@ -17,6 +17,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -279,7 +280,7 @@ import org.eclipse.text.edits.TextEdit;
  * Call destructors on return or end brace. PARTIAL
  * Add static modifier to nested classes.
  * Deal with typedef.
- * Copy constructor not always being called.
+ * Copy constructor not always being called. TICK.
  * Copy/delete constructor being called on references.
  * Inject stack creation at top of method. TICK.
  * Add arguments to stack. TICK.
@@ -288,7 +289,7 @@ import org.eclipse.text.edits.TextEdit;
  * Cleanup cleanup mechanism for classes.
  * static function with default arguments.
  * Call cleanup after function call.
- * Don't cleanup return value.
+ * Don't cleanup return value. TICK.
  * Cleanup before break statement in switch. TICK.
  * Top level stuff should be static.
  * Generate constructor.
@@ -1274,7 +1275,9 @@ public class SourceConverterStage2
 			tyd.typeParameters().addAll(templateParamsQueue);			
 			templateParamsQueue.clear();
 			
-			tyd.superInterfaceTypes().add(jast.newType("CppType"));
+			ParameterizedType type = ast.newParameterizedType(jast.newType("CppType"));
+			type.typeArguments().add(jast.newType(finalName));
+			tyd.superInterfaceTypes().add(type);
 			
 			if (compositeTypeSpecifier instanceof ICPPASTCompositeTypeSpecifier)
 			{
@@ -1641,26 +1644,40 @@ public class SourceConverterStage2
 		return exprs.get(0);
 	}
 	
-	private Expression eval1Expr(IASTExpression expr, TypeEnum wanted) throws DOMException
+	private Expression eval1Expr(IASTExpression expr, EnumSet<Flags> flags) throws DOMException
 	{
-		List<Expression> exprs = evalExpr(expr, wanted);
+		List<Expression> exprs = evalExpr(expr, flags);
 		assert(exprs.size() == 1);
 		return exprs.get(0);
 	}
 	
 	private List<Expression> evalExpr(IASTExpression expression) throws DOMException
 	{
-		return evalExpr(expression, TypeEnum.ANY);
+		return evalExpr(expression, EnumSet.noneOf(Flags.class));
+	}
+	
+	private Expression callCopyIfNeeded(Expression expr, IASTExpression cppExpr) throws DOMException
+	{
+		TypeEnum te = getTypeEnum(cppExpr.getExpressionType());
+		if (te == TypeEnum.OTHER || te == TypeEnum.ARRAY)
+		{
+			MethodInvocation method = jast.newMethod()
+					.on(expr)
+					.call("copy").toAST();
+			return method;
+		}
+		else
+			return expr;
 	}
 	
 	/**
 	 * Given a C++ expression, attempts to convert it into one
 	 * or more Java expressions.
 	 */
-	private List<Expression> evalExpr(IASTExpression expression, TypeEnum wanted) throws DOMException
+	private List<Expression> evalExpr(IASTExpression expression, EnumSet<Flags> flags) throws DOMException
 	{
 		List<Expression> ret = new ArrayList<Expression>();
-		boolean fNeedBooleans = (wanted == TypeEnum.BOOLEAN);
+		boolean fNeedBooleans = flags.contains(Flags.NEED_BOOLEAN);
 
 		if (expression instanceof IASTLiteralExpression)
 		{
@@ -1773,8 +1790,8 @@ public class SourceConverterStage2
 			else
 			{
 				InfixExpression infix = jast.newInfix()
-						.left(eval1Expr(binaryExpression.getOperand1(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY))
-						.right(eval1Expr(binaryExpression.getOperand2(), fSubsNeedBooleans ? TypeEnum.BOOLEAN : TypeEnum.ANY))
+						.left(eval1Expr(binaryExpression.getOperand1(), fSubsNeedBooleans ? EnumSet.of(Flags.NEED_BOOLEAN) : EnumSet.noneOf(Flags.class)))
+						.right(eval1Expr(binaryExpression.getOperand2(), fSubsNeedBooleans ? EnumSet.of(Flags.NEED_BOOLEAN) : EnumSet.noneOf(Flags.class)))
 						.op(evaluateBinaryOperator(binaryExpression.getOperator())).toAST();
 
 				ret.add(infix);
@@ -1833,18 +1850,8 @@ public class SourceConverterStage2
 		{
 			IASTFunctionCallExpression functionCallExpression = (IASTFunctionCallExpression)expression;
 			print("function call");
-printerr(functionCallExpression.getRawSignature() + functionCallExpression.getFileLocation().getStartingLineNumber());
 
-try
-{
-	throw new Exception();
-	
-} catch (Exception e)
-{
-	e.printStackTrace();
-}
-
-Expression funcCallExpr;
+			Expression funcCallExpr;
 			
 			if (functionCallExpression.getFunctionNameExpression() instanceof IASTIdExpression &&
 				((IASTIdExpression) functionCallExpression.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
@@ -1862,12 +1869,16 @@ Expression funcCallExpr;
 					IASTExpressionList list = (IASTExpressionList) functionCallExpression.getParameterExpression();
 					for (IASTExpression arg : list.getExpressions())
 					{
-						create.arguments().addAll(evalExpr(arg));
+						Expression exarg = eval1Expr(arg, EnumSet.of(Flags.IN_METHOD_ARGS));
+						Expression argWithCopy = callCopyIfNeeded(exarg, arg);
+						create.arguments().add(argWithCopy);
 					}
 				}
 				else if (functionCallExpression.getParameterExpression() instanceof IASTExpression)
 				{
-					create.arguments().addAll(evalExpr((IASTExpression) functionCallExpression.getParameterExpression()));
+					Expression arg = eval1Expr((IASTExpression) functionCallExpression.getParameterExpression(), EnumSet.of(Flags.IN_METHOD_ARGS));
+					Expression argWithCopy = callCopyIfNeeded(arg, (IASTExpression) functionCallExpression.getParameterExpression());
+					create.arguments().add(argWithCopy);
 				}
 
 				funcCallExpr = (method);
@@ -1900,17 +1911,21 @@ Expression funcCallExpr;
 					IASTExpressionList list = (IASTExpressionList) functionCallExpression.getParameterExpression();
 					for (IASTExpression arg : list.getExpressions())
 					{
-						method.withArguments(evalExpr(arg));
+						Expression exarg = eval1Expr(arg, EnumSet.of(Flags.IN_METHOD_ARGS));
+						Expression argWithCopy = callCopyIfNeeded(exarg, arg);
+						method.with(argWithCopy);
 					}
 				}
 				else if (functionCallExpression.getParameterExpression() instanceof IASTExpression)
 				{
-					method.withArguments(evalExpr(functionCallExpression.getParameterExpression()));
+					Expression exarg = eval1Expr(functionCallExpression.getParameterExpression(), EnumSet.of(Flags.IN_METHOD_ARGS));
+					Expression argWithCopy = callCopyIfNeeded(exarg, functionCallExpression.getParameterExpression());
+					method.with(argWithCopy);
 				}
 				funcCallExpr = (method.toAST());
 
 				if (getTypeEnum(expression.getExpressionType()) == TypeEnum.OTHER ||
-						getTypeEnum(expression.getExpressionType()) == TypeEnum.ARRAY)
+					getTypeEnum(expression.getExpressionType()) == TypeEnum.ARRAY)
 				{
 					MethodInvocation method2 = createAddItemCall(funcCallExpr, m_nextVariableId); 
 					incrementLocalVariableId();
@@ -2661,10 +2676,18 @@ Expression funcCallExpr;
 	
 	private Statement eval1Stmt(IASTStatement stmt) throws DOMException
 	{
-		List<Statement> ret = evalStmt(stmt);
+		List<Statement> ret = evalStmt(stmt, EnumSet.noneOf(Flags.class));
 		assert(ret.size() == 1);
 		return ret.get(0);
 	}
+
+	private Statement eval1Stmt(IASTStatement stmt, EnumSet<Flags> flags) throws DOMException
+	{
+		List<Statement> ret = evalStmt(stmt, flags);
+		assert(ret.size() == 1);
+		return ret.get(0);
+	}
+	
 	
 	private Expression generateDeclarationForWhileIf(IASTDeclaration declaration, List<Statement> ret) throws DOMException
 	{
@@ -2707,11 +2730,12 @@ Expression funcCallExpr;
 		return false;
 	}
 	
-	private void startNewCompoundStmt()
+	private void startNewCompoundStmt(EnumSet<Flags> flags)
 	{
-		m_localVariableStack.push(new StackVar(m_nextVariableId, m_isLoop, m_isSwitch));
-		m_isLoop = false;
-		m_isSwitch = false;
+		m_localVariableStack.push(
+				new StackVar(m_nextVariableId,
+						flags.contains(Flags.IS_LOOP),
+						flags.contains(Flags.IS_SWITCH)));
 	}
 	
 	private void endCompoundStmt()
@@ -2730,12 +2754,16 @@ Expression funcCallExpr;
 		
 		return (Block) stmt;
 	}
-	
+
+	private List<Statement> evalStmt(IASTStatement statement) throws DOMException
+	{
+		return evalStmt(statement, EnumSet.noneOf(Flags.class));
+	}
 	
 	/**
 	 * Attempts to convert the given C++ statement to one or more Java statements.
 	 */
-	private List<Statement> evalStmt(IASTStatement statement) throws DOMException
+	private List<Statement> evalStmt(IASTStatement statement, EnumSet<Flags> flags) throws DOMException
 	{
 		List<Statement> ret = new ArrayList<Statement>();
 
@@ -2815,13 +2843,10 @@ Expression funcCallExpr;
 			print("Compound: " + compoundStatement.getRawSignature());
 
 			Block block = ast.newBlock();
-			startNewCompoundStmt();
+			startNewCompoundStmt(flags);
 			
 			for (IASTStatement childStatement : compoundStatement.getStatements())
 				block.statements().addAll(evalStmt(childStatement));
-
-			block.statements().addAll(stmtQueue);
-			stmtQueue.clear();
 
 			int cnt = m_localVariableStack.peek().cnt;
 			m_nextVariableId = m_localVariableStack.peek().id;
@@ -2849,9 +2874,6 @@ Expression funcCallExpr;
 				decl.setType(types.get(i));
 				ret.add(decl);
 			}
-
-			ret.addAll(stmtQueue);
-			stmtQueue.clear();
 		}
 		else if (statement instanceof IASTDoStatement)
 		{
@@ -2859,9 +2881,8 @@ Expression funcCallExpr;
 			print("Do");
 
 			DoStatement dos = ast.newDoStatement();
-			m_isLoop = true;
-			dos.setBody(surround(eval1Stmt(doStatement.getBody())));
-			dos.setExpression(eval1Expr(doStatement.getCondition(), TypeEnum.BOOLEAN));
+			dos.setBody(surround(eval1Stmt(doStatement.getBody(), EnumSet.of(Flags.IS_LOOP))));
+			dos.setExpression(eval1Expr(doStatement.getCondition(), EnumSet.of(Flags.NEED_BOOLEAN)));
 			ret.add(dos);
 		}
 		else if (statement instanceof IASTExpressionStatement)
@@ -2881,7 +2902,7 @@ Expression funcCallExpr;
 
 			ForStatement fs = ast.newForStatement();
 			List<Expression> inits = evaluateForInitializer(forStatement.getInitializerStatement());
-			Expression expr = eval1Expr(forStatement.getConditionExpression(), TypeEnum.BOOLEAN);
+			Expression expr = eval1Expr(forStatement.getConditionExpression(), EnumSet.of(Flags.NEED_BOOLEAN));
 			List<Expression> updaters = evalExpr(forStatement.getIterationExpression());
 
 			if (inits != null)
@@ -2891,8 +2912,7 @@ Expression funcCallExpr;
 			if (updaters.get(0) != null)
 				fs.updaters().addAll(updaters);
 
-			m_isLoop = true;
-			fs.setBody(surround(eval1Stmt(forStatement.getBody())));
+			fs.setBody(surround(eval1Stmt(forStatement.getBody(), EnumSet.of(Flags.IS_LOOP))));
 			ret.add(fs);
 		}
 		else if (statement instanceof IASTIfStatement)
@@ -2909,7 +2929,7 @@ Expression funcCallExpr;
 			}
 			else
 			{
-				ifs.setExpression(eval1Expr(ifStatement.getConditionExpression(), TypeEnum.BOOLEAN));
+				ifs.setExpression(eval1Expr(ifStatement.getConditionExpression(), EnumSet.of(Flags.NEED_BOOLEAN)));
 			}
 
 			ifs.setThenStatement(surround(eval1Stmt(ifStatement.getThenClause())));
@@ -2940,9 +2960,10 @@ Expression funcCallExpr;
 					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)))) 
 					/* !(eval1Expr(returnStatement.getReturnValue()) instanceof ClassInstanceCreation))) */
 				{
-					ClassInstanceCreation create = jast.newClassCreate()
-							.type(cppToJavaType(returnStatement.getReturnValue().getExpressionType()))
-							.with(eval1Expr(returnStatement.getReturnValue())).toAST();
+					// Call copy method on returned value...
+					MethodInvocation create = jast.newMethod()
+							.on(eval1Expr(returnStatement.getReturnValue()))
+							.call("copy").toAST();
 					
 					if (m_nextVariableId != 0)
 						method.with(create);
@@ -2952,9 +2973,9 @@ Expression funcCallExpr;
 				else
 				{
 					if (m_nextVariableId != 0)
-						method.with(eval1Expr(returnStatement.getReturnValue()));
+						method.with(eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flags.IS_RET_VAL)));
 					else
-						ret2.setExpression(eval1Expr(returnStatement.getReturnValue()));
+						ret2.setExpression(eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flags.IS_RET_VAL)));
 				}	
 
 				if (m_nextVariableId != 0)
@@ -3014,12 +3035,11 @@ Expression funcCallExpr;
 				swt.setExpression(evalExpr(switchStatement.getControllerExpression()).get(0));
 			}
 
-			m_isSwitch = true;
 			if (switchStatement.getBody() instanceof IASTCompoundStatement)
 			{
 				IASTCompoundStatement compound = (IASTCompoundStatement) switchStatement.getBody();
 
-				startNewCompoundStmt();
+				startNewCompoundStmt(EnumSet.of(Flags.IS_SWITCH));
 				
 				for (IASTStatement stmt : compound.getStatements())
 					swt.statements().addAll(evalStmt(stmt));
@@ -3028,7 +3048,7 @@ Expression funcCallExpr;
 			}
 			else
 			{
-				swt.statements().addAll(evalStmt(switchStatement.getBody()));
+				swt.statements().addAll(evalStmt(switchStatement.getBody(), EnumSet.of(Flags.IS_SWITCH)));
 			}
 			
 			ret.add(swt);
@@ -3047,11 +3067,10 @@ Expression funcCallExpr;
 			}
 			else
 			{
-				whs.setExpression(eval1Expr(whileStatement.getCondition(), TypeEnum.BOOLEAN));
+				whs.setExpression(eval1Expr(whileStatement.getCondition(), EnumSet.of(Flags.NEED_BOOLEAN)));
 			}
 
-			m_isLoop = true;
-			whs.setBody(surround(eval1Stmt(whileStatement.getBody())));
+			whs.setBody(surround(eval1Stmt(whileStatement.getBody(), EnumSet.of(Flags.IS_LOOP))));
 			ret.add(whs);
 		}
 
@@ -3509,7 +3528,7 @@ Expression funcCallExpr;
 	private void incrementLocalVariableId()
 	{
 		m_nextVariableId++;
-printerr("Local variable ID:" + m_nextVariableId);
+
 		if (m_localVariableStack.peek() != null)
 			m_localVariableStack.peek().cnt++;
 		
@@ -3517,6 +3536,16 @@ printerr("Local variable ID:" + m_nextVariableId);
 			m_localVariableMaxId = m_nextVariableId;
 	}
 
+	private enum Flags
+	{
+		NEED_BOOLEAN,
+		IS_LOOP,
+		IS_SWITCH,
+		IS_RET_VAL,
+		IN_METHOD_ARGS
+	}
+	
+	
 	// The Java AST. We need this to create AST nodes...
 	private AST ast;
 	
@@ -3531,7 +3560,7 @@ printerr("Local variable ID:" + m_nextVariableId);
 	// A list of qualified names containing the bitfields...
 	private List<String> bitfields = new ArrayList<String>();
 	
-	private List<Statement> stmtQueue = new ArrayList<Statement>();
+	//private List<Statement> stmtQueue = new ArrayList<Statement>();
 
 	private int m_anonEnumCount = 0;
 	
@@ -3539,10 +3568,7 @@ printerr("Local variable ID:" + m_nextVariableId);
 	
 	private HashMap<String, String> m_anonEnumMap = new HashMap<String, String>();
 	
-	private int m_localVariableMaxId;
-	private int m_nextVariableId;
-
-	private class StackVar
+	private static class StackVar
 	{
 		StackVar(int idi, boolean isloop, boolean isswitch)
 		{
@@ -3556,11 +3582,10 @@ printerr("Local variable ID:" + m_nextVariableId);
 		final int id;
 		int cnt;
 	}
-	
+
+	private int m_localVariableMaxId;
+	private int m_nextVariableId;
 	private Deque<StackVar> m_localVariableStack = new ArrayDeque<StackVar>();
-	
-	private boolean m_isLoop = false;
-	private boolean m_isSwitch = false;
 	
 	/**
 	 * Traverses the AST of the given translation unit

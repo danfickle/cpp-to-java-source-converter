@@ -319,6 +319,10 @@ class test : public foo {
 		// Test stack object creation in method argument...
 		func6(foo(1));
 
+		// Test copy variables on use as arguments...
+		foo foo_for_func;
+		func6(foo_for_func);
+
 		// Test destructor calls at end brace...
 		{
 			foo foo_bar;
