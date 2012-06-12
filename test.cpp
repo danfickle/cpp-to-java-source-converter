@@ -460,7 +460,11 @@ class test : public foo {
 
 	foo func8()
 	{
-		return foo();
+		foo foo_bax;
+		if (false)
+			return foo();
+		else
+			return foo_bax;
 	}
 
 	// Test arrays as class fields...
