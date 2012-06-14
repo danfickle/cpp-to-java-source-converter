@@ -478,6 +478,12 @@ class test : public foo {
 		int j = i;
 	}
 
+	// Test destructor...
+	~test()
+	{
+		int i = 55;
+	}
+
 	// Test arrays as class fields...
 	foo foo_bar_array[10];
 	foo foo_baz_array[10][25];

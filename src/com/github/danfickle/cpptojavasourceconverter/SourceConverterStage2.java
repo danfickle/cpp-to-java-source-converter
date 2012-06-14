@@ -286,14 +286,15 @@ import org.eclipse.text.edits.TextEdit;
  * Add arguments to stack. TICK.
  * Add return values to stack. TICK.
  * Call destruct directly on delete variables. TICK.
- * Cleanup cleanup mechanism for classes.
+ * Cleanup cleanup mechanism for classes. TICK.
  * static function with default arguments.
  * Call cleanup after function call.
  * Don't cleanup return value. TICK.
  * Cleanup before break statement in switch. TICK.
  * Top level stuff should be static.
- * Generate constructor.
- * Generate destructor.
+ * Generate constructor. TICK.
+ * Generate destructor. TICK.
+ * Generate default constructors/copy/destructors.
  * Cast allocateArray.
  * Comma operator.
  */
@@ -371,14 +372,18 @@ public class SourceConverterStage2
 				.setStatic(((IFunction) funcBinding).isStatic())
 				.returnType(evalReturnType(funcBinding));
 		
-		boolean isCtor = false;
+		boolean isCtor = false, isDtor = false;
 
 		// Only constructors and destructors can be missing a return type...
-		if (method.toAST().getReturnType2() == null &&
-			!method.toAST().getName().getIdentifier().contains("destruct"))
+		if (method.toAST().getReturnType2() == null)
 		{
-			method.setCtor(true);
-			isCtor = true;
+			if (!method.toAST().getName().getIdentifier().contains("destruct"))
+			{
+				method.setCtor(true);
+				isCtor = true;
+			}
+			else
+				isDtor = true;
 		}
 
 		method.toAST().parameters().addAll(evalParameters(funcBinding));
@@ -455,8 +460,7 @@ public class SourceConverterStage2
 			int start = 0;
 			for (FieldInfo fieldInfo : fields)
 			{
-				printerr(fieldInfo.field.getName());
-				//printerr(fieldInfo.init);
+				print(fieldInfo.field.getName());
 
 				if (fieldInfo.init != null)
 				{
@@ -468,6 +472,31 @@ public class SourceConverterStage2
 					// Add assignment statements to start of generated method...
 					method.toAST().getBody().statements().add(start, ast.newExpressionStatement(assign));
 					start++;
+				}
+			}
+		}
+		
+		if (isDtor)
+		{
+			for (int i = fields.size() - 1; i >= 0; i--)
+			{
+				print(fields.get(i).field.getName());
+
+				if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OTHER)
+				{
+					MethodInvocation meth = jast.newMethod()
+							.on(ast.newSimpleName(fields.get(i).field.getName()))
+							.call("destruct").toAST();
+					method.toAST().getBody().statements().add(ast.newExpressionStatement(meth));					
+				}
+				else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.ARRAY &&
+						getTypeEnum(getArrayBaseType(fields.get(i).field.getType())) == TypeEnum.OTHER)
+				{
+					MethodInvocation meth = jast.newMethod()
+							.on("DestructHelper")
+							.call("destructArray")
+							.with(ast.newSimpleName(fields.get(i).field.getName())).toAST();
+					method.toAST().getBody().statements().add(ast.newExpressionStatement(meth));					
 				}
 			}
 		}
