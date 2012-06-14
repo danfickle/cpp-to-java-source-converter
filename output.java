@@ -40,6 +40,7 @@ class mypair<T> implements CppType<mypair> {
 	T[] values;
 
 	mypair(T first, T second) {
+		values = CreateHelper.allocateArray(T.class, 2);
 		values[0].op_assign(first);
 		values[1].op_assign(second);
 	}
@@ -305,43 +306,43 @@ class test extends foo implements CppType<test> {
 	}
 
 	void func6(foo a) {
-		Object[] __stack = new Object[5];
-		func6(StackHelper.addItem(new foo(1), 0, __stack).copy());
+		Object[] __stack = new Object[6];
+		func6(StackHelper.addItem(new foo(1), 0, __stack));
 		foo foo_for_func = StackHelper.addItem(new foo(), 1, __stack);
-		func6(foo_for_func.copy());
+		func6(StackHelper.addItem(foo_for_func.copy(), 2, __stack));
 		{
-			foo foo_bar = StackHelper.addItem(new foo(), 2, __stack);
-			StackHelper.cleanup(null, __stack, 2);
+			foo foo_bar = StackHelper.addItem(new foo(), 3, __stack);
+			StackHelper.cleanup(null, __stack, 3);
 		}
 		if (true) {
-			foo foo_bar = StackHelper.addItem(new foo(), 2, __stack);
-			StackHelper.cleanup(null, __stack, 2);
+			foo foo_bar = StackHelper.addItem(new foo(), 3, __stack);
+			StackHelper.cleanup(null, __stack, 3);
 		}
 		while (true) {
-			foo foo_bar = StackHelper.addItem(new foo(), 2, __stack);
-			StackHelper.cleanup(null, __stack, 2);
+			foo foo_bar = StackHelper.addItem(new foo(), 3, __stack);
+			StackHelper.cleanup(null, __stack, 3);
 		}
 		switch (1) {
 		case 1: {
-			foo foo_bar = StackHelper.addItem(new foo(), 2, __stack);
-			StackHelper.cleanup(null, __stack, 2);
+			foo foo_bar = StackHelper.addItem(new foo(), 3, __stack);
+			StackHelper.cleanup(null, __stack, 3);
 		}
 		}
 		do {
-			foo foo_bar = StackHelper.addItem(new foo(), 2, __stack);
-			StackHelper.cleanup(null, __stack, 2);
+			foo foo_bar = StackHelper.addItem(new foo(), 3, __stack);
+			StackHelper.cleanup(null, __stack, 3);
 		} while (false);
 		if (true) {
-			foo foo_bar = StackHelper.addItem(new foo(), 2, __stack);
+			foo foo_bar = StackHelper.addItem(new foo(), 3, __stack);
 			while (true) {
-				foo foo_baz = StackHelper.addItem(new foo(), 3, __stack);
+				foo foo_baz = StackHelper.addItem(new foo(), 4, __stack);
 				for (;;) {
-					foo foo_bug = StackHelper.addItem(new foo(), 4, __stack);
-					StackHelper.cleanup(null, __stack, 4);
+					foo foo_bug = StackHelper.addItem(new foo(), 5, __stack);
+					StackHelper.cleanup(null, __stack, 5);
 				}
-				StackHelper.cleanup(null, __stack, 3);
+				StackHelper.cleanup(null, __stack, 4);
 			}
-			StackHelper.cleanup(null, __stack, 2);
+			StackHelper.cleanup(null, __stack, 3);
 		}
 		StackHelper.cleanup(null, __stack, 0);
 	}
@@ -425,15 +426,60 @@ class test extends foo implements CppType<test> {
 			StackHelper.cleanup(null, __stack, 3);
 		}
 		StackHelper.addItem(new foo(1), 3, __stack);
-		func6(StackHelper.addItem(new foo(), 4, __stack).copy());
+		func6(StackHelper.addItem(new foo(), 4, __stack));
 		StackHelper.addItem(func8(), 5, __stack);
 		StackHelper.cleanup(null, __stack, 0);
 	}
 
 	foo func8() {
 		Object[] __stack = new Object[1];
-		return StackHelper.cleanup(StackHelper.addItem(new foo(), 0, __stack)
-				.copy(), __stack, 0);
+		foo foo_bax = StackHelper.addItem(new foo(), 0, __stack);
+		if (false) {
+			return StackHelper.cleanup(new foo(), __stack, 0);
+		} else {
+			return StackHelper.cleanup(foo_bax.copy(), __stack, 0);
+		}
+		StackHelper.cleanup(null, __stack, 0);
+	}
+
+	test() {
+		anon_class1 = new MISSING();
+		anon_class2 = new MISSING();
+		anon_class3 = new MISSING();
+		anon_class4 = new MISSING();
+		test_foo_with_init = new foo();
+		foo_bar_array = CreateHelper.allocateArray(foo.class, 10);
+		foo_baz_array = CreateHelper.allocateArray(foo.class, 10, 25);
+		basic_array = new int[1];
+		not_so_basic_array = new int[5][7];
+		foo_bar = new foo();
+		int i = 10;
+	}
+
+	test(int i) {
+		anon_class1 = new MISSING();
+		anon_class2 = new MISSING();
+		anon_class3 = new MISSING();
+		anon_class4 = new MISSING();
+		test_foo_with_init = new foo();
+		foo_bar_array = CreateHelper.allocateArray(foo.class, 10);
+		foo_baz_array = CreateHelper.allocateArray(foo.class, 10, 25);
+		basic_array = new int[1];
+		not_so_basic_array = new int[5][7];
+		foo_bar = new foo();
+		int j = i;
+	}
+
+	void destruct() {
+		int i = 55;
+		foo_bar.destruct();
+		DestructHelper.destructArray(foo_baz_array);
+		DestructHelper.destructArray(foo_bar_array);
+		test_foo_with_init.destruct();
+		anon_class4.destruct();
+		anon_class3.destruct();
+		anon_class2.destruct();
+		anon_class1.destruct();
 	}
 
 	foo[] foo_bar_array;
