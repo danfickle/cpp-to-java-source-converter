@@ -499,7 +499,7 @@ public class SourceConverterStage2
 				}
 			}
 		}
-
+		
 		if (isCtor)
 		{
 			generateCtorStatements(fields, method.toAST());
@@ -668,6 +668,35 @@ public class SourceConverterStage2
 			compositeMap.get("").tyd.bodyDeclarations().add(field);
 	}
 	
+	private void lookForConstructors(IASTDeclSpecifier declSpec, CompositeInfo info) throws DOMException
+	{
+		if (!(declSpec instanceof IASTCompositeTypeSpecifier))
+			return;
+
+		IASTCompositeTypeSpecifier composite = (IASTCompositeTypeSpecifier) declSpec;
+
+		for (IASTDeclaration decl : composite.getMembers())
+		{
+			if (decl instanceof IASTFunctionDefinition)
+			{
+				if (((IASTFunctionDefinition)decl).getDeclarator().getName().resolveBinding() instanceof ICPPConstructor)
+				{
+					info.hasCtor = true;
+
+					// TODO: check if copy constructor...
+				}
+				else if (((IASTFunctionDefinition)decl).getDeclarator().getName().resolveBinding() instanceof ICPPMethod)
+				{
+					ICPPMethod meth = (ICPPMethod) ((IASTFunctionDefinition)decl).getDeclarator().getName().resolveBinding();
+					
+					if (meth.isDestructor())
+						info.hasDtor = true;
+				}
+			}
+		}
+	}
+	
+	
 	private List<FieldInfo> collectFieldsForClass(IASTDeclSpecifier declSpec) throws DOMException
 	{
 		if (!(declSpec instanceof IASTCompositeTypeSpecifier))
@@ -750,7 +779,7 @@ public class SourceConverterStage2
 				else if (binding instanceof IField)
 				{
 					print("standard field");
-					generateField(binding, declarator, null/* exprs.get(i) */);
+					generateField(binding, declarator, null);
 				}
 				else if (binding instanceof IFunction &&
 						declarator instanceof IASTFunctionDeclarator)
@@ -1359,6 +1388,8 @@ public class SourceConverterStage2
 			else
 				unit.types().add(tyd);
 
+			info = new CompositeInfo(tyd);
+			
 			if (compositeTypeSpecifier.getKey() == IASTCompositeTypeSpecifier.k_union)
 			{
 				Javadoc jd = ast.newJavadoc();
@@ -1372,17 +1403,18 @@ public class SourceConverterStage2
 			if (getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
 			{
 				finalName = "AnonClass" + m_anonClassCount;
-				compositeMap.put(getCompleteName(compositeTypeSpecifier.getName()), new CompositeInfo(tyd));
+				compositeMap.put(getCompleteName(compositeTypeSpecifier.getName()), info);
 				m_anonClassCount++;
 			}
 			else
 			{
 				finalName = getSimpleName(compositeTypeSpecifier.getName());
-				compositeMap.put(getCompleteName(compositeTypeSpecifier.getName()), new CompositeInfo(tyd));
+				compositeMap.put(getCompleteName(compositeTypeSpecifier.getName()), info);
 			}
 
-			compositeMap.get(getCompleteName(compositeTypeSpecifier.getName())).declSpecifier = declSpecifier;
-			
+			info.declSpecifier = declSpecifier;
+			lookForConstructors(declSpecifier, info);
+		
 			tyd.setName(ast.newSimpleName(finalName));
 
 			tyd.typeParameters().addAll(templateParamsQueue);			
@@ -1409,6 +1441,57 @@ public class SourceConverterStage2
 			{
 				evalDeclaration(decl);
 			}
+			
+			if (!info.hasCtor)
+			{
+				MethodDeclaration meth = jast.newMethodDecl()
+						.returnType(null)
+						.name(finalName)
+						.setCtor(true).toAST();
+				
+				Block blk = ast.newBlock();
+				meth.setBody(blk);
+			
+				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
+				generateCtorStatements(fields, meth);
+				tyd.bodyDeclarations().add(meth);
+			}
+			
+			if (!info.hasDtor)
+			{
+				MethodDeclaration meth = jast.newMethodDecl()
+						.returnType(ast.newPrimitiveType(PrimitiveType.VOID))
+						.name("destruct").toAST();
+				
+				// Overriden interface methods must be public...
+				meth.modifiers().add(ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+
+				Block blk = ast.newBlock();
+				meth.setBody(blk);
+
+				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
+				generateDtorStatements(fields, meth);
+				tyd.bodyDeclarations().add(meth);
+			}
+			
+			// Add a copy method...
+			MethodDeclaration meth = jast.newMethodDecl()
+					.returnType(jast.newType(finalName))
+					.name("copy").toAST();
+			
+			// Overriden interface methods must be public...
+			meth.modifiers().add(ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+
+			ClassInstanceCreation create = ast.newClassInstanceCreation();
+			create.setType(jast.newType(finalName));
+			create.arguments().add(ast.newThisExpression());
+			ReturnStatement stmt = jast.newReturn(create);
+
+			Block blk = ast.newBlock();
+			blk.statements().add(stmt);
+			meth.setBody(blk);
+
+			tyd.bodyDeclarations().add(meth);			
 		}
 		else if (declSpecifier instanceof IASTElaboratedTypeSpecifier)
 		{
