@@ -243,20 +243,15 @@ import org.eclipse.text.edits.TextEdit;
  * TODO
  * pointers. TICK.
  * references. TICK.
- * templates.
- * destructors. PARTIAL.
+ * destructors. TICK.
  * enums. TICK.
  * variable declarations inside while, if. TICK.
  * != null, != 0, etc... for return, variable assignment, etc. TICK.
- * order of evaluation.
- * -- operator overloading. 
  * default arguments. TICK.
  * bit fields. TICK, need mask and shift calculation.
  * array initializers. TICK.
- * re-parenting.
  * What information do we need from first pass:
  * bit-fields so instance access can be converted to function call.
- * 
  * When should copy constructor be called? TICK.
  * Raw types in Ref<> and Ptr<>. TICK.
  * multiple inheritance.
@@ -266,23 +261,16 @@ import org.eclipse.text.edits.TextEdit;
  * Default arguments for function declarations. TICK.
  * If isEventualPtrOrRef then add .val to expression. TICK.
  * TypeDeclarations losing type param info. TICK.
- *
- * Overuse of op_assign.
  * Rename String to something. TICK.
  * Address of operator. TICK.
  * Anonymous stuff. TICK.
  * - Anonymous enums. TICK.
- * - Anonymous classes, unions, structs. TICK.
  * Switch not working. TICK.
  * Fix wrong type for anon classes (nested).
  * Fix empty stuff in for statement. TICK.
- * Fix comma operator.
  * Fix new[] and delete[]. TICK.
- * Call destructors on return or end brace. PARTIAL
- * Add static modifier to nested classes.
- * Deal with typedef.
+ * Call destructors on return or end brace. TICK.
  * Copy constructor not always being called. TICK.
- * Copy/delete constructor being called on references.
  * Inject stack creation at top of method. TICK.
  * Add arguments to stack. TICK.
  * Add return values to stack. TICK.
@@ -295,9 +283,20 @@ import org.eclipse.text.edits.TextEdit;
  * Top level stuff should be static.
  * Generate constructor. TICK.
  * Generate destructor. TICK.
- * Generate default constructors/copy/destructors.
+ * Generate default constructors/destructors. TICK.
+ * 
+ * Generate default copy constructor.
  * Cast allocateArray.
  * Comma operator.
+ * Add static modifier to nested classes.
+ * Deal with typedef.
+ * - Anonymous classes, unions, structs. REGRESSION
+ * templates.
+ * order of evaluation.
+ * operator overloading. 
+ * re-parenting.
+ * Overuse of op_assign.
+ * Copy/delete constructor being called on references.
  */
 
 /**
@@ -430,7 +429,11 @@ public class SourceConverterStage2
 				isCtor = true;
 			}
 			else
+			{
+				// Need to be public for interface method...
+				method.toAST().modifiers().add(ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
 				isDtor = true;
+			}
 		}
 
 		method.toAST().parameters().addAll(evalParameters(funcBinding));
