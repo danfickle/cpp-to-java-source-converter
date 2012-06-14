@@ -371,10 +371,15 @@ public class SourceConverterStage2
 				.setStatic(((IFunction) funcBinding).isStatic())
 				.returnType(evalReturnType(funcBinding));
 		
+		boolean isCtor = false;
+
 		// Only constructors and destructors can be missing a return type...
 		if (method.toAST().getReturnType2() == null &&
 			!method.toAST().getName().getIdentifier().contains("destruct"))
+		{
 			method.setCtor(true);
+			isCtor = true;
+		}
 
 		method.toAST().parameters().addAll(evalParameters(funcBinding));
 		
@@ -398,6 +403,12 @@ public class SourceConverterStage2
 			blk.statements().add(0, stmt2);
 		}
 
+		
+		IASTDeclSpecifier declSpecifier = declSpecMap.get(getQualifiedPart(func.getDeclarator().getName()));
+
+		collectFieldsForClass(declSpecifier);
+		List<FieldInfo> fields = fieldInfoMap.get(getQualifiedPart(func.getDeclarator().getName()));
+		
 		if (func instanceof ICPPASTFunctionDefinition)
 		{
 			// Now check for C++ constructor initializers...
@@ -406,39 +417,61 @@ public class SourceConverterStage2
 
 			if (chains != null && chains.length != 0)
 			{
-				int start = 0;
 				for (ICPPASTConstructorChainInitializer chain : chains)
 				{
-					JASTHelper.AssignExpr assign = jast.newAssign();
-					assign.left(ast.newSimpleName(getSimpleName(chain.getMemberInitializerId())));
-
 					// We may have to call a constructor... 
 					if ((chain.getMemberInitializerId().resolveBinding() instanceof IVariable &&
-						((IVariable)chain.getMemberInitializerId().resolveBinding()).getType() instanceof ICompositeType) &&
-						!(eval1Expr(chain.getInitializerValue()) instanceof ClassInstanceCreation))
+						((IVariable)chain.getMemberInitializerId().resolveBinding()).getType() instanceof ICompositeType)) // &&
+						//!(eval1Expr(chain.getInitializerValue()) instanceof ClassInstanceCreation))
 					{
 						ClassInstanceCreation create = jast.newClassCreate()
 								.type(cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()))
 								.withAll(evalExpr(chain.getInitializerValue())).toAST();
 
-						assign.right(create);
+						for (FieldInfo fieldInfo : fields)
+						{
+							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
+								fieldInfo.init = create;
+						}
 					}
 					else if (chain.getInitializerValue() != null)
 					{
-						assign.right(eval1Expr(chain.getInitializerValue()));
+						for (FieldInfo fieldInfo : fields)
+						{
+							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
+								fieldInfo.init = eval1Expr(chain.getInitializerValue());
+						}
 					}
 					else
 					{
 						// TODO...
 					}
-					
-					// Add assignment statements to start of generated method...
-					method.toAST().getBody().statements().add(start, ast.newExpressionStatement(assign.toAST()));
-					start++;
 				}
 			}
 		}
 
+		if (isCtor)
+		{
+			int start = 0;
+			for (FieldInfo fieldInfo : fields)
+			{
+				printerr(fieldInfo.field.getName());
+				//printerr(fieldInfo.init);
+
+				if (fieldInfo.init != null)
+				{
+					Assignment assign = jast.newAssign()
+							.left(ast.newSimpleName(fieldInfo.field.getName()))
+							.right(fieldInfo.init)
+							.op(Assignment.Operator.ASSIGN).toAST();
+
+					// Add assignment statements to start of generated method...
+					method.toAST().getBody().statements().add(start, ast.newExpressionStatement(assign));
+					start++;
+				}
+			}
+		}
+		
 		// Now add the method to the appropriate class declaration...
 		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(func.getDeclarator().getName()));
 
@@ -597,6 +630,39 @@ public class SourceConverterStage2
 			decl.bodyDeclarations().add(field);
 		else
 			currentDeclarations.get("").bodyDeclarations().add(field);
+	}
+	
+	private void collectFieldsForClass(IASTDeclSpecifier declSpec) throws DOMException
+	{
+		if (!(declSpec instanceof IASTCompositeTypeSpecifier))
+			return;
+
+		IASTCompositeTypeSpecifier composite = (IASTCompositeTypeSpecifier) declSpec;
+
+		List<FieldInfo> fields = new ArrayList<FieldInfo>();
+		fieldInfoMap.put(getCompleteName(composite.getName()), fields);
+		
+		for (IASTDeclaration decl : composite.getMembers())
+		{
+			if (decl instanceof IASTSimpleDeclaration)
+			{
+				IASTSimpleDeclaration simple = (IASTSimpleDeclaration) decl;
+
+				List<Expression> exprs = evaluateDeclarationReturnInitializers(simple, false);				
+				
+				int i = 0;
+				for (IASTDeclarator declarator : simple.getDeclarators())
+				{
+					IBinding binding = declarator.getName().resolveBinding();
+				
+					if (binding instanceof IField)
+					{
+						fields.add(new FieldInfo(declarator, exprs.get(i), (IField) binding));
+					}
+					i++;
+				}
+			}
+		}
 	}
 	
 	
@@ -1245,7 +1311,9 @@ public class SourceConverterStage2
 
 			TypeDeclaration tyd = ast.newTypeDeclaration();
 			TypeDeclaration decl2 = currentDeclarations.get(getQualifiedPart(compositeTypeSpecifier.getName()));
-			
+
+			declSpecMap.put(getCompleteName(compositeTypeSpecifier.getName()) , declSpecifier);
+
 			if (decl2 != null)
 				decl2.bodyDeclarations().add(tyd);
 			else
@@ -3585,6 +3653,10 @@ public class SourceConverterStage2
 	// A map mapping qualified C++ names to Java TypeDeclaration(s)...
 	private Map<String, TypeDeclaration> currentDeclarations = new HashMap<String, TypeDeclaration>();
 
+	private Map<String, List<FieldInfo>> fieldInfoMap = new HashMap<String, List<FieldInfo>>();
+	
+	private Map<String, IASTDeclSpecifier> declSpecMap = new HashMap<String, IASTDeclSpecifier>();
+	
 	// A list of qualified names containing the bitfields...
 	private List<String> bitfields = new ArrayList<String>();
 	
@@ -3614,6 +3686,20 @@ public class SourceConverterStage2
 	private int m_localVariableMaxId;
 	private int m_nextVariableId;
 	private Deque<ScopeVar> m_localVariableStack = new ArrayDeque<ScopeVar>();
+	
+	private static class FieldInfo
+	{
+		FieldInfo(IASTDeclarator declaratorArg, Expression initArg, IField fieldArg)
+		{
+			declarator = declaratorArg;
+			init = initArg;
+			field = fieldArg;
+		}
+		
+		final IASTDeclarator declarator;
+		Expression init;
+		final IField field;
+	}
 	
 	/**
 	 * Traverses the AST of the given translation unit

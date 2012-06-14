@@ -467,6 +467,17 @@ class test : public foo {
 			return foo_bax;
 	}
 
+	// Test constructor...
+	test()
+	{
+		int i = 10;
+	}
+
+	test(int i)
+	{
+		int j = i;
+	}
+
 	// Test arrays as class fields...
 	foo foo_bar_array[10];
 	foo foo_baz_array[10][25];
