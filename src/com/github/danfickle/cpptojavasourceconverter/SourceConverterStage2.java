@@ -16,6 +16,7 @@ import java.io.PrintWriter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -353,9 +354,55 @@ public class SourceConverterStage2
 			methodDef.toAST().setBody(funcBlockDef);
 			
 			if (decl == null)
-				decl = currentDeclarations.get(getQualifiedPart(func.getName()));
+				decl = compositeMap.get(getQualifiedPart(func.getName())).tyd;
 
 			decl.bodyDeclarations().add(methodDef.toAST());
+		}
+	}
+	
+	private void generateCtorStatements(List<FieldInfo> fields, MethodDeclaration method)
+	{
+		int start = 0;
+		for (FieldInfo fieldInfo : fields)
+		{
+			print(fieldInfo.field.getName());
+
+			if (fieldInfo.init != null)
+			{
+				Assignment assign = jast.newAssign()
+						.left(ast.newSimpleName(fieldInfo.field.getName()))
+						.right(fieldInfo.init)
+						.op(Assignment.Operator.ASSIGN).toAST();
+
+				// Add assignment statements to start of generated method...
+				method.getBody().statements().add(start, ast.newExpressionStatement(assign));
+				start++;
+			}
+		}
+	}
+
+	private void generateDtorStatements(List<FieldInfo> fields, MethodDeclaration method) throws DOMException
+	{
+		for (int i = fields.size() - 1; i >= 0; i--)
+		{
+			print(fields.get(i).field.getName());
+
+			if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OTHER)
+			{
+				MethodInvocation meth = jast.newMethod()
+						.on(ast.newSimpleName(fields.get(i).field.getName()))
+						.call("destruct").toAST();
+				method.getBody().statements().add(ast.newExpressionStatement(meth));					
+			}
+			else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.ARRAY &&
+					getTypeEnum(getArrayBaseType(fields.get(i).field.getType())) == TypeEnum.OTHER)
+			{
+				MethodInvocation meth = jast.newMethod()
+						.on("DestructHelper")
+						.call("destructArray")
+						.with(ast.newSimpleName(fields.get(i).field.getName())).toAST();
+				method.getBody().statements().add(ast.newExpressionStatement(meth));					
+			}
 		}
 	}
 	
@@ -408,11 +455,9 @@ public class SourceConverterStage2
 			blk.statements().add(0, stmt2);
 		}
 
-		
-		IASTDeclSpecifier declSpecifier = declSpecMap.get(getQualifiedPart(func.getDeclarator().getName()));
+		IASTDeclSpecifier declSpecifier = compositeMap.get(getQualifiedPart(func.getDeclarator().getName())).declSpecifier;
 
-		collectFieldsForClass(declSpecifier);
-		List<FieldInfo> fields = fieldInfoMap.get(getQualifiedPart(func.getDeclarator().getName()));
+		List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
 		
 		if (func instanceof ICPPASTFunctionDefinition)
 		{
@@ -457,72 +502,35 @@ public class SourceConverterStage2
 
 		if (isCtor)
 		{
-			int start = 0;
-			for (FieldInfo fieldInfo : fields)
-			{
-				print(fieldInfo.field.getName());
-
-				if (fieldInfo.init != null)
-				{
-					Assignment assign = jast.newAssign()
-							.left(ast.newSimpleName(fieldInfo.field.getName()))
-							.right(fieldInfo.init)
-							.op(Assignment.Operator.ASSIGN).toAST();
-
-					// Add assignment statements to start of generated method...
-					method.toAST().getBody().statements().add(start, ast.newExpressionStatement(assign));
-					start++;
-				}
-			}
+			generateCtorStatements(fields, method.toAST());
 		}
-		
-		if (isDtor)
+		else if (isDtor)
 		{
-			for (int i = fields.size() - 1; i >= 0; i--)
-			{
-				print(fields.get(i).field.getName());
-
-				if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OTHER)
-				{
-					MethodInvocation meth = jast.newMethod()
-							.on(ast.newSimpleName(fields.get(i).field.getName()))
-							.call("destruct").toAST();
-					method.toAST().getBody().statements().add(ast.newExpressionStatement(meth));					
-				}
-				else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.ARRAY &&
-						getTypeEnum(getArrayBaseType(fields.get(i).field.getType())) == TypeEnum.OTHER)
-				{
-					MethodInvocation meth = jast.newMethod()
-							.on("DestructHelper")
-							.call("destructArray")
-							.with(ast.newSimpleName(fields.get(i).field.getName())).toAST();
-					method.toAST().getBody().statements().add(ast.newExpressionStatement(meth));					
-				}
-			}
+			generateDtorStatements(fields, method.toAST());
 		}
 		
 		// Now add the method to the appropriate class declaration...
-		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(func.getDeclarator().getName()));
+		CompositeInfo info = compositeMap.get(getQualifiedPart(func.getDeclarator().getName()));
 
-		if (decl == null)
+		if (info == null)
 		{
-			decl = ast.newTypeDeclaration();
+			info = new CompositeInfo(ast.newTypeDeclaration());
 			String nm = getQualifiedPart(func.getDeclarator().getName()).replace(':', '_');
 			print(nm);
 			if (nm.isEmpty())
 				nm = "Globals";
 			
-			decl.setName(ast.newSimpleName(nm));
+			info.tyd.setName(ast.newSimpleName(nm));
 			// TODO get name from db...	
-			unit.types().add(decl);
-			currentDeclarations.put(getQualifiedPart(func.getDeclarator().getName()), decl);
+			unit.types().add(info.tyd);
+			compositeMap.put(getQualifiedPart(func.getDeclarator().getName()), info);
 		}
 		
-		decl.bodyDeclarations().add(method.toAST());		
+		info.tyd.bodyDeclarations().add(method.toAST());		
 		
 		// Use this if you want to generate additional
 		// functions for default arguments...
-		makeDefaultCalls(func.getDeclarator(), funcBinding, decl);
+		makeDefaultCalls(func.getDeclarator(), funcBinding, info.tyd);
 	}
 	
 	/**
@@ -559,7 +567,7 @@ public class SourceConverterStage2
 		funcBlock.statements().add(ret);
 		methodBit.toAST().setBody(funcBlock);
 
-		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(declarator.getName()));
+		TypeDeclaration decl = compositeMap.get(getQualifiedPart(declarator.getName())).tyd;
 		decl.bodyDeclarations().add(methodBit.toAST());
 
 		JASTHelper.MethodDecl methodSet = jast.newMethodDecl()
@@ -604,8 +612,7 @@ public class SourceConverterStage2
 		funcBlockSet.statements().add(ast.newExpressionStatement(orequal));
 		methodSet.toAST().setBody(funcBlockSet);
 
-		TypeDeclaration decl2 = currentDeclarations.get(getQualifiedPart(declarator.getName()));
-		decl2.bodyDeclarations().add(methodSet.toAST());
+		decl.bodyDeclarations().add(methodSet.toAST());
 	}
 	
 	/**
@@ -631,7 +638,7 @@ public class SourceConverterStage2
 		else
 			field.setType(cppToJavaType(ifield.getType()));
 
-		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(declarator.getName()));
+		TypeDeclaration decl = compositeMap.get(getQualifiedPart(declarator.getName())).tyd;
 		decl.bodyDeclarations().add(field);
 	}
 	
@@ -653,23 +660,22 @@ public class SourceConverterStage2
 		else
 			field.setType(cppToJavaType(ifield.getType()));
 
-		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(declarator.getName()));
+		CompositeInfo info = compositeMap.get(getQualifiedPart(declarator.getName()));
 		
-		if (decl != null)
-			decl.bodyDeclarations().add(field);
+		if (info != null)
+			info.tyd.bodyDeclarations().add(field);
 		else
-			currentDeclarations.get("").bodyDeclarations().add(field);
+			compositeMap.get("").tyd.bodyDeclarations().add(field);
 	}
 	
-	private void collectFieldsForClass(IASTDeclSpecifier declSpec) throws DOMException
+	private List<FieldInfo> collectFieldsForClass(IASTDeclSpecifier declSpec) throws DOMException
 	{
 		if (!(declSpec instanceof IASTCompositeTypeSpecifier))
-			return;
+			return Collections.emptyList();
 
 		IASTCompositeTypeSpecifier composite = (IASTCompositeTypeSpecifier) declSpec;
 
 		List<FieldInfo> fields = new ArrayList<FieldInfo>();
-		fieldInfoMap.put(getCompleteName(composite.getName()), fields);
 		
 		for (IASTDeclaration decl : composite.getMembers())
 		{
@@ -686,12 +692,18 @@ public class SourceConverterStage2
 				
 					if (binding instanceof IField)
 					{
-						fields.add(new FieldInfo(declarator, exprs.get(i), (IField) binding));
+						FieldInfo field = new FieldInfo(declarator, exprs.get(i), (IField) binding);
+						fields.add(field);
+
+						if (declarator instanceof IASTFieldDeclarator &&
+							((IASTFieldDeclarator) declarator).getBitFieldSize() != null)
+							field.isBitfield = true;
 					}
 					i++;
 				}
 			}
 		}
+		return fields;
 	}
 	
 	
@@ -1174,10 +1186,10 @@ public class SourceConverterStage2
 			return;
 		
 		EnumDeclaration enumd = ast.newEnumDeclaration();
-		TypeDeclaration decl = currentDeclarations.get(getQualifiedPart(enumerationSpecifier.getName()));
+		CompositeInfo info = compositeMap.get(getQualifiedPart(enumerationSpecifier.getName()));
 
-		if (decl != null)
-			decl.bodyDeclarations().add(enumd);
+		if (info != null)
+			info.tyd.bodyDeclarations().add(enumd);
 		else
 			unit.types().add(enumd);
 		
@@ -1339,12 +1351,11 @@ public class SourceConverterStage2
 			print("composite type specifier");
 
 			TypeDeclaration tyd = ast.newTypeDeclaration();
-			TypeDeclaration decl2 = currentDeclarations.get(getQualifiedPart(compositeTypeSpecifier.getName()));
+			
+			CompositeInfo info = compositeMap.get(getQualifiedPart(compositeTypeSpecifier.getName()));
 
-			declSpecMap.put(getCompleteName(compositeTypeSpecifier.getName()) , declSpecifier);
-
-			if (decl2 != null)
-				decl2.bodyDeclarations().add(tyd);
+			if (info != null)
+				info.tyd.bodyDeclarations().add(tyd);
 			else
 				unit.types().add(tyd);
 
@@ -1361,14 +1372,17 @@ public class SourceConverterStage2
 			if (getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
 			{
 				finalName = "AnonClass" + m_anonClassCount;
-				currentDeclarations.put(getCompleteName(compositeTypeSpecifier.getName()), tyd);
+				compositeMap.put(getCompleteName(compositeTypeSpecifier.getName()), new CompositeInfo(tyd));
 				m_anonClassCount++;
 			}
 			else
 			{
 				finalName = getSimpleName(compositeTypeSpecifier.getName());
-				currentDeclarations.put(getCompleteName(compositeTypeSpecifier.getName()), tyd);
+				compositeMap.put(getCompleteName(compositeTypeSpecifier.getName()), new CompositeInfo(tyd));
 			}
+
+			compositeMap.get(getCompleteName(compositeTypeSpecifier.getName())).declSpecifier = declSpecifier;
+			
 			tyd.setName(ast.newSimpleName(finalName));
 
 			tyd.typeParameters().addAll(templateParamsQueue);			
@@ -3670,7 +3684,6 @@ public class SourceConverterStage2
 		IN_METHOD_ARGS
 	}
 	
-	
 	// The Java AST. We need this to create AST nodes...
 	private AST ast;
 	
@@ -3679,18 +3692,9 @@ public class SourceConverterStage2
 	// The Java CompilationUnit. We add type declarations (classes, enums) to this...
 	private CompilationUnit unit; 
 
-	// A map mapping qualified C++ names to Java TypeDeclaration(s)...
-	private Map<String, TypeDeclaration> currentDeclarations = new HashMap<String, TypeDeclaration>();
-
-	private Map<String, List<FieldInfo>> fieldInfoMap = new HashMap<String, List<FieldInfo>>();
-	
-	private Map<String, IASTDeclSpecifier> declSpecMap = new HashMap<String, IASTDeclSpecifier>();
-	
 	// A list of qualified names containing the bitfields...
 	private List<String> bitfields = new ArrayList<String>();
 	
-	//private List<Statement> stmtQueue = new ArrayList<Statement>();
-
 	private int m_anonEnumCount = 0;
 	
 	private int m_anonClassCount = 0;
@@ -3726,9 +3730,27 @@ public class SourceConverterStage2
 		}
 		
 		final IASTDeclarator declarator;
-		Expression init;
 		final IField field;
+		Expression init;
+		boolean isBitfield;
 	}
+	
+	private static class CompositeInfo
+	{
+		CompositeInfo(TypeDeclaration tydArg)
+		{
+			tyd = tydArg;
+		}
+		
+		TypeDeclaration tyd;
+		IASTDeclSpecifier declSpecifier;
+		boolean hasCtor;
+		boolean hasDtor;
+		boolean hasCopy;
+	}
+	
+	private Map<String, CompositeInfo> compositeMap = new HashMap<String, CompositeInfo>();
+
 	
 	/**
 	 * Traverses the AST of the given translation unit
@@ -3753,7 +3775,7 @@ public class SourceConverterStage2
 		global.setName(ast.newSimpleName("Globals"));
 		unit.types().add(global);
 
-		currentDeclarations.put("", global);
+		compositeMap.put("", new CompositeInfo(global));
 
 		for (IASTProblem prob : translationUnit.getPreprocessorProblems())
 		{
