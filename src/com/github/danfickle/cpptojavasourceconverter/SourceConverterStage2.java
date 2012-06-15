@@ -1542,38 +1542,27 @@ public class SourceConverterStage2
 
 							MethodInvocation meth3 = jast.newMethod()
 									.on("CPP")
-									.call("copyArray")
+									.call("assignArray")
+									.with(ast.newSimpleName(fieldInfo.field.getName()))
 									.with(qual).toAST();
 
-							CastExpression cast = ast.newCastExpression();
-							cast.setExpression(meth3);
-							cast.setType(cppToJavaType(fieldInfo.field.getType()));
-							
-							Assignment assign = jast.newAssign()
-									.left(ast.newSimpleName(fieldInfo.field.getName()))
-									.right(cast)
-									.op(Assignment.Operator.ASSIGN).toAST();
-							
-							ifBlock.statements().add(ast.newExpressionStatement(assign));
+							ifBlock.statements().add(ast.newExpressionStatement(meth3));
 						}
 						else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
 						{
 							QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
-
+							String methodName = "assignBasicArray";
+							
+							if (getArraySizeExpressions(fieldInfo.field.getType()).size() > 1)
+								methodName = "assignMultiArray";
+							
 							MethodInvocation meth3 = jast.newMethod()
-									.on(qual)
-									.call("clone").toAST();
-
-							CastExpression cast = ast.newCastExpression();
-							cast.setExpression(meth3);
-							cast.setType(cppToJavaType(fieldInfo.field.getType()));
+									.on("CPP")
+									.call(methodName)
+									.with(ast.newSimpleName(fieldInfo.field.getName()))
+									.with(qual).toAST();
 							
-							Assignment assign = jast.newAssign()
-									.left(ast.newSimpleName(fieldInfo.field.getName()))
-									.right(cast)
-									.op(Assignment.Operator.ASSIGN).toAST();
-							
-							ifBlock.statements().add(ast.newExpressionStatement(assign));
+							ifBlock.statements().add(ast.newExpressionStatement(meth3));
 						}
 						else
 						{
