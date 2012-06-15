@@ -284,6 +284,7 @@ import org.eclipse.text.edits.TextEdit;
  * Generate constructor. TICK.
  * Generate destructor. TICK.
  * Generate default constructors/destructors. TICK.
+ * Generate default assignment method. TICK.
  * 
  * Generate default copy constructor.
  * Cast allocateArray.
@@ -671,7 +672,7 @@ public class SourceConverterStage2
 			compositeMap.get("").tyd.bodyDeclarations().add(field);
 	}
 	
-	private void lookForConstructors(IASTDeclSpecifier declSpec, CompositeInfo info) throws DOMException
+	private void findSpecialMethods(IASTDeclSpecifier declSpec, CompositeInfo info) throws DOMException
 	{
 		if (!(declSpec instanceof IASTCompositeTypeSpecifier))
 			return;
@@ -694,6 +695,8 @@ public class SourceConverterStage2
 					
 					if (meth.isDestructor())
 						info.hasDtor = true;
+					else if (meth.getName().equals("operator ="))
+						info.hasAssign = true;
 				}
 			}
 		}
@@ -1416,7 +1419,7 @@ public class SourceConverterStage2
 			}
 
 			info.declSpecifier = declSpecifier;
-			lookForConstructors(declSpecifier, info);
+			findSpecialMethods(declSpecifier, info);
 		
 			tyd.setName(ast.newSimpleName(finalName));
 
@@ -1474,6 +1477,111 @@ public class SourceConverterStage2
 
 				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
 				generateDtorStatements(fields, meth);
+				tyd.bodyDeclarations().add(meth);
+			}
+			
+			if (!info.hasAssign)
+			{
+				MethodDeclaration meth = jast.newMethodDecl()
+						.returnType(jast.newType(finalName))
+						.name("op_assign").toAST();
+				
+				// Overriden interface methods must be public...
+				meth.modifiers().add(ast.newModifier(ModifierKeyword.PUBLIC_KEYWORD));
+				SingleVariableDeclaration var = ast.newSingleVariableDeclaration();
+				var.setType(jast.newType(finalName));
+				var.setName(ast.newSimpleName("right"));
+				meth.parameters().add(var);
+				
+				
+				Block blk = ast.newBlock();
+				meth.setBody(blk);
+
+				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
+				
+				if (!fields.isEmpty())
+				{
+					// if (right != this) { ... } 
+					IfStatement ifStmt = ast.newIfStatement();
+					InfixExpression condition = ast.newInfixExpression();
+					condition.setLeftOperand(ast.newSimpleName("right"));
+					condition.setRightOperand(ast.newThisExpression());
+					condition.setOperator(InfixExpression.Operator.NOT_EQUALS);
+					ifStmt.setExpression(condition);
+					Block ifBlock = ast.newBlock();
+					ifStmt.setThenStatement(ifBlock);
+					blk.statements().add(ifStmt);
+
+					for (FieldInfo fieldInfo : fields)
+					{
+						print(fieldInfo.field.getName());
+
+						if (fieldInfo.init != null &&
+							getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
+						{
+							QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+							MethodInvocation meth2 = jast.newMethod()
+									.on(ast.newSimpleName(fieldInfo.field.getName()))
+									.call("op_assign")
+									.with(qual).toAST();
+
+							ifBlock.statements().add(ast.newExpressionStatement(meth2));
+						}
+						else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
+								getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OTHER)
+						{
+							QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+							MethodInvocation meth3 = jast.newMethod()
+									.on("CPP")
+									.call("copyArray")
+									.with(qual).toAST();
+
+							CastExpression cast = ast.newCastExpression();
+							cast.setExpression(meth3);
+							cast.setType(cppToJavaType(fieldInfo.field.getType()));
+							
+							Assignment assign = jast.newAssign()
+									.left(ast.newSimpleName(fieldInfo.field.getName()))
+									.right(cast)
+									.op(Assignment.Operator.ASSIGN).toAST();
+							
+							ifBlock.statements().add(ast.newExpressionStatement(assign));
+						}
+						else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
+						{
+							QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+							MethodInvocation meth3 = jast.newMethod()
+									.on(qual)
+									.call("clone").toAST();
+
+							CastExpression cast = ast.newCastExpression();
+							cast.setExpression(meth3);
+							cast.setType(cppToJavaType(fieldInfo.field.getType()));
+							
+							Assignment assign = jast.newAssign()
+									.left(ast.newSimpleName(fieldInfo.field.getName()))
+									.right(cast)
+									.op(Assignment.Operator.ASSIGN).toAST();
+							
+							ifBlock.statements().add(ast.newExpressionStatement(assign));
+						}
+						else
+						{
+							QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+							Assignment assign = jast.newAssign()
+									.left(ast.newSimpleName(fieldInfo.field.getName()))
+									.right(qual)
+									.op(Assignment.Operator.ASSIGN).toAST();
+
+							ifBlock.statements().add(ast.newExpressionStatement(assign));
+						}
+					}
+				}
+				blk.statements().add(jast.newReturn(ast.newThisExpression()));
 				tyd.bodyDeclarations().add(meth);
 			}
 			
@@ -3833,6 +3941,7 @@ public class SourceConverterStage2
 		boolean hasCtor;
 		boolean hasDtor;
 		boolean hasCopy;
+		boolean hasAssign;
 	}
 	
 	private Map<String, CompositeInfo> compositeMap = new HashMap<String, CompositeInfo>();
