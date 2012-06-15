@@ -205,6 +205,7 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.ParameterizedType;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PrimitiveType;
+import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TagElement;
 import org.eclipse.jdt.core.dom.TypeLiteral;
 import org.eclipse.jdt.core.dom.InfixExpression.Operator;
@@ -298,6 +299,7 @@ import org.eclipse.text.edits.TextEdit;
  * re-parenting.
  * Overuse of op_assign.
  * Copy/delete constructor being called on references.
+ * When to call super on generated methods.
  */
 
 /**
@@ -1444,6 +1446,7 @@ public class SourceConverterStage2
 				if (cppCompositeTypeSpecifier.getBaseSpecifiers() != null && cppCompositeTypeSpecifier.getBaseSpecifiers().length != 0)
 				{
 					tyd.setSuperclassType(jast.newType(getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName())));
+					info.hasSuper = true;
 				}
 				
 //				for (ICPPASTBaseSpecifier base : cppCompositeTypeSpecifier.getBaseSpecifiers())
@@ -1500,7 +1503,6 @@ public class SourceConverterStage2
 				var.setName(ast.newSimpleName("right"));
 				meth.parameters().add(var);
 				
-				
 				Block blk = ast.newBlock();
 				meth.setBody(blk);
 
@@ -1519,6 +1521,14 @@ public class SourceConverterStage2
 					ifStmt.setThenStatement(ifBlock);
 					blk.statements().add(ifStmt);
 
+					if (info.hasSuper)
+					{
+						SuperMethodInvocation sup = ast.newSuperMethodInvocation();
+						sup.setName(ast.newSimpleName("op_assign"));
+						sup.arguments().add(ast.newSimpleName("right"));
+						ifBlock.statements().add(ast.newExpressionStatement(sup));
+					}
+					
 					for (FieldInfo fieldInfo : fields)
 					{
 						print(fieldInfo.field.getName());
@@ -3944,6 +3954,7 @@ public class SourceConverterStage2
 		boolean hasDtor;
 		boolean hasCopy;
 		boolean hasAssign;
+		boolean hasSuper;
 	}
 	
 	private Map<String, CompositeInfo> compositeMap = new HashMap<String, CompositeInfo>();
