@@ -286,10 +286,10 @@ import org.eclipse.text.edits.TextEdit;
  * Generate default constructors/destructors. TICK.
  * Generate default assignment method. TICK.
  * Cast allocateArray. TICK.
+ * Add static modifier to nested classes and global variables. TICK.
  *
  * Generate default copy constructor.
  * Comma operator.
- * Add static modifier to nested classes.
  * Deal with typedef.
  * - Anonymous classes, unions, structs. REGRESSION
  * templates.
@@ -664,6 +664,8 @@ public class SourceConverterStage2
 		else
 			field.setType(cppToJavaType(ifield.getType()));
 
+		field.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
+		
 		CompositeInfo info = compositeMap.get(getQualifiedPart(declarator.getName()));
 		
 		if (info != null)
