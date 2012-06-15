@@ -1,7 +1,8 @@
 package yourpackage;
 
 class Globals {
-	class class_outside_namespace implements CppType<class_outside_namespace> {
+	static class class_outside_namespace implements
+			CppType<class_outside_namespace> {
 		byte a;
 		char b;
 		short c;
@@ -11,21 +12,47 @@ class Globals {
 		int g;
 		short h;
 		long i;
+
+		class_outside_namespace() {
+		}
+
+		public void destruct() {
+		}
+
+		public class_outside_namespace op_assign(class_outside_namespace right) {
+			if (right != this) {
+				a = right.a;
+				b = right.b;
+				c = right.c;
+				d = right.d;
+				e = right.e;
+				f = right.f;
+				g = right.g;
+				h = right.h;
+				i = right.i;
+			}
+			return this;
+		}
+
+		public class_outside_namespace copy() {
+			return new class_outside_namespace(this);
+		}
 	}
 
-	class_outside_namespace cls1 = new class_outside_namespace();
-	int variable;
-	AnonClass3 anon_class3 = new MISSING();
-	foo foo_bar_top_level = new foo();
-	foo[] foo_bar_array_top_level1 = CreateHelper.allocateArray(foo.class, 10);
-	foo[][] foo_bar_array_top_level2 = CreateHelper.allocateArray(foo.class,
-			10, 40);
-	int[] array_top_level1 = new int[10];
-	byte[][] array_top_level2 = new byte[20][5];
-	int top_level_int = 5;
-	foo top_level_foo = new foo(3);
-	PtrInteger top_level_ptr = 0;
-	PtrInteger top_level_ptr2 = new int[25];
+	static class_outside_namespace cls1 = new class_outside_namespace();
+	static int variable;
+	static AnonClass3 anon_class3 = new MISSING();
+	static foo foo_bar_top_level = new foo();
+	static foo[] foo_bar_array_top_level1 = (foo[]) CreateHelper.allocateArray(
+			foo.class, 10);
+	static foo[][] foo_bar_array_top_level2 = (foo[][]) CreateHelper
+			.allocateArray(foo.class, 10, 40);
+	static int[] array_top_level1 = new int[10];
+	static byte[][] array_top_level2 = new byte[20][5];
+	static int top_level_int = 5;
+	static foo top_level_foo = new foo(3);
+	static PtrInteger top_level_ptr = 0;
+	static PtrInteger top_level_ptr2 = new int[25];
 }
 
 class CppString implements CppType<CppString> {
@@ -34,27 +61,103 @@ class CppString implements CppType<CppString> {
 	CppString(int i) {
 		m_count = i;
 	}
+
+	public void destruct() {
+	}
+
+	public CppString op_assign(CppString right) {
+		if (right != this) {
+			m_count = right.m_count;
+		}
+		return this;
+	}
+
+	public CppString copy() {
+		return new CppString(this);
+	}
 }
 
 class mypair<T> implements CppType<mypair> {
 	T[] values;
 
 	mypair(T first, T second) {
-		values = CreateHelper.allocateArray(T.class, 2);
+		values = (T[]) CreateHelper.allocateArray(T.class, 2);
 		values[0].op_assign(first);
 		values[1].op_assign(second);
+	}
+
+	public void destruct() {
+		DestructHelper.destructArray(values);
+	}
+
+	public mypair op_assign(mypair right) {
+		if (right != this) {
+			values = (T[]) CPP.copyArray(right.values);
+		}
+		return this;
+	}
+
+	public mypair copy() {
+		return new mypair(this);
 	}
 }
 
 class HashMap<T, V> implements CppType<HashMap> {
 	T one;
 	V two;
+
+	HashMap() {
+		one = new T();
+		two = new V();
+	}
+
+	public void destruct() {
+		two.destruct();
+		one.destruct();
+	}
+
+	public HashMap op_assign(HashMap right) {
+		if (right != this) {
+			one.op_assign(right.one);
+			two.op_assign(right.two);
+		}
+		return this;
+	}
+
+	public HashMap copy() {
+		return new HashMap(this);
+	}
 }
 
 class CT<V, T> implements CppType<CT> {
 	HashMap<V, Integer> three;
 	T one;
 	V two;
+
+	CT() {
+		three = new HashMap<V, Integer>();
+		one = new T();
+		two = new V();
+	}
+
+	public void destruct() {
+		two.destruct();
+		one.destruct();
+		three.destruct();
+	}
+
+	public CT op_assign(CT right) {
+		if (right != this) {
+			three.op_assign(right.three);
+			one.op_assign(right.one);
+			two.op_assign(right.two);
+		}
+		return this;
+	}
+
+	public CT copy() {
+		return new CT(this);
+	}
 }
 
 enum AnonEnum0 {
@@ -101,7 +204,7 @@ class foo implements CppType<foo> {
 	foo() {
 	}
 
-	void destruct() {
+	public void destruct() {
 	}
 
 	foo(int i) {
@@ -127,6 +230,14 @@ class foo implements CppType<foo> {
 
 	int func_with_defaults_and_definition(int one) {
 		return func_with_defaults_and_definition(one, 3);
+	}
+
+	public foo op_assign(foo right) {
+		return this;
+	}
+
+	public foo copy() {
+		return new foo(this);
 	}
 }
 
@@ -155,24 +266,77 @@ class test extends foo implements CppType<test> {
 		}
 	}
 
-	class AnonClass0 implements CppType<AnonClass0> {
+	static class AnonClass0 implements CppType<AnonClass0> {
 		int a;
 		int b;
+
+		AnonClass0() {
+		}
+
+		public void destruct() {
+		}
+
+		public AnonClass0 op_assign(AnonClass0 right) {
+			if (right != this) {
+				a = right.a;
+				b = right.b;
+			}
+			return this;
+		}
+
+		public AnonClass0 copy() {
+			return new AnonClass0(this);
+		}
 	}
 
 	AnonClass0 anon_class1;
 	AnonClass0 anon_class2;
 
-	class AnonClass1 implements CppType<AnonClass1> {
+	static class AnonClass1 implements CppType<AnonClass1> {
 		int c;
 		int d;
+
+		AnonClass1() {
+		}
+
+		public void destruct() {
+		}
+
+		public AnonClass1 op_assign(AnonClass1 right) {
+			if (right != this) {
+				c = right.c;
+				d = right.d;
+			}
+			return this;
+		}
+
+		public AnonClass1 copy() {
+			return new AnonClass1(this);
+		}
 	}
 
 	AnonClass1 anon_class3;
 	AnonClass1 anon_class4;
 
-	class subby implements CppType<subby> {
+	static class subby implements CppType<subby> {
 		int k;
+
+		subby() {
+		}
+
+		public void destruct() {
+		}
+
+		public subby op_assign(subby right) {
+			if (right != this) {
+				k = right.k;
+			}
+			return this;
+		}
+
+		public subby copy() {
+			return new subby(this);
+		}
 	}
 
 	foo test_foo_with_init;
@@ -222,7 +386,7 @@ class test extends foo implements CppType<test> {
 	foo func4(int a, int b, short c) {
 		Object[] __stack = new Object[5];
 		foo[] sd = StackHelper.addItem(
-				CreateHelper.allocateArray(foo.class, 15), 0, __stack);
+				(foo[]) CreateHelper.allocateArray(foo.class, 15), 0, __stack);
 		foo foo1;
 		Ptr<foo> foo2;
 		foo foo3 = StackHelper.addItem(new foo(sd[1]), 1, __stack);
@@ -287,7 +451,7 @@ class test extends foo implements CppType<test> {
 		}
 		foo ptr1 = new foo();
 		foo ptr2 = new foo(100);
-		foo ptr3 = CreateHelper.allocateArray(foo.class, 100);
+		foo ptr3 = (foo) CreateHelper.allocateArray(foo.class, 100);
 		(ptr1).destruct();
 		(ptr2).destruct();
 		DestructHelper.destructArray(ptr3);
@@ -297,9 +461,11 @@ class test extends foo implements CppType<test> {
 			return;
 		}
 		foo[] foos_array = StackHelper.addItem(
-				CreateHelper.allocateArray(foo.class, 45 + 2), 0, __stack);
+				(foo[]) CreateHelper.allocateArray(foo.class, 45 + 2), 0,
+				__stack);
 		foo[][] foos_array2 = StackHelper.addItem(
-				CreateHelper.allocateArray(foo.class, 50, 20), 1, __stack);
+				(foo[][]) CreateHelper.allocateArray(foo.class, 50, 20), 1,
+				__stack);
 		PtrInteger p = new int[2];
 		int r;
 		StackHelper.cleanup(null, __stack, 0);
@@ -448,8 +614,8 @@ class test extends foo implements CppType<test> {
 		anon_class3 = new MISSING();
 		anon_class4 = new MISSING();
 		test_foo_with_init = new foo();
-		foo_bar_array = CreateHelper.allocateArray(foo.class, 10);
-		foo_baz_array = CreateHelper.allocateArray(foo.class, 10, 25);
+		foo_bar_array = (foo[]) CreateHelper.allocateArray(foo.class, 10);
+		foo_baz_array = (foo[][]) CreateHelper.allocateArray(foo.class, 10, 25);
 		basic_array = new int[1];
 		not_so_basic_array = new int[5][7];
 		foo_bar = new foo();
@@ -462,15 +628,15 @@ class test extends foo implements CppType<test> {
 		anon_class3 = new MISSING();
 		anon_class4 = new MISSING();
 		test_foo_with_init = new foo();
-		foo_bar_array = CreateHelper.allocateArray(foo.class, 10);
-		foo_baz_array = CreateHelper.allocateArray(foo.class, 10, 25);
+		foo_bar_array = (foo[]) CreateHelper.allocateArray(foo.class, 10);
+		foo_baz_array = (foo[][]) CreateHelper.allocateArray(foo.class, 10, 25);
 		basic_array = new int[1];
 		not_so_basic_array = new int[5][7];
 		foo_bar = new foo();
 		int j = i;
 	}
 
-	void destruct() {
+	public void destruct() {
 		int i = 55;
 		foo_bar.destruct();
 		DestructHelper.destructArray(foo_baz_array);
@@ -491,14 +657,71 @@ class test extends foo implements CppType<test> {
 	/**
 	 * @union
 	 */
-	class test_union implements CppType<test_union> {
+	static class test_union implements CppType<test_union> {
 		int a;
 		float b;
+
+		test_union() {
+		}
+
+		public void destruct() {
+		}
+
+		public test_union op_assign(test_union right) {
+			if (right != this) {
+				a = right.a;
+				b = right.b;
+			}
+			return this;
+		}
+
+		public test_union copy() {
+			return new test_union(this);
+		}
 	}
 
-	class test_struct implements CppType<test_struct> {
+	static class test_struct implements CppType<test_struct> {
 		int a;
 		int b;
+
+		test_struct() {
+		}
+
+		public void destruct() {
+		}
+
+		public test_struct op_assign(test_struct right) {
+			if (right != this) {
+				a = right.a;
+				b = right.b;
+			}
+			return this;
+		}
+
+		public test_struct copy() {
+			return new test_struct(this);
+		}
+	}
+
+	public test op_assign(test right) {
+		if (right != this) {
+			anon_class1.op_assign(right.anon_class1);
+			anon_class2.op_assign(right.anon_class2);
+			anon_class3.op_assign(right.anon_class3);
+			anon_class4.op_assign(right.anon_class4);
+			test_foo_with_init.op_assign(right.test_foo_with_init);
+			test_with_bit_field = right.test_with_bit_field;
+			foo_bar_array = (foo[]) CPP.copyArray(right.foo_bar_array);
+			foo_baz_array = (foo[][]) CPP.copyArray(right.foo_baz_array);
+			basic_array = (int[]) right.basic_array.clone();
+			not_so_basic_array = (int[][]) right.not_so_basic_array.clone();
+			foo_bar.op_assign(right.foo_bar);
+		}
+		return this;
+	}
+
+	public test copy() {
+		return new test(this);
 	}
 }
 
@@ -508,13 +731,70 @@ class test extends foo implements CppType<test> {
 class test_union2 implements CppType<test_union2> {
 	short a;
 	short b;
+
+	test_union2() {
+	}
+
+	public void destruct() {
+	}
+
+	public test_union2 op_assign(test_union2 right) {
+		if (right != this) {
+			a = right.a;
+			b = right.b;
+		}
+		return this;
+	}
+
+	public test_union2 copy() {
+		return new test_union2(this);
+	}
 }
 
 class AnonClass2 implements CppType<AnonClass2> {
-	class AnonClass3 implements CppType<AnonClass3> {
+	static class AnonClass3 implements CppType<AnonClass3> {
 		int a;
+
+		AnonClass3() {
+		}
+
+		public void destruct() {
+		}
+
+		public AnonClass3 op_assign(AnonClass3 right) {
+			if (right != this) {
+				a = right.a;
+			}
+			return this;
+		}
+
+		public AnonClass3 copy() {
+			return new AnonClass3(this);
+		}
 	}
 
 	AnonClass3 anon_class1;
 	AnonClass3 anon_class2;
+
+	AnonClass2() {
+		anon_class1 = new MISSING();
+		anon_class2 = new MISSING();
+	}
+
+	public void destruct() {
+		anon_class2.destruct();
+		anon_class1.destruct();
+	}
+
+	public AnonClass2 op_assign(AnonClass2 right) {
+		if (right != this) {
+			anon_class1.op_assign(right.anon_class1);
+			anon_class2.op_assign(right.anon_class2);
+		}
+		return this;
+	}
+
+	public AnonClass2 copy() {
+		return new AnonClass2(this);
+	}
 }
