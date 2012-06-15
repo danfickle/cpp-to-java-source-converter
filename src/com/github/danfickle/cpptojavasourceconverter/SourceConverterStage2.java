@@ -285,9 +285,9 @@ import org.eclipse.text.edits.TextEdit;
  * Generate destructor. TICK.
  * Generate default constructors/destructors. TICK.
  * Generate default assignment method. TICK.
- * 
+ * Cast allocateArray. TICK.
+ *
  * Generate default copy constructor.
- * Cast allocateArray.
  * Comma operator.
  * Add static modifier to nested classes.
  * Deal with typedef.
@@ -1706,11 +1706,17 @@ public class SourceConverterStage2
 			TypeLiteral tl = ast.newTypeLiteral();
 			tl.setType(jtp);
 
-			return jast.newMethod()
+			MethodInvocation meth = jast.newMethod()
 					.on("CreateHelper")
 					.call("allocateArray")
 					.with(tl)
 					.withArguments(sizeExprs).toAST();
+
+			CastExpression cast = ast.newCastExpression();
+			cast.setExpression(meth);
+			cast.setType(cppToJavaType(tp));
+
+			return cast;
 		}
 		else
 		{
