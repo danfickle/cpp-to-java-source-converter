@@ -1390,9 +1390,14 @@ public class SourceConverterStage2
 			CompositeInfo info = compositeMap.get(getQualifiedPart(compositeTypeSpecifier.getName()));
 
 			if (info != null)
+			{
+				tyd.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
 				info.tyd.bodyDeclarations().add(tyd);
+			}
 			else
+			{
 				unit.types().add(tyd);
+			}
 
 			info = new CompositeInfo(tyd);
 			
