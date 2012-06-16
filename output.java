@@ -34,6 +34,18 @@ class Globals {
 			return this;
 		}
 
+		class_outside_namespace(class_outside_namespace right) {
+			a = right.a;
+			b = right.b;
+			c = right.c;
+			d = right.d;
+			e = right.e;
+			f = right.f;
+			g = right.g;
+			h = right.h;
+			i = right.i;
+		}
+
 		public class_outside_namespace copy() {
 			return new class_outside_namespace(this);
 		}
@@ -59,7 +71,7 @@ class CppString implements CppType<CppString> {
 	int m_count;
 
 	CppString(int i) {
-		m_count = i;
+		this.m_count = i;
 	}
 
 	public void destruct() {
@@ -72,6 +84,10 @@ class CppString implements CppType<CppString> {
 		return this;
 	}
 
+	CppString(CppString right) {
+		m_count = right.m_count;
+	}
+
 	public CppString copy() {
 		return new CppString(this);
 	}
@@ -81,20 +97,24 @@ class mypair<T> implements CppType<mypair> {
 	T[] values;
 
 	mypair(T first, T second) {
-		values = (T[]) CreateHelper.allocateArray(T.class, 2);
+		this.values = (T[]) CreateHelper.allocateArray(T.class, 2);
 		values[0].op_assign(first);
 		values[1].op_assign(second);
 	}
 
 	public void destruct() {
-		DestructHelper.destructArray(values);
+		DestructHelper.destructArray(this.values);
 	}
 
 	public mypair op_assign(mypair right) {
 		if (right != this) {
-			values = (T[]) CPP.copyArray(right.values);
+			CPP.assignArray(values, right.values);
 		}
 		return this;
+	}
+
+	mypair(mypair right) {
+		values = (T[]) CPP.copyArray(right.values);
 	}
 
 	public mypair copy() {
@@ -107,13 +127,13 @@ class HashMap<T, V> implements CppType<HashMap> {
 	V two;
 
 	HashMap() {
-		one = new T();
-		two = new V();
+		this.one = new T();
+		this.two = new V();
 	}
 
 	public void destruct() {
-		two.destruct();
-		one.destruct();
+		this.two.destruct();
+		this.one.destruct();
 	}
 
 	public HashMap op_assign(HashMap right) {
@@ -122,6 +142,11 @@ class HashMap<T, V> implements CppType<HashMap> {
 			two.op_assign(right.two);
 		}
 		return this;
+	}
+
+	HashMap(HashMap right) {
+		one = right.one.copy();
+		two = right.two.copy();
 	}
 
 	public HashMap copy() {
@@ -135,15 +160,15 @@ class CT<V, T> implements CppType<CT> {
 	V two;
 
 	CT() {
-		three = new HashMap<V, Integer>();
-		one = new T();
-		two = new V();
+		this.three = new HashMap<V, Integer>();
+		this.one = new T();
+		this.two = new V();
 	}
 
 	public void destruct() {
-		two.destruct();
-		one.destruct();
-		three.destruct();
+		this.two.destruct();
+		this.one.destruct();
+		this.three.destruct();
 	}
 
 	public CT op_assign(CT right) {
@@ -153,6 +178,12 @@ class CT<V, T> implements CppType<CT> {
 			two.op_assign(right.two);
 		}
 		return this;
+	}
+
+	CT(CT right) {
+		three = right.three.copy();
+		one = right.one.copy();
+		two = right.two.copy();
 	}
 
 	public CT copy() {
@@ -207,6 +238,10 @@ class foo implements CppType<foo> {
 	public void destruct() {
 	}
 
+	foo(foo right) {
+		int i = 10;
+	}
+
 	foo(int i) {
 		i = AnonEnum0.value1.val;
 		i = AnonEnum1.value4.val;
@@ -231,6 +266,9 @@ class foo implements CppType<foo> {
 	int func_with_defaults_and_definition(int one) {
 		return func_with_defaults_and_definition(one, 3);
 	}
+
+	static int static_int;
+	static String static_string = new String();
 
 	public foo op_assign(foo right) {
 		return this;
@@ -284,6 +322,11 @@ class test extends foo implements CppType<test> {
 			return this;
 		}
 
+		AnonClass0(AnonClass0 right) {
+			a = right.a;
+			b = right.b;
+		}
+
 		public AnonClass0 copy() {
 			return new AnonClass0(this);
 		}
@@ -310,6 +353,11 @@ class test extends foo implements CppType<test> {
 			return this;
 		}
 
+		AnonClass1(AnonClass1 right) {
+			c = right.c;
+			d = right.d;
+		}
+
 		public AnonClass1 copy() {
 			return new AnonClass1(this);
 		}
@@ -332,6 +380,10 @@ class test extends foo implements CppType<test> {
 				k = right.k;
 			}
 			return this;
+		}
+
+		subby(subby right) {
+			k = right.k;
 		}
 
 		public subby copy() {
@@ -609,43 +661,46 @@ class test extends foo implements CppType<test> {
 	}
 
 	test() {
-		anon_class1 = new MISSING();
-		anon_class2 = new MISSING();
-		anon_class3 = new MISSING();
-		anon_class4 = new MISSING();
-		test_foo_with_init = new foo();
-		foo_bar_array = (foo[]) CreateHelper.allocateArray(foo.class, 10);
-		foo_baz_array = (foo[][]) CreateHelper.allocateArray(foo.class, 10, 25);
-		basic_array = new int[1];
-		not_so_basic_array = new int[5][7];
-		foo_bar = new foo();
+		this.anon_class1 = new MISSING();
+		this.anon_class2 = new MISSING();
+		this.anon_class3 = new MISSING();
+		this.anon_class4 = new MISSING();
+		this.test_foo_with_init = new foo();
+		this.foo_bar_array = (foo[]) CreateHelper.allocateArray(foo.class, 10);
+		this.foo_baz_array = (foo[][]) CreateHelper.allocateArray(foo.class,
+				10, 25);
+		this.basic_array = new int[1];
+		this.not_so_basic_array = new int[5][7];
+		this.foo_bar = new foo();
 		int i = 10;
 	}
 
 	test(int i) {
-		anon_class1 = new MISSING();
-		anon_class2 = new MISSING();
-		anon_class3 = new MISSING();
-		anon_class4 = new MISSING();
-		test_foo_with_init = new foo();
-		foo_bar_array = (foo[]) CreateHelper.allocateArray(foo.class, 10);
-		foo_baz_array = (foo[][]) CreateHelper.allocateArray(foo.class, 10, 25);
-		basic_array = new int[1];
-		not_so_basic_array = new int[5][7];
-		foo_bar = new foo();
+		this.anon_class1 = new MISSING();
+		this.anon_class2 = new MISSING();
+		this.anon_class3 = new MISSING();
+		this.anon_class4 = new MISSING();
+		this.test_foo_with_init = new foo();
+		this.foo_bar_array = (foo[]) CreateHelper.allocateArray(foo.class, 10);
+		this.foo_baz_array = (foo[][]) CreateHelper.allocateArray(foo.class,
+				10, 25);
+		this.basic_array = new int[1];
+		this.not_so_basic_array = new int[5][7];
+		this.foo_bar = new foo();
 		int j = i;
 	}
 
 	public void destruct() {
 		int i = 55;
-		foo_bar.destruct();
-		DestructHelper.destructArray(foo_baz_array);
-		DestructHelper.destructArray(foo_bar_array);
-		test_foo_with_init.destruct();
-		anon_class4.destruct();
-		anon_class3.destruct();
-		anon_class2.destruct();
-		anon_class1.destruct();
+		this.foo_bar.destruct();
+		DestructHelper.destructArray(this.foo_baz_array);
+		DestructHelper.destructArray(this.foo_bar_array);
+		this.test_foo_with_init.destruct();
+		this.anon_class4.destruct();
+		this.anon_class3.destruct();
+		this.anon_class2.destruct();
+		this.anon_class1.destruct();
+		super.destruct();
 	}
 
 	foo[] foo_bar_array;
@@ -675,6 +730,11 @@ class test extends foo implements CppType<test> {
 			return this;
 		}
 
+		test_union(test_union right) {
+			a = right.a;
+			b = right.b;
+		}
+
 		public test_union copy() {
 			return new test_union(this);
 		}
@@ -698,6 +758,11 @@ class test extends foo implements CppType<test> {
 			return this;
 		}
 
+		test_struct(test_struct right) {
+			a = right.a;
+			b = right.b;
+		}
+
 		public test_struct copy() {
 			return new test_struct(this);
 		}
@@ -705,19 +770,36 @@ class test extends foo implements CppType<test> {
 
 	public test op_assign(test right) {
 		if (right != this) {
+			super.op_assign(right);
 			anon_class1.op_assign(right.anon_class1);
 			anon_class2.op_assign(right.anon_class2);
 			anon_class3.op_assign(right.anon_class3);
 			anon_class4.op_assign(right.anon_class4);
 			test_foo_with_init.op_assign(right.test_foo_with_init);
 			test_with_bit_field = right.test_with_bit_field;
-			foo_bar_array = (foo[]) CPP.copyArray(right.foo_bar_array);
-			foo_baz_array = (foo[][]) CPP.copyArray(right.foo_baz_array);
-			basic_array = (int[]) right.basic_array.clone();
-			not_so_basic_array = (int[][]) right.not_so_basic_array.clone();
+			CPP.assignArray(foo_bar_array, right.foo_bar_array);
+			CPP.assignArray(foo_baz_array, right.foo_baz_array);
+			CPP.assignBasicArray(basic_array, right.basic_array);
+			CPP.assignMultiArray(not_so_basic_array, right.not_so_basic_array);
 			foo_bar.op_assign(right.foo_bar);
 		}
 		return this;
+	}
+
+	test(test right) {
+		super(right);
+		anon_class1 = right.anon_class1.copy();
+		anon_class2 = right.anon_class2.copy();
+		anon_class3 = right.anon_class3.copy();
+		anon_class4 = right.anon_class4.copy();
+		test_foo_with_init = right.test_foo_with_init.copy();
+		test_with_bit_field = right.test_with_bit_field;
+		foo_bar_array = (foo[]) CPP.copyArray(right.foo_bar_array);
+		foo_baz_array = (foo[][]) CPP.copyArray(right.foo_baz_array);
+		basic_array = (int[]) CPP.copyBasicArray(right.basic_array);
+		not_so_basic_array = (int[][]) CPP
+				.copyMultiArray(right.not_so_basic_array);
+		foo_bar = right.foo_bar.copy();
 	}
 
 	public test copy() {
@@ -746,6 +828,11 @@ class test_union2 implements CppType<test_union2> {
 		return this;
 	}
 
+	test_union2(test_union2 right) {
+		a = right.a;
+		b = right.b;
+	}
+
 	public test_union2 copy() {
 		return new test_union2(this);
 	}
@@ -768,6 +855,10 @@ class AnonClass2 implements CppType<AnonClass2> {
 			return this;
 		}
 
+		AnonClass3(AnonClass3 right) {
+			a = right.a;
+		}
+
 		public AnonClass3 copy() {
 			return new AnonClass3(this);
 		}
@@ -777,13 +868,13 @@ class AnonClass2 implements CppType<AnonClass2> {
 	AnonClass3 anon_class2;
 
 	AnonClass2() {
-		anon_class1 = new MISSING();
-		anon_class2 = new MISSING();
+		this.anon_class1 = new MISSING();
+		this.anon_class2 = new MISSING();
 	}
 
 	public void destruct() {
-		anon_class2.destruct();
-		anon_class1.destruct();
+		this.anon_class2.destruct();
+		this.anon_class1.destruct();
 	}
 
 	public AnonClass2 op_assign(AnonClass2 right) {
@@ -792,6 +883,11 @@ class AnonClass2 implements CppType<AnonClass2> {
 			anon_class2.op_assign(right.anon_class2);
 		}
 		return this;
+	}
+
+	AnonClass2(AnonClass2 right) {
+		anon_class1 = right.anon_class1.copy();
+		anon_class2 = right.anon_class2.copy();
 	}
 
 	public AnonClass2 copy() {
