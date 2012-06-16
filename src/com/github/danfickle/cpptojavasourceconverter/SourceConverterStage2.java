@@ -303,6 +303,7 @@ import org.eclipse.text.edits.TextEdit;
  * When to call super on generated methods.
  * Static fields.
  * Qualify fields with this.
+ * Check if has copy ctor.
  */
 
 /**
@@ -372,7 +373,7 @@ public class SourceConverterStage2
 		{
 			print(fieldInfo.field.getName());
 
-			if (fieldInfo.init != null)
+			if (fieldInfo.init != null && !fieldInfo.isStatic)
 			{
 				Assignment assign = jast.newAssign()
 						.left(ast.newSimpleName(fieldInfo.field.getName()))
@@ -392,7 +393,9 @@ public class SourceConverterStage2
 		{
 			print(fields.get(i).field.getName());
 
-			if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OTHER)
+			if (fields.get(i).isStatic)
+				/* Do nothing. */ ;
+			else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OTHER)
 			{
 				MethodInvocation meth = jast.newMethod()
 						.on(ast.newSimpleName(fields.get(i).field.getName()))
@@ -717,7 +720,6 @@ public class SourceConverterStage2
 		}
 	}
 	
-	
 	private List<FieldInfo> collectFieldsForClass(IASTDeclSpecifier declSpec) throws DOMException
 	{
 		if (!(declSpec instanceof IASTCompositeTypeSpecifier))
@@ -743,11 +745,15 @@ public class SourceConverterStage2
 					if (binding instanceof IField)
 					{
 						FieldInfo field = new FieldInfo(declarator, exprs.get(i), (IField) binding);
-						fields.add(field);
 
 						if (declarator instanceof IASTFieldDeclarator &&
 							((IASTFieldDeclarator) declarator).getBitFieldSize() != null)
 							field.isBitfield = true;
+						
+						if (((IField) binding).isStatic())
+							field.isStatic = true;
+
+						fields.add(field);
 					}
 					i++;
 				}
@@ -1518,86 +1524,89 @@ public class SourceConverterStage2
 				meth.setBody(blk);
 
 				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
-				
-				if (!fields.isEmpty() || info.hasSuper)
+
+				Block ifBlock = ast.newBlock();
+
+				if (info.hasSuper)
 				{
-					// if (right != this) { ... } 
+					SuperMethodInvocation sup = ast.newSuperMethodInvocation();
+					sup.setName(ast.newSimpleName("op_assign"));
+					sup.arguments().add(ast.newSimpleName("right"));
+					ifBlock.statements().add(ast.newExpressionStatement(sup));
+				}
+
+				for (FieldInfo fieldInfo : fields)
+				{
+					print(fieldInfo.field.getName());
+
+					if (fieldInfo.isStatic)
+						/* Do nothing. */ ;
+					else if (fieldInfo.init != null &&
+							getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
+					{
+						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+						MethodInvocation meth2 = jast.newMethod()
+								.on(ast.newSimpleName(fieldInfo.field.getName()))
+								.call("op_assign")
+								.with(qual).toAST();
+
+						ifBlock.statements().add(ast.newExpressionStatement(meth2));
+					}
+					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
+							getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OTHER)
+					{
+						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+						MethodInvocation meth3 = jast.newMethod()
+								.on("CPP")
+								.call("assignArray")
+								.with(ast.newSimpleName(fieldInfo.field.getName()))
+								.with(qual).toAST();
+
+						ifBlock.statements().add(ast.newExpressionStatement(meth3));
+					}
+					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
+					{
+						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+						String methodName = "assignBasicArray";
+
+						if (getArraySizeExpressions(fieldInfo.field.getType()).size() > 1)
+							methodName = "assignMultiArray";
+
+						MethodInvocation meth3 = jast.newMethod()
+								.on("CPP")
+								.call(methodName)
+								.with(ast.newSimpleName(fieldInfo.field.getName()))
+								.with(qual).toAST();
+
+						ifBlock.statements().add(ast.newExpressionStatement(meth3));
+					}
+					else
+					{
+						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+						Assignment assign = jast.newAssign()
+								.left(ast.newSimpleName(fieldInfo.field.getName()))
+								.right(qual)
+								.op(Assignment.Operator.ASSIGN).toAST();
+
+						ifBlock.statements().add(ast.newExpressionStatement(assign));
+					}
+				}
+
+				if (!ifBlock.statements().isEmpty())
+				{	// if (right != this) { ... } 
 					IfStatement ifStmt = ast.newIfStatement();
 					InfixExpression condition = ast.newInfixExpression();
 					condition.setLeftOperand(ast.newSimpleName("right"));
 					condition.setRightOperand(ast.newThisExpression());
 					condition.setOperator(InfixExpression.Operator.NOT_EQUALS);
 					ifStmt.setExpression(condition);
-					Block ifBlock = ast.newBlock();
 					ifStmt.setThenStatement(ifBlock);
 					blk.statements().add(ifStmt);
-
-					if (info.hasSuper)
-					{
-						SuperMethodInvocation sup = ast.newSuperMethodInvocation();
-						sup.setName(ast.newSimpleName("op_assign"));
-						sup.arguments().add(ast.newSimpleName("right"));
-						ifBlock.statements().add(ast.newExpressionStatement(sup));
-					}
-					
-					for (FieldInfo fieldInfo : fields)
-					{
-						print(fieldInfo.field.getName());
-
-						if (fieldInfo.init != null &&
-							getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
-						{
-							QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
-
-							MethodInvocation meth2 = jast.newMethod()
-									.on(ast.newSimpleName(fieldInfo.field.getName()))
-									.call("op_assign")
-									.with(qual).toAST();
-
-							ifBlock.statements().add(ast.newExpressionStatement(meth2));
-						}
-						else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
-								getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OTHER)
-						{
-							QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
-
-							MethodInvocation meth3 = jast.newMethod()
-									.on("CPP")
-									.call("assignArray")
-									.with(ast.newSimpleName(fieldInfo.field.getName()))
-									.with(qual).toAST();
-
-							ifBlock.statements().add(ast.newExpressionStatement(meth3));
-						}
-						else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
-						{
-							QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
-							String methodName = "assignBasicArray";
-							
-							if (getArraySizeExpressions(fieldInfo.field.getType()).size() > 1)
-								methodName = "assignMultiArray";
-							
-							MethodInvocation meth3 = jast.newMethod()
-									.on("CPP")
-									.call(methodName)
-									.with(ast.newSimpleName(fieldInfo.field.getName()))
-									.with(qual).toAST();
-							
-							ifBlock.statements().add(ast.newExpressionStatement(meth3));
-						}
-						else
-						{
-							QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
-
-							Assignment assign = jast.newAssign()
-									.left(ast.newSimpleName(fieldInfo.field.getName()))
-									.right(qual)
-									.op(Assignment.Operator.ASSIGN).toAST();
-
-							ifBlock.statements().add(ast.newExpressionStatement(assign));
-						}
-					}
 				}
+
 				blk.statements().add(jast.newReturn(ast.newThisExpression()));
 				tyd.bodyDeclarations().add(meth);
 			}
@@ -1630,7 +1639,9 @@ public class SourceConverterStage2
 				{
 					print(fieldInfo.field.getName());
 
-					if (fieldInfo.init != null &&
+					if (fieldInfo.isStatic)
+						/* Do nothing. */ ;
+					else if (fieldInfo.init != null &&
 						getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
 					{
 						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
@@ -4055,6 +4066,7 @@ public class SourceConverterStage2
 		final IField field;
 		Expression init;
 		boolean isBitfield;
+		boolean isStatic;
 	}
 	
 	private static class CompositeInfo

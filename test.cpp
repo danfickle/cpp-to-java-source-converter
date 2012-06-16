@@ -97,6 +97,10 @@ public:
 		// Test a return statement...
 		return two;
 	}
+
+	// Test static fields...
+	static int static_int;
+	static String static_string;
 };
 
 // Test a class with a parent class...
