@@ -289,6 +289,8 @@ import org.eclipse.text.edits.TextEdit;
  * Cast allocateArray. TICK.
  * Add static modifier to nested classes and global variables. TICK.
  * Generate default copy constructor. TICK.
+ * Check if has copy ctor. TICK.
+ * Qualify fields with this. TICK.
  * 
  * Comma operator.
  * Deal with typedef.
@@ -301,8 +303,6 @@ import org.eclipse.text.edits.TextEdit;
  * Copy/delete constructor being called on references.
  * When to call super on generated methods.
  * Static fields initializers.
- * Qualify fields with this.
- * Check if has copy ctor.
  * Rename String to something.
  */
 
@@ -375,8 +375,12 @@ public class SourceConverterStage2
 
 			if (fieldInfo.init != null && !fieldInfo.isStatic)
 			{
+				FieldAccess fa = ast.newFieldAccess();
+				fa.setExpression(ast.newThisExpression());
+				fa.setName(ast.newSimpleName(fieldInfo.field.getName()));
+				
 				Assignment assign = jast.newAssign()
-						.left(ast.newSimpleName(fieldInfo.field.getName()))
+						.left(fa)
 						.right(fieldInfo.init)
 						.op(Assignment.Operator.ASSIGN).toAST();
 
@@ -397,18 +401,26 @@ public class SourceConverterStage2
 				/* Do nothing. */ ;
 			else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OTHER)
 			{
+				FieldAccess fa = ast.newFieldAccess();
+				fa.setExpression(ast.newThisExpression());
+				fa.setName(ast.newSimpleName(fields.get(i).field.getName()));
+				
 				MethodInvocation meth = jast.newMethod()
-						.on(ast.newSimpleName(fields.get(i).field.getName()))
+						.on(fa)
 						.call("destruct").toAST();
 				method.getBody().statements().add(ast.newExpressionStatement(meth));					
 			}
 			else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.ARRAY &&
 					getTypeEnum(getArrayBaseType(fields.get(i).field.getType())) == TypeEnum.OTHER)
 			{
+				FieldAccess fa = ast.newFieldAccess();
+				fa.setExpression(ast.newThisExpression());
+				fa.setName(ast.newSimpleName(fields.get(i).field.getName()));
+				
 				MethodInvocation meth = jast.newMethod()
 						.on("DestructHelper")
 						.call("destructArray")
-						.with(ast.newSimpleName(fields.get(i).field.getName())).toAST();
+						.with(fa).toAST();
 				method.getBody().statements().add(ast.newExpressionStatement(meth));					
 			}
 		}
