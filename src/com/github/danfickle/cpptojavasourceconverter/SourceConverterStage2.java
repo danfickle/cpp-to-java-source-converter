@@ -263,7 +263,6 @@ import org.eclipse.text.edits.TextEdit;
  * Default arguments for function declarations. TICK.
  * If isEventualPtrOrRef then add .val to expression. TICK.
  * TypeDeclarations losing type param info. TICK.
- * Rename String to something. TICK.
  * Address of operator. TICK.
  * Anonymous stuff. TICK.
  * - Anonymous enums. TICK.
@@ -301,9 +300,10 @@ import org.eclipse.text.edits.TextEdit;
  * Overuse of op_assign.
  * Copy/delete constructor being called on references.
  * When to call super on generated methods.
- * Static fields.
+ * Static fields initializers.
  * Qualify fields with this.
  * Check if has copy ctor.
+ * Rename String to something.
  */
 
 /**
@@ -645,13 +645,18 @@ public class SourceConverterStage2
 		VariableDeclarationFragment frag = ast.newVariableDeclarationFragment();
 		frag.setName(ast.newSimpleName(ifield.getName()));
 		
-		if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER ||
-			getTypeEnum(ifield.getType()) == TypeEnum.ARRAY)
-		{
-			frag.setInitializer(init);
-		}
-
 		FieldDeclaration field = ast.newFieldDeclaration(frag);
+		
+		if (ifield.isStatic())
+		{
+			field.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
+			
+			if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER ||
+				getTypeEnum(ifield.getType()) == TypeEnum.ARRAY)
+			{
+				frag.setInitializer(init);
+			}
+		}
 
 		if (ifield.getType().toString().isEmpty())
 			field.setType(jast.newType("AnonClass" + (m_anonClassCount - 1)));
@@ -806,7 +811,7 @@ public class SourceConverterStage2
 				else if (binding instanceof IField)
 				{
 					print("standard field");
-					generateField(binding, declarator, null);
+					generateField(binding, declarator, exprs.get(i));
 				}
 				else if (binding instanceof IFunction &&
 						declarator instanceof IASTFunctionDeclarator)
