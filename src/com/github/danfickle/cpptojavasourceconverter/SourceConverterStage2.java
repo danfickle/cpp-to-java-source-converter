@@ -1694,7 +1694,6 @@ public class SourceConverterStage2
 						MethodInvocation meth3 = jast.newMethod()
 								.on("CPP")
 								.call(methodName)
-								.with(ast.newSimpleName(fieldInfo.field.getName()))
 								.with(qual).toAST();
 
 						CastExpression cast = ast.newCastExpression();
