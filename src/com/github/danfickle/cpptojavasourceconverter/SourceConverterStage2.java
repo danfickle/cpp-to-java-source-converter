@@ -205,6 +205,7 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.ParameterizedType;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PrimitiveType;
+import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.TagElement;
 import org.eclipse.jdt.core.dom.TypeLiteral;
@@ -288,8 +289,8 @@ import org.eclipse.text.edits.TextEdit;
  * Generate default assignment method. TICK.
  * Cast allocateArray. TICK.
  * Add static modifier to nested classes and global variables. TICK.
- *
- * Generate default copy constructor.
+ * Generate default copy constructor. TICK.
+ * 
  * Comma operator.
  * Deal with typedef.
  * - Anonymous classes, unions, structs. REGRESSION
@@ -301,6 +302,7 @@ import org.eclipse.text.edits.TextEdit;
  * Copy/delete constructor being called on references.
  * When to call super on generated methods.
  * Static fields.
+ * Qualify fields with this.
  */
 
 /**
@@ -1517,7 +1519,7 @@ public class SourceConverterStage2
 
 				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
 				
-				if (!fields.isEmpty())
+				if (!fields.isEmpty() || info.hasSuper)
 				{
 					// if (right != this) { ... } 
 					IfStatement ifStmt = ast.newIfStatement();
@@ -1597,6 +1599,111 @@ public class SourceConverterStage2
 					}
 				}
 				blk.statements().add(jast.newReturn(ast.newThisExpression()));
+				tyd.bodyDeclarations().add(meth);
+			}
+			
+			if (!info.hasCopy)
+			{
+				MethodDeclaration meth = jast.newMethodDecl()
+						.returnType(null)
+						.name(finalName)
+						.setCtor(true).toAST();
+
+				SingleVariableDeclaration var = ast.newSingleVariableDeclaration();
+				var.setType(jast.newType(finalName));
+				var.setName(ast.newSimpleName("right"));
+				meth.parameters().add(var);
+
+				Block blk = ast.newBlock();
+				meth.setBody(blk);
+
+				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
+
+				if (info.hasSuper)
+				{
+					SuperConstructorInvocation sup = ast.newSuperConstructorInvocation();
+					sup.arguments().add(ast.newSimpleName("right"));
+					blk.statements().add(sup);
+				}
+
+				for (FieldInfo fieldInfo : fields)
+				{
+					print(fieldInfo.field.getName());
+
+					if (fieldInfo.init != null &&
+						getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
+					{
+						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+						MethodInvocation meth2 = jast.newMethod()
+								.on(qual)
+								.call("copy").toAST();
+
+						Assignment assign = jast.newAssign()
+								.left(ast.newSimpleName(fieldInfo.field.getName()))
+								.right(meth2)
+								.op(Assignment.Operator.ASSIGN).toAST();
+						
+						blk.statements().add(ast.newExpressionStatement(assign));
+					}
+					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
+							getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OTHER)
+					{
+						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+						MethodInvocation meth3 = jast.newMethod()
+								.on("CPP")
+								.call("copyArray")
+								.with(qual).toAST();
+
+						CastExpression cast = ast.newCastExpression();
+						cast.setType(cppToJavaType(fieldInfo.field.getType()));
+						cast.setExpression(meth3);
+						
+						Assignment assign = jast.newAssign()
+								.left(ast.newSimpleName(fieldInfo.field.getName()))
+								.right(cast)
+								.op(Assignment.Operator.ASSIGN).toAST();
+						
+						blk.statements().add(ast.newExpressionStatement(assign));
+					}
+					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
+					{
+						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+						String methodName = "copyBasicArray";
+
+						if (getArraySizeExpressions(fieldInfo.field.getType()).size() > 1)
+							methodName = "copyMultiArray";
+
+						MethodInvocation meth3 = jast.newMethod()
+								.on("CPP")
+								.call(methodName)
+								.with(ast.newSimpleName(fieldInfo.field.getName()))
+								.with(qual).toAST();
+
+						CastExpression cast = ast.newCastExpression();
+						cast.setType(cppToJavaType(fieldInfo.field.getType()));
+						cast.setExpression(meth3);
+						
+						Assignment assign = jast.newAssign()
+								.left(ast.newSimpleName(fieldInfo.field.getName()))
+								.right(cast)
+								.op(Assignment.Operator.ASSIGN).toAST();
+
+						blk.statements().add(ast.newExpressionStatement(assign));
+					}
+					else
+					{
+						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
+
+						Assignment assign = jast.newAssign()
+								.left(ast.newSimpleName(fieldInfo.field.getName()))
+								.right(qual)
+								.op(Assignment.Operator.ASSIGN).toAST();
+
+						blk.statements().add(ast.newExpressionStatement(assign));
+					}
+				}
 				tyd.bodyDeclarations().add(meth);
 			}
 			
