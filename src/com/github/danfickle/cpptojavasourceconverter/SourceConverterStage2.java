@@ -300,6 +300,7 @@ import org.eclipse.text.edits.TextEdit;
  * Overuse of op_assign.
  * Copy/delete constructor being called on references.
  * When to call super on generated methods.
+ * Static fields.
  */
 
 /**
@@ -383,7 +384,7 @@ public class SourceConverterStage2
 		}
 	}
 
-	private void generateDtorStatements(List<FieldInfo> fields, MethodDeclaration method) throws DOMException
+	private void generateDtorStatements(List<FieldInfo> fields, MethodDeclaration method, boolean hasSuper) throws DOMException
 	{
 		for (int i = fields.size() - 1; i >= 0; i--)
 		{
@@ -405,6 +406,13 @@ public class SourceConverterStage2
 						.with(ast.newSimpleName(fields.get(i).field.getName())).toAST();
 				method.getBody().statements().add(ast.newExpressionStatement(meth));					
 			}
+		}
+		
+		if (hasSuper)
+		{
+			SuperMethodInvocation supMeth = ast.newSuperMethodInvocation();
+			supMeth.setName(ast.newSimpleName("destruct"));
+			method.getBody().statements().add(ast.newExpressionStatement(supMeth));
 		}
 	}
 	
@@ -461,7 +469,8 @@ public class SourceConverterStage2
 			blk.statements().add(0, stmt2);
 		}
 
-		IASTDeclSpecifier declSpecifier = compositeMap.get(getQualifiedPart(func.getDeclarator().getName())).declSpecifier;
+		CompositeInfo info = compositeMap.get(getQualifiedPart(func.getDeclarator().getName()));
+		IASTDeclSpecifier declSpecifier = info.declSpecifier;
 
 		List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
 		
@@ -512,11 +521,11 @@ public class SourceConverterStage2
 		}
 		else if (isDtor)
 		{
-			generateDtorStatements(fields, method.toAST());
+			generateDtorStatements(fields, method.toAST(), info.hasSuper);
 		}
 		
 		// Now add the method to the appropriate class declaration...
-		CompositeInfo info = compositeMap.get(getQualifiedPart(func.getDeclarator().getName()));
+		//CompositeInfo info = compositeMap.get(getQualifiedPart(func.getDeclarator().getName()));
 
 		if (info == null)
 		{
@@ -1486,7 +1495,7 @@ public class SourceConverterStage2
 				meth.setBody(blk);
 
 				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
-				generateDtorStatements(fields, meth);
+				generateDtorStatements(fields, meth, info.hasSuper);
 				tyd.bodyDeclarations().add(meth);
 			}
 			
