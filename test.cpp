@@ -76,6 +76,12 @@ public:
 	foo() { }
 	~foo() { }
 
+	// Test copy ctor...
+	foo(const foo& right)
+	{
+		int i = 10;
+	}
+
 	foo(int i) {
 		// Test use of anonymous enums values
 		// and assigning enum values to int...

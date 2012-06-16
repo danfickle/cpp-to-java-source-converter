@@ -710,7 +710,16 @@ public class SourceConverterStage2
 				{
 					info.hasCtor = true;
 
-					// TODO: check if copy constructor...
+					ICPPConstructor ctor = (ICPPConstructor) ((IASTFunctionDefinition)decl).getDeclarator().getName().resolveBinding(); 
+					ICPPParameter[] params  = ctor.getParameters();
+
+					if (params.length != 0 &&
+						getTypeEnum(params[0].getType()) == TypeEnum.REFERENCE &&
+						cppToJavaType(params[0].getType()).toString().equals(ctor.getName()))
+					{
+						// TODO: We should check there are no params or others have default values...
+						info.hasCopy = true;
+					}
 				}
 				else if (((IASTFunctionDefinition)decl).getDeclarator().getName().resolveBinding() instanceof ICPPMethod)
 				{
