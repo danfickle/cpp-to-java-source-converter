@@ -661,6 +661,7 @@ class test extends foo implements CppType<test> {
 	}
 
 	test() {
+		super();
 		this.anon_class1 = new MISSING();
 		this.anon_class2 = new MISSING();
 		this.anon_class3 = new MISSING();
@@ -676,6 +677,7 @@ class test extends foo implements CppType<test> {
 	}
 
 	test(int i) {
+		super();
 		this.anon_class1 = new MISSING();
 		this.anon_class2 = new MISSING();
 		this.anon_class3 = new MISSING();
@@ -804,6 +806,68 @@ class test extends foo implements CppType<test> {
 
 	public test copy() {
 		return new test(this);
+	}
+}
+
+class test2 extends foo implements CppType<test2> {
+	foo foo_bar;
+
+	test2() {
+		super();
+		this.foo_bar = new foo();
+	}
+
+	public void destruct() {
+		this.foo_bar.destruct();
+		super.destruct();
+	}
+
+	public test2 op_assign(test2 right) {
+		if (right != this) {
+			super.op_assign(right);
+			foo_bar.op_assign(right.foo_bar);
+		}
+		return this;
+	}
+
+	test2(test2 right) {
+		super(right);
+		foo_bar = right.foo_bar.copy();
+	}
+
+	public test2 copy() {
+		return new test2(this);
+	}
+}
+
+class test3 extends foo implements CppType<test3> {
+	foo foo_baz;
+
+	test3() {
+		super(1, 2);
+		this.foo_baz = new foo(3, 4);
+	}
+
+	public void destruct() {
+		this.foo_baz.destruct();
+		super.destruct();
+	}
+
+	public test3 op_assign(test3 right) {
+		if (right != this) {
+			super.op_assign(right);
+			foo_baz.op_assign(right.foo_baz);
+		}
+		return this;
+	}
+
+	test3(test3 right) {
+		super(right);
+		foo_baz = right.foo_baz.copy();
+	}
+
+	public test3 copy() {
+		return new test3(this);
 	}
 }
 
