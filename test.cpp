@@ -530,6 +530,31 @@ class test3 : public foo
 
 	// Test a constructor where the base class ctor is called with arguments...
 	test3() : foo(1, 2), foo_baz(3, 4) { }
+
+	void ptr_test_method()
+	{
+		int a;
+		int b[20];
+
+		// Test a variety of pointer expressions...
+		int * c = &a;
+		int * d = b;
+		int * e = c;
+		int * f = &b[1];
+		int * g = d++;
+		int * h = --g;
+		int * i = d + 10;
+		int * j = ++d + 5;
+		int k = f[5];
+		int l = *j;
+		int * m = &f[4];
+
+		f[4] = 111;
+		*f = 112;
+		*(f + 2) = 113;
+		*(f--) = 114;
+	}
+
 };
 
 // Test a namepace level union...
