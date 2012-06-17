@@ -518,6 +518,20 @@ class test : public foo {
 	};
 };
 
+class test2 : private foo
+{
+	// Test a class with a base class and no ctor...
+	foo foo_bar;
+};
+
+class test3 : public foo
+{
+	foo foo_baz;
+
+	// Test a constructor where the base class ctor is called with arguments...
+	test3() : foo(1, 2), foo_baz(3, 4) { }
+};
+
 // Test a namepace level union...
 union test_union2
 {

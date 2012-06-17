@@ -291,6 +291,7 @@ import org.eclipse.text.edits.TextEdit;
  * Generate default copy constructor. TICK.
  * Check if has copy ctor. TICK.
  * Qualify fields with this. TICK.
+ * When to call super on generated methods. TICK.
  * 
  * Comma operator.
  * Deal with typedef.
@@ -301,9 +302,9 @@ import org.eclipse.text.edits.TextEdit;
  * re-parenting.
  * Overuse of op_assign.
  * Copy/delete constructor being called on references.
- * When to call super on generated methods.
  * Static fields initializers.
  * Rename String to something.
+ * Use names that are unlikely to clash for copy, CPP, right, etc.
  */
 
 /**
@@ -490,6 +491,7 @@ public class SourceConverterStage2
 		IASTDeclSpecifier declSpecifier = info.declSpecifier;
 
 		List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
+		List<Expression> superInit = null;
 		
 		if (func instanceof ICPPASTFunctionDefinition)
 		{
@@ -523,6 +525,11 @@ public class SourceConverterStage2
 							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
 								fieldInfo.init = eval1Expr(chain.getInitializerValue());
 						}
+						
+						if (info.hasSuper && chain.getMemberInitializerId().resolveBinding().getName().equals(info.superClass))
+						{
+							superInit = evalExpr(chain.getInitializerValue());
+						}
 					}
 					else
 					{
@@ -535,6 +542,16 @@ public class SourceConverterStage2
 		if (isCtor)
 		{
 			generateCtorStatements(fields, method.toAST());
+			
+			if (info.hasSuper)
+			{
+				SuperConstructorInvocation con = ast.newSuperConstructorInvocation();
+
+				if (superInit != null)
+					con.arguments().addAll(superInit);
+				
+				method.toAST().getBody().statements().add(0, con);
+			}
 		}
 		else if (isDtor)
 		{
@@ -1490,6 +1507,7 @@ public class SourceConverterStage2
 				{
 					tyd.setSuperclassType(jast.newType(getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName())));
 					info.hasSuper = true;
+					info.superClass = getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName());
 				}
 				
 //				for (ICPPASTBaseSpecifier base : cppCompositeTypeSpecifier.getBaseSpecifiers())
@@ -1513,6 +1531,10 @@ public class SourceConverterStage2
 			
 				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
 				generateCtorStatements(fields, meth);
+
+				if (info.hasSuper)
+					blk.statements().add(0, ast.newSuperConstructorInvocation());
+				
 				tyd.bodyDeclarations().add(meth);
 			}
 			
@@ -4103,6 +4125,7 @@ public class SourceConverterStage2
 		
 		TypeDeclaration tyd;
 		IASTDeclSpecifier declSpecifier;
+		String superClass;
 		boolean hasCtor;
 		boolean hasDtor;
 		boolean hasCopy;
