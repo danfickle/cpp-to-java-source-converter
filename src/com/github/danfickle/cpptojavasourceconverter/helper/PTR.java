@@ -5,18 +5,21 @@ class PTR
 	private PTR() { }
 	
 	static PtrInteger newIntPtr() { return new PtrIntegerOne(); }
+	static PtrInteger newIntPtr(int val) { return new PtrIntegerOne(val); }
 	static PtrInteger newIntPtr(int[] arr) { return new PtrIntegerMulti(arr); }
-	static PtrInteger addrOfInt(int val) { return new PtrIntegerOne(val); }
-	static PtrInteger addrOfInt(PtrInteger right, int offset) { return new PtrIntegerMulti(right, offset); }
-	static PtrInteger addrOfInt(int[] right, int offset) { return new PtrIntegerMulti(right, offset); }
+	static PtrInteger newIntPtr(PtrInteger right)
+	{
+		if (right instanceof PtrIntegerMulti)
+			return new PtrIntegerMulti((PtrIntegerMulti) right);
+		else
+			return new PtrIntegerOne((PtrIntegerOne) right);
+	}
 }
 
 interface PtrInteger
 {
 	int get();
-	int get(int offset);
 	int set(int item);
-	int set(int offset, int item);
 	PtrInteger postinc();
 	PtrInteger postdec();
 	PtrInteger adjust(int cnt);
@@ -31,19 +34,19 @@ interface PtrInteger
 //		int b = 0;
 //		
 //		PtrInteger c = PTR.newIntPtr();
-//		PtrInteger d = PTR.addrOfInt(b);
+//		PtrInteger d = PTR.newIntPtr(b);
 //		PtrInteger e = PTR.newIntPtr(new int[10]);
-//		PtrInteger f = PTR.addrOfInt(a, 2);
-//		PtrInteger g = PTR.addrOfInt(f, 5);
-//		int h = g.get();
-//		int i = f.get(2);
-//		int j = f.add(-2).get(2);
-//		PtrInteger k = g.postdec();
-//		
-//		k.set(111);
-//		k.add(5).set(112);
-//		k.set(5, 113);
-//		k.postdec().set(114);
+//		PtrInteger f = PTR.newIntPtr(a);
+//		int h = f.get();            // h = *f or h = f[0]
+//		int i = f.add(2).get();     // i = f[2] or i = *(f + 2)
+//		int j = e.add(5).set(2);    // j = e[5] = 2  or j = *(e + 5) = 2 
+//		PtrInteger k = e.add(5);    // int * k = &e[5] or k = e + 5 
+//		int l = k.postdec().get();  // l = *(k--)
+//		k.adjust(-2);               // k -= 2
+//
+//		k.set(111);                 // *k = 111 or k[0] = 111
+//		k.add(5).set(112);          // k[5] = 112 or *(k + 5) = 112
+//		k.postdec().set(114);       // *(k--) = 114
 //	}
 //}
 
@@ -53,23 +56,7 @@ class PtrIntegerOne implements PtrInteger
 
 	PtrIntegerOne() { }
 	PtrIntegerOne(int item) { val = item; }
-	
-	public int get(int offset)
-	{
-		if (offset != 0)
-			throw new IllegalArgumentException();
-		
-		return val;
-	}
-
-	public int set(int offset, int item)
-	{
-		if (offset != 0)
-			throw new IllegalArgumentException();
-
-		val = item;
-		return val;
-	}
+	PtrIntegerOne(PtrIntegerOne right) { val = right.val; }
 	
 	public int get() { return val; }	
 	public int set(int item) { val = item; return val; }
@@ -98,30 +85,30 @@ class PtrIntegerMulti implements PtrInteger
 	private final int[] val;
 	private int currentOffset;
 
-	PtrIntegerMulti(int[] arr) { val = arr; }
-	PtrIntegerMulti(int[] arr, int offset) { val = arr; currentOffset = offset; }
-
-	PtrIntegerMulti(PtrInteger right, int offset)
+	private PtrIntegerMulti(int[] arr, int offset)
 	{
-		val = ((PtrIntegerMulti) right).val; 
-		currentOffset = ((PtrIntegerMulti) right).currentOffset + offset;
+		val = arr;
+		currentOffset = offset;
 	}
-	
-	public int get(int offset) { return val[currentOffset + offset]; }
-	public int set(int offset, int item) {	val[currentOffset + offset] = item; return item;	}
+
+	PtrIntegerMulti(PtrIntegerMulti right)
+	{
+		val = right.val; 
+		currentOffset = right.currentOffset;
+	}
+
+	PtrIntegerMulti(int[] arr) { val = arr; }
 	public int get() { return val[currentOffset]; }	
 	public int set(int item) { val[currentOffset] = item; return item; }
 
 	public PtrInteger postinc()
 	{
-		currentOffset++;
-		return new PtrIntegerMulti(val, currentOffset - 1);
+		return new PtrIntegerMulti(val, currentOffset++);
 	}
 
 	public PtrInteger postdec()
 	{
-		currentOffset--;
-		return new PtrIntegerMulti(val, currentOffset + 1);
+		return new PtrIntegerMulti(val, currentOffset--);
 	}
 
 	public PtrInteger adjust(int cnt) 
