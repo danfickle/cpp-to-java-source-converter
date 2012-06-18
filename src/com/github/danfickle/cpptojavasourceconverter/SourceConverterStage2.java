@@ -2233,10 +2233,31 @@ public class SourceConverterStage2
 			IASTArraySubscriptExpression arraySubscriptExpression = (IASTArraySubscriptExpression)expression;
 			print("Array subscript");
 
-			ArrayAccess array = ast.newArrayAccess(); 
-			array.setArray(eval1Expr(arraySubscriptExpression.getArrayExpression()));
-			array.setIndex(eval1Expr(arraySubscriptExpression.getSubscriptExpression()));
-			ret.add(array);
+			if (isEventualPtrOrRef(arraySubscriptExpression.getArrayExpression().getExpressionType()))
+			{
+				MethodInvocation meth = jast.newMethod()
+						.on(eval1Expr(arraySubscriptExpression.getArrayExpression()))
+						.call("add")
+						.with(eval1Expr(arraySubscriptExpression.getSubscriptExpression())).toAST();
+
+				if (!flags.contains(Flag.ASSIGN_LEFT_SIDE) &&
+					!flags.contains(Flag.IN_ADDRESS_OF))
+				{
+					MethodInvocation meth2 = jast.newMethod()
+						.on(meth)
+						.call("get").toAST();
+					ret.add(meth2);
+				}
+				else
+					ret.add(meth);
+			}
+			else
+			{
+				ArrayAccess array = ast.newArrayAccess(); 
+				array.setArray(eval1Expr(arraySubscriptExpression.getArrayExpression()));
+				array.setIndex(eval1Expr(arraySubscriptExpression.getSubscriptExpression()));
+				ret.add(array);
+			}
 		}
 		else if (expression instanceof IASTBinaryExpression)
 		{
@@ -2289,21 +2310,45 @@ public class SourceConverterStage2
 			}
 			else if (isAssignmentExpression(binaryExpression.getOperator()))
 			{
-				Assignment assign = jast.newAssign()
-						.left(eval1Expr(binaryExpression.getOperand1()))
-						.right(eval1Expr(binaryExpression.getOperand2()))
-						.op(evaluateBinaryAssignmentOperator(binaryExpression.getOperator())).toAST();
+				if (isEventualPtrDeref(binaryExpression.getOperand1()) &&
+					binaryExpression.getOperator() == IASTBinaryExpression.op_assign)
+				{
+					MethodInvocation meth = jast.newMethod()
+							.on(eval1Expr(binaryExpression.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
+							.call("set")
+							.with(eval1Expr(binaryExpression.getOperand2())).toAST();
+					
+					ret.add(meth);
+				}
+				else
+				{
+					Assignment assign = jast.newAssign()
+							.left(eval1Expr(binaryExpression.getOperand1()))
+							.right(eval1Expr(binaryExpression.getOperand2()))
+							.op(evaluateBinaryAssignmentOperator(binaryExpression.getOperator())).toAST();
 
-				ret.add(assign);
+					ret.add(assign);
+				}
 			}
 			else
 			{
-				InfixExpression infix = jast.newInfix()
-						.left(eval1Expr(binaryExpression.getOperand1(), fSubsNeedBooleans ? EnumSet.of(Flag.NEED_BOOLEAN) : EnumSet.noneOf(Flag.class)))
-						.right(eval1Expr(binaryExpression.getOperand2(), fSubsNeedBooleans ? EnumSet.of(Flag.NEED_BOOLEAN) : EnumSet.noneOf(Flag.class)))
-						.op(evaluateBinaryOperator(binaryExpression.getOperator())).toAST();
+				if (isEventualPtrOrRef(binaryExpression.getOperand1().getExpressionType()))
+				{
+					MethodInvocation meth = jast.newMethod()
+							.on(eval1Expr(binaryExpression.getOperand1()))
+							.call("add")
+							.with(eval1Expr(binaryExpression.getOperand2())).toAST();
+					ret.add(meth);
+				}
+				else
+				{
+					InfixExpression infix = jast.newInfix()
+							.left(eval1Expr(binaryExpression.getOperand1(), fSubsNeedBooleans ? EnumSet.of(Flag.NEED_BOOLEAN) : EnumSet.noneOf(Flag.class)))
+							.right(eval1Expr(binaryExpression.getOperand2(), fSubsNeedBooleans ? EnumSet.of(Flag.NEED_BOOLEAN) : EnumSet.noneOf(Flag.class)))
+							.op(evaluateBinaryOperator(binaryExpression.getOperator())).toAST();
 
-				ret.add(infix);
+					ret.add(infix);
+				}
 			}
 		}
 		else if (expression instanceof IASTCastExpression)
@@ -2489,14 +2534,14 @@ public class SourceConverterStage2
 
 					ret.add(fa);
 				}
-				else if (isEventualPtrOrRef(idExpression.getExpressionType()))
-				{
-					FieldAccess fa = jast.newField()
-							.on(getSimpleName(idExpression.getName()))
-							.field("val").toAST();
-
-					ret.add(fa);
-				}
+//				else if (isEventualPtrOrRef(idExpression.getExpressionType()))
+//				{
+//					FieldAccess fa = jast.newField()
+//							.on(getSimpleName(idExpression.getName()))
+//							.field("val").toAST();
+//
+//					ret.add(fa);
+//				}
 				else
 				{
 					SimpleName nm = ast.newSimpleName(getSimpleName(idExpression.getName()));
@@ -2521,7 +2566,65 @@ public class SourceConverterStage2
 			IASTUnaryExpression unaryExpression = (IASTUnaryExpression)expression;
 			print("unary");
 
-			if (isPostfixExpression(unaryExpression.getOperator()))
+			if (isEventualPtrOrRef(unaryExpression.getExpressionType()))
+			{
+				if (unaryExpression.getOperator() == IASTUnaryExpression.op_postFixIncr)
+				{
+					MethodInvocation meth = jast.newMethod()
+							.on(eval1Expr(unaryExpression.getOperand()))
+							.call("postinc").toAST();
+					ret.add(meth);
+				}
+				else if (unaryExpression.getOperator() == IASTUnaryExpression.op_postFixDecr)
+				{
+					MethodInvocation meth = jast.newMethod()
+							.on(eval1Expr(unaryExpression.getOperand()))
+							.call("postdec").toAST();
+					ret.add(meth);
+				}
+				else if (unaryExpression.getOperator() == IASTUnaryExpression.op_star)
+				{
+					printerr(unaryExpression.getOperand().getRawSignature() + unaryExpression.getOperator() + flags.toString());
+					
+					if (!flags.contains(Flag.ASSIGN_LEFT_SIDE))
+					{
+						MethodInvocation meth = jast.newMethod()
+								.on(eval1Expr(unaryExpression.getOperand()))
+								.call("get").toAST();
+						ret.add(meth);
+					}
+					else
+					{
+						ret.add(eval1Expr(unaryExpression.getOperand()));
+					}
+				}
+				else if (unaryExpression.getOperator() == IASTUnaryExpression.op_amper)
+				{
+					ret.add(eval1Expr(unaryExpression.getOperand(), EnumSet.of(Flag.IN_ADDRESS_OF)));
+				}
+				else if (unaryExpression.getOperator() == IASTUnaryExpression.op_prefixDecr)
+				{
+					MethodInvocation meth = jast.newMethod()
+							.on(eval1Expr(unaryExpression.getOperand()))
+							.call("adjust")
+							.with(jast.newNumber(-1)).toAST();
+					ret.add(meth);
+				}
+				else if (unaryExpression.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
+				{
+					ret.add(eval1Expr(unaryExpression.getOperand(), flags));
+				}
+				else
+				{
+					printerr("" + unaryExpression.getOperator());
+					MethodInvocation meth = jast.newMethod()
+							.on(eval1Expr(unaryExpression.getOperand()))
+							.call("adjust")
+							.with(jast.newNumber(1)).toAST();
+					ret.add(meth);
+				}
+			}
+			else if (isPostfixExpression(unaryExpression.getOperator()))
 			{
 				PostfixExpression post = ast.newPostfixExpression();
 				post.setOperator(evalUnaryPostfixOperator(unaryExpression.getOperator()));
@@ -2537,12 +2640,21 @@ public class SourceConverterStage2
 			}
 			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
 			{
-				ParenthesizedExpression paren = jast.newParen(eval1Expr(unaryExpression.getOperand()));
+				ParenthesizedExpression paren = jast.newParen(eval1Expr(unaryExpression.getOperand(), flags));
 				ret.add(paren);
 			}
 			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_star)
 			{
-				ret.addAll(evalExpr(unaryExpression.getOperand()));
+				if (isEventualPtrOrRef(unaryExpression.getOperand().getExpressionType()) &&
+					!flags.contains(Flag.ASSIGN_LEFT_SIDE))
+				{	
+					MethodInvocation meth = jast.newMethod()
+						.on(eval1Expr(unaryExpression.getOperand()))
+						.call("get").toAST();
+					ret.add(meth);
+				}
+				else
+					ret.addAll(evalExpr(unaryExpression.getOperand()));
 			}
 			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_amper)
 			{
@@ -3812,6 +3924,29 @@ public class SourceConverterStage2
 		return cppToJavaType(type, false, false);
 	}
 
+	private boolean isEventualPtrDeref(IASTExpression expr)
+	{
+		// First get rid of enclosing brackets...
+		while (expr instanceof IASTUnaryExpression &&
+				((IASTUnaryExpression) expr).getOperator() == IASTUnaryExpression.op_bracketedPrimary)
+		{
+			expr = ((IASTUnaryExpression) expr).getOperand();
+		}
+
+		// Now check if it is the de-reference operator...
+		if (expr instanceof IASTUnaryExpression &&
+			((IASTUnaryExpression) expr).getOperator() == IASTUnaryExpression.op_star)
+			return true;
+		
+		// Finally check for the array access operator on a pointer...
+		if (expr instanceof IASTArraySubscriptExpression &&
+			isEventualPtrOrRef(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
+			return true;
+		
+		return false;
+	}
+	
+	
 	/**
 	 * Determines if a type will turn into a Ptr or Ref. If so, we should access
 	 * it with .val suffix.
@@ -4061,7 +4196,9 @@ public class SourceConverterStage2
 		IS_LOOP,
 		IS_SWITCH,
 		IS_RET_VAL,
-		IN_METHOD_ARGS
+		IN_METHOD_ARGS,
+		ASSIGN_LEFT_SIDE,
+		IN_ADDRESS_OF
 	}
 	
 	// The Java AST. We need this to create AST nodes...
