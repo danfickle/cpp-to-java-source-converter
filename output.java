@@ -848,6 +848,26 @@ class test3 extends foo implements CppType<test3> {
 		this.foo_baz = new foo(3, 4);
 	}
 
+	void ptr_test_method() {
+		int a;
+		int[] b = new int[20];
+		PtrInteger c = a;
+		PtrInteger d = b;
+		PtrInteger e = c;
+		PtrInteger f = b[1];
+		PtrInteger g = d.postinc();
+		PtrInteger h = g.adjust(-1);
+		PtrInteger i = d.add(10);
+		PtrInteger j = d.adjust(1).add(5);
+		int k = f.add(5).get();
+		int l = j.get();
+		PtrInteger m = f.add(4);
+		f.add(4).set(111);
+		f.set(112);
+		(((f.add(2)))).set(113);
+		f.postdec().set(114);
+	}
+
 	public void destruct() {
 		this.foo_baz.destruct();
 		super.destruct();
