@@ -549,11 +549,13 @@ class test3 : public foo
 		int l = *j;
 		int * m = &f[4];
 
+		// Test plain assignment...
 		f[4] = 111;
 		*f = 112;
 		(((*(f + 2)))) = 113;
 		*(f--) = 114;
 
+		// Test compound assignment...
 		f[1] *= 3;
 		(*f) += 4;
 	}
@@ -587,6 +589,27 @@ int top_level_int = 5;
 foo top_level_foo(3);
 int * top_level_ptr = new int;
 int * top_level_ptr2 = new int[25];
+
+// Test global operator overloading...
+class OpTest
+{
+public:
+	int j;
+	OpTest(int i) : j(i) { }
+};
+
+OpTest operator +(const OpTest& a, const OpTest& b)
+{
+	return OpTest(a.j + b.j);
+}
+
+void OpTestTest()
+{
+	OpTest a(1);
+	OpTest b(2);
+	OpTest c = a + b;
+}
+
 
 // Tests TODO
 // comma operator.
