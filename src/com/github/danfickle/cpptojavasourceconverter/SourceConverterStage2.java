@@ -292,6 +292,7 @@ import org.eclipse.text.edits.TextEdit;
  * Check if has copy ctor. TICK.
  * Qualify fields with this. TICK.
  * When to call super on generated methods. TICK.
+ * Compund assignment operators on pointers. TICK.
  * 
  * Comma operator.
  * Deal with typedef.
@@ -2320,6 +2321,20 @@ public class SourceConverterStage2
 					
 					ret.add(meth);
 				}
+				else if (isEventualPtrDeref(binaryExpression.getOperand1()))
+				{
+					InfixExpression infix = ast.newInfixExpression();
+					infix.setOperator(compoundAssignmentToInfixOperator(binaryExpression.getOperator()));
+					infix.setRightOperand(eval1Expr(binaryExpression.getOperand2()));
+					infix.setLeftOperand(eval1Expr(binaryExpression.getOperand1()));
+					
+					MethodInvocation meth = jast.newMethod()
+							.on(eval1Expr(binaryExpression.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
+							.call("set")
+							.with(infix).toAST();
+					
+					ret.add(meth);
+				}
 				else
 				{
 					Assignment assign = jast.newAssign()
@@ -2932,6 +2947,32 @@ public class SourceConverterStage2
 		}
 	}
 
+	private InfixExpression.Operator compoundAssignmentToInfixOperator(int op)
+	{
+		switch (op)
+		{
+		case IASTBinaryExpression.op_binaryAndAssign:
+			return InfixExpression.Operator.AND;
+		case IASTBinaryExpression.op_binaryOrAssign:
+			return InfixExpression.Operator.OR;
+		case IASTBinaryExpression.op_binaryXorAssign:
+			return InfixExpression.Operator.XOR;
+		case IASTBinaryExpression.op_divideAssign:
+			return InfixExpression.Operator.DIVIDE;
+		case IASTBinaryExpression.op_plusAssign:
+			return InfixExpression.Operator.PLUS;
+		case IASTBinaryExpression.op_minusAssign:
+			return InfixExpression.Operator.MINUS;
+		case IASTBinaryExpression.op_multiplyAssign:
+			return InfixExpression.Operator.TIMES;
+		case IASTBinaryExpression.op_shiftLeftAssign:
+			return InfixExpression.Operator.LEFT_SHIFT;
+		case IASTBinaryExpression.op_shiftRightAssign:
+			return InfixExpression.Operator.RIGHT_SHIFT_SIGNED; // VERIFY
+		default:
+			return null;
+		}
+	}
 	
 	/**
 	 * Converts the CDT binary operator to a JDT binary operator.
