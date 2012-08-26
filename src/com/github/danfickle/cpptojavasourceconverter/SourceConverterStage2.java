@@ -156,6 +156,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPBinding;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPClassTemplate;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPClassType;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPConstructor;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPFunction;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPFunctionTemplate;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPMethod;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPParameter;
@@ -2157,7 +2158,7 @@ public class SourceConverterStage2
 		{
 			return expr;
 		}
-		else if (flags.contains(Flag.IS_RET_VAL))
+		else if (flags.contains(Flag.IS_RET_VAL) && te == TypeEnum.OTHER)
 		{
 			MethodInvocation method = jast.newMethod()
 					.on(expr)
@@ -2270,43 +2271,30 @@ public class SourceConverterStage2
 					((IASTImplicitNameOwner) expression).getImplicitNames().length != 0 &&
 					((IASTImplicitNameOwner) expression).getImplicitNames()[0].isOperator())
 			{
-
-
 				String name = ((IASTImplicitNameOwner) expression).getImplicitNames()[0].resolveBinding().getName();
-				String replace = "";
-//TODO Unknown functions.
-				if (name.equals("operator =") &&
-					((IASTImplicitNameOwner)expression).getImplicitNames()[0].resolveBinding() instanceof ICPPMethod)
+				//TODO Unknown functions.
+				String replace = normalizeName(name);
+
+				if (((IASTImplicitNameOwner)expression).getImplicitNames()[0].resolveBinding() instanceof ICPPMethod)
 				{
-					ICPPMethod bind = (ICPPMethod) ((IASTImplicitNameOwner)expression).getImplicitNames()[0].resolveBinding();
-
-					Assignment ass = ast.newAssignment();
-					if (!(eval1Expr(binaryExpression.getOperand2()) instanceof ClassInstanceCreation))
-					{
-						ClassInstanceCreation create = jast.newClassCreate()
-								.type(cppToJavaType(bind.getParameters()[0].getType()))
-								.with(eval1Expr(binaryExpression.getOperand2())).toAST();
-
-						ass.setRightHandSide(create);
-					}
-					else
-					{
-						ass.setRightHandSide(eval1Expr(binaryExpression.getOperand2()));
-					}
-
-					ass.setLeftHandSide(eval1Expr(binaryExpression.getOperand1()));
-					ret.add(ass);
-				}
-				else
-				{
-					replace = normalizeName(name);
-
 					MethodInvocation method = jast.newMethod()
 							.on(eval1Expr(binaryExpression.getOperand1()))
 							.call(replace)
 							.with(eval1Expr(binaryExpression.getOperand2())).toAST();
-
 					ret.add(method);
+				}
+				else if (((IASTImplicitNameOwner)expression).getImplicitNames()[0].resolveBinding() instanceof ICPPFunction)
+				{
+					MethodInvocation method = jast.newMethod()
+							.on("Globals")
+							.call(replace)
+							.with(eval1Expr(binaryExpression.getOperand1()))
+							.with(eval1Expr(binaryExpression.getOperand2())).toAST();
+					ret.add(method);
+				}
+				else
+				{
+					assert(false);
 				}
 			}
 			else if (isAssignmentExpression(binaryExpression.getOperator()))
