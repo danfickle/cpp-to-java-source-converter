@@ -1,5 +1,7 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,7 +18,12 @@ public class Main
 	{
 		IASTTranslationUnit tu = getTranslationUnit("/home/daniel/workspace/cpp-to-java-source-converter/test.cpp");
 		SourceConverterStage2 parser = new SourceConverterStage2();
-		parser.traverse(tu);
+		String outputCode = parser.traverse(tu);
+
+		FileOutputStream fos = new FileOutputStream("/home/daniel/workspace/cpp-to-java-source-converter/output.java");
+		OutputStreamWriter out = new OutputStreamWriter(fos, "UTF-8"); 
+		out.write(outputCode);
+		out.close();
 	}
 	
 	private static IASTTranslationUnit getTranslationUnit(String filename) throws Exception
@@ -30,8 +37,8 @@ public class Main
 	{
 		@Override
 		public Map<String, String> getDefinedSymbols() {
-			HashMap<String, String> hm = new HashMap<String, String>();
-			hm.put("NULL", "0"); // example...
+			Map<String, String> hm = new HashMap<String, String>();
+			// hm.put("NULL", "0"); // example only...
 			return hm;
 		}		
 		
