@@ -327,34 +327,47 @@ public class SourceConverterStage2
 	 */
 	private void makeDefaultCalls(IASTFunctionDeclarator func, IBinding funcBinding, TypeDeclaration decl) throws DOMException
 	{
+		// getDefaultValues will return an item for every parameter.
+		// ie. null for params without a default value.
 		List<Expression> defaultValues = getDefaultValues(func);
 
+		// We start from the right because C++ can only have default values at the
+		// right and we can stop when we get to a null (meaning there is no more defaults).
 		for (int k = defaultValues.size() - 1; k >= 0; k--)
 		{
 			if (defaultValues.get(k) == null)
 				break;
 
+			// Create the method declaration. This will handle void return types.
 			JASTHelper.MethodDecl methodDef = jast.newMethodDecl()
 					.name(getSimpleName(func.getName()))
 					.returnType(evalReturnType(funcBinding));
 
+			// This gets a parameter variable declaration for each param.
 			List<SingleVariableDeclaration> list = evalParameters(funcBinding);
 
+			// Add a param declaration for each param up until we want to use
+			// default values (which won't have a param).
 			for (int k2 = 0; k2 < k; k2++)
 				methodDef.toAST().parameters().add(list.get(k2));
 
+			// This code block simple calls the original method with
+			// passed in arguments plus default arguments.
 			Block funcBlockDef = ast.newBlock();
 			JASTHelper.Method method = jast.newMethod()
 					.call(getSimpleName(func.getName()));
 
+			// Add the passed in params by name.
 			List<SimpleName> names = getArgumentNames(funcBinding);
 			for (int k3 = 0; k3 < k; k3++)
 				method.with(names.get(k3));
 
+			// Now add the default values.
 			List<Expression> vals = getDefaultValues(func);
 			for (int k4 = k; k4 < defaultValues.size(); k4++)
 				method.with(vals.get(k4));
 
+			// If not a void function, return the result of the method call.
 			if (evalReturnType(funcBinding).toString().equals("void"))
 				funcBlockDef.statements().add(ast.newExpressionStatement(method.toAST()));
 			else
@@ -362,13 +375,23 @@ public class SourceConverterStage2
 
 			methodDef.toAST().setBody(funcBlockDef);
 			
+			// If we are not in a class, get the correct class.
 			if (decl == null)
 				decl = compositeMap.get(getQualifiedPart(func.getName())).tyd;
 
+			// Add this method to the correct class.
 			decl.bodyDeclarations().add(methodDef.toAST());
 		}
 	}
 	
+	
+	/**
+	 * Given a list of fields for a class, adds initialization statements
+	 * to the constructor for each field as required.
+	 * Initializers provided to this function are generated from C++ initializer
+	 * lists, and implicit initializers for objects.
+	 * Note: We must initialize in order that fields were declared.
+	 */
 	private void generateCtorStatements(List<FieldInfo> fields, MethodDeclaration method)
 	{
 		int start = 0;
@@ -376,9 +399,11 @@ public class SourceConverterStage2
 		{
 			print(fieldInfo.field.getName());
 
+			// Static fields can't be initialized in the constructor.
 			if (fieldInfo.init != null && !fieldInfo.isStatic)
 			{
 				FieldAccess fa = ast.newFieldAccess();
+				// Use 'this.field' construct as we may be shadowing a param name.
 				fa.setExpression(ast.newThisExpression());
 				fa.setName(ast.newSimpleName(fieldInfo.field.getName()));
 				
@@ -394,6 +419,9 @@ public class SourceConverterStage2
 		}
 	}
 
+	/**
+	 * Generate destruct calls for fields in reverse order of field declaration.
+	 */
 	private void generateDtorStatements(List<FieldInfo> fields, MethodDeclaration method, boolean hasSuper) throws DOMException
 	{
 		for (int i = fields.size() - 1; i >= 0; i--)
@@ -408,6 +436,7 @@ public class SourceConverterStage2
 				fa.setExpression(ast.newThisExpression());
 				fa.setName(ast.newSimpleName(fields.get(i).field.getName()));
 				
+				// We call the generated destruct method on objects.
 				MethodInvocation meth = jast.newMethod()
 						.on(fa)
 						.call("destruct").toAST();
@@ -420,6 +449,7 @@ public class SourceConverterStage2
 				fa.setExpression(ast.newThisExpression());
 				fa.setName(ast.newSimpleName(fields.get(i).field.getName()));
 				
+				// We use the DestructHelper to destruct arrays of objects.
 				MethodInvocation meth = jast.newMethod()
 						.on("DestructHelper")
 						.call("destructArray")
@@ -428,6 +458,7 @@ public class SourceConverterStage2
 			}
 		}
 		
+		// Last, we call destruct on the super object.
 		if (hasSuper)
 		{
 			SuperMethodInvocation supMeth = ast.newSuperMethodInvocation();
