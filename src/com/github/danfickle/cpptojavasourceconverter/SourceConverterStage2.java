@@ -243,6 +243,10 @@ import org.eclipse.jface.text.Document;
 import org.eclipse.text.edits.TextEdit;
 
 /*
+ * FAILING TESTS:
+ * test-class
+ * test-bitfields
+ * 
  * TODO
  * pointers. TICK.
  * references. TICK.

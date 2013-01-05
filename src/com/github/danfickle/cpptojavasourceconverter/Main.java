@@ -1,6 +1,8 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
+import java.io.BufferedReader;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.OutputStreamWriter;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,16 +16,28 @@ import org.eclipse.cdt.core.parser.IScannerInfo;
 
 public class Main
 {
+	final static String HOME_PATH = "/home/daniel/workspace/cpp-to-java-source-converter/";
+	
 	public static void main(String... args) throws Exception
 	{
-		IASTTranslationUnit tu = getTranslationUnit("/home/daniel/workspace/cpp-to-java-source-converter/test.cpp");
-		SourceConverterStage2 parser = new SourceConverterStage2();
-		String outputCode = parser.traverse(tu);
+	    BufferedReader br = new BufferedReader(new FileReader(HOME_PATH + "list-of-test-files.txt"));
+	    String line = br.readLine();
 
-		FileOutputStream fos = new FileOutputStream("/home/daniel/workspace/cpp-to-java-source-converter/output.java");
-		OutputStreamWriter out = new OutputStreamWriter(fos, "UTF-8"); 
-		out.write(outputCode);
-		out.close();
+	    while (line != null) {
+	    	if (!line.isEmpty())
+	    	{
+	    		IASTTranslationUnit tu = getTranslationUnit(HOME_PATH + line + ".cpp");
+	    		SourceConverterStage2 parser = new SourceConverterStage2();
+	    		String outputCode = parser.traverse(tu);
+
+	    		FileOutputStream fos = new FileOutputStream(HOME_PATH + line + ".java");
+	    		OutputStreamWriter out = new OutputStreamWriter(fos, "UTF-8"); 
+	    		out.write(outputCode);
+	    		out.close();
+	    	}
+	    	line = br.readLine();
+	    }
+	    br.close();
 	}
 	
 	private static IASTTranslationUnit getTranslationUnit(String filename) throws Exception
@@ -44,7 +58,7 @@ public class Main
 		
 		@Override
 		public String[] getIncludePaths() {
-			return new String[] { "/home/daniel/workspace/cpp-to-java-source-converter/" };
+			return new String[] { HOME_PATH };
 		}
 	}
 	

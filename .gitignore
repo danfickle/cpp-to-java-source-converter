@@ -1,0 +1,7 @@
+*~
+.classpath
+.project
+lib
+bin
+test-*.java
+crap
