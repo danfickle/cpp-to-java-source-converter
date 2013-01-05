@@ -500,10 +500,17 @@ public class SourceConverterStage2
 
 		method.toAST().parameters().addAll(evalParameters(funcBinding));
 		
+		// These class vars track the number of local variables in this function
+		// during the recursive evaluation.
 		m_localVariableMaxId = -1;
 		m_nextVariableId = 0;
+
+		// eval1Stmt work recursively to generate the function body.
 		method.toAST().setBody(surround(eval1Stmt(func.getBody())));
 
+		// If we have any local variables that are objects, or arrays of objects,
+		// we must create an explicit stack so they can be added to it and explicity
+		// cleaned up at termination points (return, break, continue, end block).
 		if (m_localVariableMaxId != -1)
 		{
 			Block blk = method.toAST().getBody();
@@ -545,6 +552,7 @@ public class SourceConverterStage2
 								.type(cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()))
 								.withAll(evalExpr(chain.getInitializerValue())).toAST();
 
+						// Match this initializer with the correct field.
 						for (FieldInfo fieldInfo : fields)
 						{
 							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
@@ -553,6 +561,7 @@ public class SourceConverterStage2
 					}
 					else if (chain.getInitializerValue() != null)
 					{
+						// Match this initializer with the correct field.
 						for (FieldInfo fieldInfo : fields)
 						{
 							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
@@ -574,8 +583,10 @@ public class SourceConverterStage2
 		
 		if (isCtor)
 		{
+			// This function generates an initializer for all fields that need initializing.
 			generateCtorStatements(fields, method.toAST());
 			
+			// If we have a super class, call super constructor.
 			if (info.hasSuper)
 			{
 				SuperConstructorInvocation con = ast.newSuperConstructorInvocation();
@@ -588,6 +599,7 @@ public class SourceConverterStage2
 		}
 		else if (isDtor)
 		{
+			// This will destruct all fields that need destructing.
 			generateDtorStatements(fields, method.toAST(), info.hasSuper);
 		}
 		
@@ -610,8 +622,7 @@ public class SourceConverterStage2
 		
 		info.tyd.bodyDeclarations().add(method.toAST());		
 		
-		// Use this if you want to generate additional
-		// functions for default arguments...
+		// Generates functions for default arguments.
 		makeDefaultCalls(func.getDeclarator(), funcBinding, info.tyd);
 	}
 	
@@ -730,7 +741,7 @@ public class SourceConverterStage2
 	}
 	
 	/**
-	 * Generates a Java field, given a C++ variable.
+	 * Generates a Java field, given a C++ top-level (global) variable.
 	 */
 	private void generateVariable(IBinding binding, IASTDeclarator declarator, Expression init) throws DOMException
 	{
@@ -757,6 +768,11 @@ public class SourceConverterStage2
 			compositeMap.get("").tyd.bodyDeclarations().add(field);
 	}
 	
+	/**
+	 * C++ has four special methods that must be generated if not present.
+	 * This function attempts to find constructor, destructor, copy and assign
+	 * methods, so they can be generated if not present. 
+	 */
 	private void findSpecialMethods(IASTDeclSpecifier declSpec, CompositeInfo info) throws DOMException
 	{
 		if (!(declSpec instanceof IASTCompositeTypeSpecifier))
@@ -796,6 +812,9 @@ public class SourceConverterStage2
 		}
 	}
 	
+	/**
+	 * This method creates a list of fields present in the class.
+	 */
 	private List<FieldInfo> collectFieldsForClass(IASTDeclSpecifier declSpec) throws DOMException
 	{
 		if (!(declSpec instanceof IASTCompositeTypeSpecifier))
@@ -1062,7 +1081,7 @@ public class SourceConverterStage2
 	}
 
 	/**
-	 * Gets the default expressions for function arguments.
+	 * Gets the default expressions for function arguments (null where default is not provided).
 	 */
 	private List<Expression> getDefaultValues(IASTFunctionDeclarator func) throws DOMException
 	{
@@ -1309,6 +1328,32 @@ public class SourceConverterStage2
 
 	/**
 	 * Given a C++ enumeration, converts it to the Java equivalent.
+	 * For example, the following:
+	 * 	enum test_enum { val1, val2 = 1020, val3, val4 = 1045 };
+	 * would produce:
+	 * 	enum test_enum {
+	 *   val1(0), val2(1020), val3((1020) + 1), val4(1045);
+	 *   final int val;
+	 *
+	 *   test_enum(final int enumVal) {
+	 *     val = enumVal;
+	 *   }
+	 *
+	 *   static test_enum fromValue(final int enumVal) {
+	 *      switch (enumVal) {
+	 *      case 0:
+	 *       return val1;
+	 *      case 1020:
+	 *       return val2;
+	 *      case (1020) + 1:
+	 *       return val3;
+	 *      case 1045:
+	 *       return val4;
+	 *      default:
+	 *       throw new ClassCastException();
+	 *      }
+	 *   }
+	 *  }
 	 */
 	private void generateEnumeration(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
 	{
