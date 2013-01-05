@@ -246,6 +246,8 @@ import org.eclipse.text.edits.TextEdit;
  * FAILING TESTS:
  * test-class
  * test-bitfields
+ * test-pointers
+ * test-templates
  * 
  * TODO
  * pointers. TICK.

@@ -7,3 +7,6 @@ test-default-args
 test-class
 test-bitfield
 test-branch
+test-pointers
+test-operator-overloading
+test-templates
