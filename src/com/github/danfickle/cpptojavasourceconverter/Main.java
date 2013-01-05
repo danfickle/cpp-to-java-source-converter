@@ -20,13 +20,13 @@ public class Main
 	
 	public static void main(String... args) throws Exception
 	{
-	    BufferedReader br = new BufferedReader(new FileReader(HOME_PATH + "list-of-test-files.txt"));
+	    BufferedReader br = new BufferedReader(new FileReader(HOME_PATH + "tests/" + "list-of-test-files.txt"));
 	    String line = br.readLine();
 
 	    while (line != null) {
 	    	if (!line.isEmpty())
 	    	{
-	    		IASTTranslationUnit tu = getTranslationUnit(HOME_PATH + line + ".cpp");
+	    		IASTTranslationUnit tu = getTranslationUnit(HOME_PATH + "tests/" + line + ".cpp");
 	    		SourceConverterStage2 parser = new SourceConverterStage2();
 	    		String outputCode = parser.traverse(tu);
 
