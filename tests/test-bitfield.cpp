@@ -11,8 +11,12 @@ public:
 
 		test_with_bit_field += 3;
 		test_with_bit_field *= 4;
+
 		test_with_bit_field++;
+		test_with_bit_field--;
+
 		--test_with_bit_field;
+		int i = ++test_with_bit_field + 33;
 
 		// Test getting of bit field...
 		return test_with_bit_field;

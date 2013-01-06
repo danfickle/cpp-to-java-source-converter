@@ -363,40 +363,94 @@ public class SourceConverterStage2
 	 *   {
 	 *	   return __bitfields & 1;
 	 *   }
-	 *   void set__test_with_bit_field(int val)
+	 *   int set__test_with_bit_field(int val)
 	 *   {
 	 *     __bitfields &= ~1;
 	 *	   __bitfields |= (val << 0) & 1;
+	 *     return val;
+	 *   }
+	 *   int postInc__test_with_bit_field()
+	 *   {
+	 *     int ret = get__test_with_bit_field();
+	 *     set__test_with_bit_field(ret + 1);
+	 *     return ret;
+	 *   }
+	 *   int postDec__test_with_bit_field()
+	 *   {
+	 *     int ret = get__test_with_bit_field();
+	 *     set__test_with_bit_field(ret - 1);
+	 *     return ret;
 	 *   }
 	 */
 	private void generateBitField(IBinding binding, IASTDeclarator declarator) throws DOMException
 	{
-		IField ifield = (IField) binding;
-
-		JASTHelper.MethodDecl methodBit = jast.newMethodDecl()
-				.returnType(cppToJavaType(ifield.getType()))
-				.name("get__" + ifield.getName());
-
-		InfixExpression infix = jast.newInfix()
-				.left(ast.newSimpleName("__bitfields"))
-				.right(jast.newNumber(1))
-				.op(InfixExpression.Operator.AND).toAST();
-		
-		ReturnStatement ret = jast.newReturn(infix);
-
-		Block funcBlock = ast.newBlock();
-		funcBlock.statements().add(ret);
-		methodBit.toAST().setBody(funcBlock);
-
+		IField field = (IField) binding;
 		TypeDeclaration decl = compositeMap.get(getQualifiedPart(declarator.getName())).tyd;
-		decl.bodyDeclarations().add(methodBit.toAST());
+		
+		MethodDeclaration methGet = generateBitFieldGetter(field, declarator);
+		decl.bodyDeclarations().add(methGet);
 
+		MethodDeclaration methSet = generateBitFieldSetter(field, declarator);
+		decl.bodyDeclarations().add(methSet);
+
+		MethodDeclaration methInc = generateBitFieldIncDec(field, declarator, true);
+		decl.bodyDeclarations().add(methInc);
+		
+		MethodDeclaration methDec = generateBitFieldIncDec(field, declarator, false);
+		decl.bodyDeclarations().add(methDec);
+	}
+
+	/**
+	 * Generates a bit field post-increment or decrement method.
+	 */
+	private MethodDeclaration generateBitFieldIncDec(IField field, IASTDeclarator declarator, boolean inc) throws DOMException
+	{
+		JASTHelper.MethodDecl methodInc = jast.newMethodDecl()
+				.returnType(cppToJavaType(field.getType()))
+				.name((inc ? "postInc__" : "postDec__") + field.getName());
+	
+		MethodInvocation methodGetCall = jast.newMethod()
+				.call("get__" + field.getName()).toAST();
+		
+		VariableDeclarationStatement decl = jast.newVarDeclStmt()
+				.name("ret")
+				.type(cppToJavaType(field.getType()))
+				.init(methodGetCall)
+				.toAST();
+		
+		InfixExpression infix = jast.newInfix()
+				.left(ast.newSimpleName("ret"))
+				.right(jast.newNumber(1))
+				.op(inc ? InfixExpression.Operator.PLUS : InfixExpression.Operator.MINUS)
+				.toAST();
+		
+		MethodInvocation methodSetCall = jast.newMethod()
+				.call("set__" + field.getName())
+				.with(infix).toAST();
+		
+		ExpressionStatement stmt = ast.newExpressionStatement(methodSetCall);
+		ReturnStatement retStmt = jast.newReturn(ast.newSimpleName("ret"));
+		
+		Block blk = ast.newBlock();
+		blk.statements().add(decl);
+		blk.statements().add(stmt);
+		blk.statements().add(retStmt);
+		methodInc.toAST().setBody(blk);
+
+		return methodInc.toAST();
+	}
+	
+	/**
+	 * Generates a bitfield set method.
+	 */
+	private MethodDeclaration generateBitFieldSetter(IField field, IASTDeclarator declarator) throws DOMException
+	{
 		JASTHelper.MethodDecl methodSet = jast.newMethodDecl()
-				.returnType(ast.newPrimitiveType(PrimitiveType.VOID))
-				.name("set__" + ifield.getName());
+				.returnType(cppToJavaType(field.getType()))
+				.name("set__" + field.getName());
 		
 		SingleVariableDeclaration var = ast.newSingleVariableDeclaration();
-		var.setType(cppToJavaType(ifield.getType()));
+		var.setType(cppToJavaType(field.getType()));
 		var.setName(ast.newSimpleName("val"));
 		methodSet.toAST().parameters().add(var);
 
@@ -431,11 +485,35 @@ public class SourceConverterStage2
 		Block funcBlockSet = ast.newBlock();
 		funcBlockSet.statements().add(exprStmt);
 		funcBlockSet.statements().add(ast.newExpressionStatement(orequal));
+		funcBlockSet.statements().add(jast.newReturn(ast.newSimpleName("val")));
 		methodSet.toAST().setBody(funcBlockSet);
 
-		decl.bodyDeclarations().add(methodSet.toAST());
+		return methodSet.toAST();
 	}
 	
+	/**
+	 * Generates a bit field get method.
+	 */
+	private MethodDeclaration generateBitFieldGetter(IField field, IASTDeclarator declarator) throws DOMException
+	{
+		JASTHelper.MethodDecl methodBit = jast.newMethodDecl()
+				.returnType(cppToJavaType(field.getType()))
+				.name("get__" + field.getName());
+
+		InfixExpression infix = jast.newInfix()
+				.left(ast.newSimpleName("__bitfields"))
+				.right(jast.newNumber(1))
+				.op(InfixExpression.Operator.AND).toAST();
+		
+		ReturnStatement ret = jast.newReturn(infix);
+
+		Block funcBlock = ast.newBlock();
+		funcBlock.statements().add(ret);
+		methodBit.toAST().setBody(funcBlock);
+
+		return methodBit.toAST();
+	}
+
 	/**
 	 * Generates a Java field, given a C++ field.
 	 */
@@ -2376,6 +2454,38 @@ public class SourceConverterStage2
 						.on(eval1Expr(expr.getOperand()))
 						.call("adjust")
 						.with(jast.newNumber(1)).toAST();
+				ret.add(meth);
+			}
+		}
+		else if (isBitfield(expr.getOperand()))
+		{
+			if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr ||
+				expr.getOperator() == IASTUnaryExpression.op_prefixIncr)
+			{
+				// --test_with_bit_field
+				//  converts to:
+				// set__test_with_bit_field(get__test_with_bit_field() - 1);
+				InfixExpression infix = ast.newInfixExpression();
+				infix.setOperator(expr.getOperator() == IASTUnaryExpression.op_prefixIncr ? InfixExpression.Operator.PLUS : InfixExpression.Operator.MINUS);
+				infix.setLeftOperand(eval1Expr(expr.getOperand()));
+				infix.setRightOperand(jast.newNumber(1));
+			
+				MethodInvocation meth = jast.newMethod()
+						.call("set__" + getBitfieldSimpleName(expr.getOperand()))
+						.with(infix).toAST();
+			
+				ret.add(meth);
+			}
+			else if (expr.getOperator() == IASTUnaryExpression.op_postFixDecr ||
+					expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
+			{
+				// test_with_bit_field++
+				//  converts to:
+				// postInc__test_with_bit_field()
+				MethodInvocation meth = jast.newMethod()
+						.call((expr.getOperator() == IASTUnaryExpression.op_postFixDecr ? "postDec__" : "postInc__")
+								+ getBitfieldSimpleName(expr.getOperand())).toAST();
+				
 				ret.add(meth);
 			}
 		}
