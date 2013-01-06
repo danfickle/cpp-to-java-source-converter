@@ -16,6 +16,8 @@ void ptr_test_method()
 	int l = *j;
 	int * m = &f[4];
 
+	f = 0;
+
 	// Test plain assignment...
 	f[4] = 111;
 	*f = 112;
