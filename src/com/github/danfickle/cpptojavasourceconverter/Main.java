@@ -24,7 +24,7 @@ public class Main
 	    String line = br.readLine();
 
 	    while (line != null) {
-	    	if (!line.isEmpty())
+	    	if (!line.isEmpty() && !line.startsWith("#"))
 	    	{
 	    		IASTTranslationUnit tu = getTranslationUnit(HOME_PATH + "tests/" + line + ".cpp");
 	    		SourceConverterStage2 parser = new SourceConverterStage2();

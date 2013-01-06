@@ -1,5 +1,6 @@
 class A
 {
+public:
 	// Test bit fields...
 	int test_with_bit_field : 5;
 
@@ -8,6 +9,8 @@ class A
 		// Test setting of bit field...
 		test_with_bit_field = 8;
 
+		test_with_bit_field += 3;
+		test_with_bit_field *= 4;
 		test_with_bit_field++;
 		--test_with_bit_field;
 
@@ -16,4 +19,16 @@ class A
 	}
 };
 
+int func3()
+{
+	A a;
+	a.test_with_bit_field++;
+	a.test_with_bit_field += 3;
+
+	A * b = new A;
+	b->test_with_bit_field++;
+	b->test_with_bit_field += 5;
+
+	return a.test_with_bit_field + b->test_with_bit_field;
+}
 

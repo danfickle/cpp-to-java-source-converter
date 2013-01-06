@@ -16,8 +16,11 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 import org.eclipse.cdt.core.dom.ast.IBinding;
@@ -127,6 +130,7 @@ public class SourceConverterStage2
 			if (fieldInfo.init != null && !fieldInfo.isStatic)
 			{
 				FieldAccess fa = ast.newFieldAccess();
+
 				// Use 'this.field' construct as we may be shadowing a param name.
 				fa.setExpression(ast.newThisExpression());
 				fa.setName(ast.newSimpleName(fieldInfo.field.getName()));
@@ -154,7 +158,7 @@ public class SourceConverterStage2
 
 			if (fields.get(i).isStatic)
 				/* Do nothing. */ ;
-			else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OTHER)
+			else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OBJECT)
 			{
 				FieldAccess fa = ast.newFieldAccess();
 				fa.setExpression(ast.newThisExpression());
@@ -167,7 +171,7 @@ public class SourceConverterStage2
 				method.getBody().statements().add(ast.newExpressionStatement(meth));					
 			}
 			else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.ARRAY &&
-					getTypeEnum(getArrayBaseType(fields.get(i).field.getType())) == TypeEnum.OTHER)
+					getTypeEnum(getArrayBaseType(fields.get(i).field.getType())) == TypeEnum.OBJECT)
 			{
 				FieldAccess fa = ast.newFieldAccess();
 				fa.setExpression(ast.newThisExpression());
@@ -448,7 +452,7 @@ public class SourceConverterStage2
 		{
 			field.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
 			
-			if (getTypeEnum(ifield.getType()) == TypeEnum.OTHER ||
+			if (getTypeEnum(ifield.getType()) == TypeEnum.OBJECT ||
 				getTypeEnum(ifield.getType()) == TypeEnum.ARRAY)
 			{
 				frag.setInitializer(init);
@@ -567,7 +571,10 @@ public class SourceConverterStage2
 
 						if (declarator instanceof IASTFieldDeclarator &&
 							((IASTFieldDeclarator) declarator).getBitFieldSize() != null)
+						{
+							addBitfield(declarator.getName());
 							field.isBitfield = true;
+						}
 						
 						if (((IField) binding).isStatic())
 							field.isStatic = true;
@@ -1404,7 +1411,7 @@ public class SourceConverterStage2
 						ifBlock.statements().add(ast.newExpressionStatement(meth2));
 					}
 					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
-							getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OTHER)
+							getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OBJECT)
 					{
 						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
 
@@ -1508,7 +1515,7 @@ public class SourceConverterStage2
 						blk.statements().add(ast.newExpressionStatement(assign));
 					}
 					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
-							getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OTHER)
+							getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OBJECT)
 					{
 						QualifiedName qual = ast.newQualifiedName(ast.newSimpleName("right"), ast.newSimpleName(fieldInfo.field.getName()));
 
@@ -1753,7 +1760,7 @@ public class SourceConverterStage2
 				{
 					IVariable var = (IVariable) binding;
 					TypeEnum type = getTypeEnum(var.getType());
-					if (type == TypeEnum.OTHER || type == TypeEnum.REFERENCE)
+					if (type == TypeEnum.OBJECT || type == TypeEnum.REFERENCE)
 					{
 						ClassInstanceCreation create = jast.newClassCreate()
 								.type(cppToJavaType(var.getType()))
@@ -1774,7 +1781,7 @@ public class SourceConverterStage2
 
 						TypeEnum te = getTypeEnum(getArrayBaseType(var.getType()));
 						
-						if ((te == TypeEnum.OTHER || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER) &&
+						if ((te == TypeEnum.OBJECT || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER) &&
 							wrap)
 						{
 							MethodInvocation meth = createAddItemCall(ex);
@@ -1958,14 +1965,14 @@ public class SourceConverterStage2
 		{
 			return expr;
 		}
-		else if (flags.contains(Flag.IS_RET_VAL) && te == TypeEnum.OTHER)
+		else if (flags.contains(Flag.IS_RET_VAL) && te == TypeEnum.OBJECT)
 		{
 			MethodInvocation method = jast.newMethod()
 					.on(expr)
 					.call("copy").toAST();			
 			return method;
 		}
-		else if (te == TypeEnum.OTHER && !(expr instanceof ClassInstanceCreation))
+		else if (te == TypeEnum.OBJECT && !(expr instanceof ClassInstanceCreation))
 		{
 			MethodInvocation method = jast.newMethod()
 					.on(expr)
@@ -1973,7 +1980,7 @@ public class SourceConverterStage2
 			MethodInvocation addItem = createAddItemCall(method);
 			return addItem;
 		}
-		else if (te == TypeEnum.OTHER)
+		else if (te == TypeEnum.OBJECT)
 		{
 			MethodInvocation addItem = createAddItemCall(expr);
 			return addItem;
@@ -2035,7 +2042,7 @@ public class SourceConverterStage2
 			IASTArraySubscriptExpression arraySubscriptExpression = (IASTArraySubscriptExpression)expression;
 			print("Array subscript");
 
-			if (isEventualPtrOrRef(arraySubscriptExpression.getArrayExpression().getExpressionType()))
+			if (isEventualPtr(arraySubscriptExpression.getArrayExpression().getExpressionType()))
 			{
 				MethodInvocation meth = jast.newMethod()
 						.on(eval1Expr(arraySubscriptExpression.getArrayExpression()))
@@ -2102,6 +2109,9 @@ public class SourceConverterStage2
 				if (isEventualPtrDeref(binaryExpression.getOperand1()) &&
 					binaryExpression.getOperator() == IASTBinaryExpression.op_assign)
 				{
+					// ptr[0] = 5;  or  *ptr = 5; 
+					//  convert to:
+					// ptr.set(5);
 					MethodInvocation meth = jast.newMethod()
 							.on(eval1Expr(binaryExpression.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
 							.call("set")
@@ -2111,6 +2121,9 @@ public class SourceConverterStage2
 				}
 				else if (isEventualPtrDeref(binaryExpression.getOperand1()))
 				{
+					// (*ptr) += 5  or  ptr[0] += 5
+					//  convert to:
+					// ptr.set(ptr.get() + 5);
 					InfixExpression infix = ast.newInfixExpression();
 					infix.setOperator(compoundAssignmentToInfixOperator(binaryExpression.getOperator()));
 					infix.setRightOperand(eval1Expr(binaryExpression.getOperand2()));
@@ -2119,6 +2132,35 @@ public class SourceConverterStage2
 					MethodInvocation meth = jast.newMethod()
 							.on(eval1Expr(binaryExpression.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
 							.call("set")
+							.with(infix).toAST();
+					
+					ret.add(meth);
+				}
+				else if (isBitfield(binaryExpression.getOperand1()) &&
+						binaryExpression.getOperator() == IASTBinaryExpression.op_assign)
+				{
+					// test_with_bit_field = 4;
+					//  converts to:
+					// set__test_with_bit_field(4)
+					MethodInvocation meth = jast.newMethod()
+							.call("set__" + getBitfieldSimpleName(binaryExpression.getOperand1()))
+							.with(eval1Expr(binaryExpression.getOperand2())).toAST();
+					
+					ret.add(meth);
+				}
+				else if (isBitfield(binaryExpression.getOperand1()))
+				{
+					// test_with_bit_field += 3;
+					//  converts to:
+					// set__test_with_bit_field(get__test_with_bit_field() + 3);
+					InfixExpression infix = ast.newInfixExpression();
+					infix.setOperator(compoundAssignmentToInfixOperator(binaryExpression.getOperator()));
+					infix.setRightOperand(eval1Expr(binaryExpression.getOperand2()));
+					infix.setLeftOperand(eval1Expr(binaryExpression.getOperand1()));
+					
+					MethodInvocation meth = jast.newMethod()
+							.on(eval1Expr(binaryExpression.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
+							.call("set__" + getBitfieldSimpleName(binaryExpression.getOperand1()))
 							.with(infix).toAST();
 					
 					ret.add(meth);
@@ -2135,7 +2177,7 @@ public class SourceConverterStage2
 			}
 			else
 			{
-				if (isEventualPtrOrRef(binaryExpression.getOperand1().getExpressionType()))
+				if (isEventualPtr(binaryExpression.getOperand1().getExpressionType()))
 				{
 					MethodInvocation meth = jast.newMethod()
 							.on(eval1Expr(binaryExpression.getOperand1()))
@@ -2236,7 +2278,7 @@ public class SourceConverterStage2
 					create.arguments().add(arg);
 				}
 				
-				if ((getTypeEnum(expression.getExpressionType()) == TypeEnum.OTHER) &&
+				if ((getTypeEnum(expression.getExpressionType()) == TypeEnum.OBJECT) &&
 					!(flags.contains(Flag.IS_RET_VAL)) &&
 					!(flags.contains(Flag.IN_METHOD_ARGS)))
 				{
@@ -2286,7 +2328,7 @@ public class SourceConverterStage2
 				}
 				funcCallExpr = (method.toAST());
 
-				if ((getTypeEnum(expression.getExpressionType()) == TypeEnum.OTHER) &&
+				if ((getTypeEnum(expression.getExpressionType()) == TypeEnum.OBJECT) &&
 					!(flags.contains(Flag.IS_RET_VAL)) &&
 					!(flags.contains(Flag.IN_METHOD_ARGS)))
 				{
@@ -2302,13 +2344,13 @@ public class SourceConverterStage2
 			IASTIdExpression idExpression = (IASTIdExpression)expression;
 			print("id expression");
 
-			if (isBitfield(idExpression.getName()))
-			{
-				print("Got bitifield");
-				MethodInvocation methodGet = jast.newMethod().call("get__" + getSimpleName(idExpression.getName())).toAST();
-				ret.add(methodGet);
-			}
-			else
+//			if (isBitfield(idExpression.getName()))
+//			{
+//				print("Got bitifield");
+//				MethodInvocation methodGet = jast.newMethod().call("get__" + getSimpleName(idExpression.getName())).toAST();
+//				ret.add(methodGet);
+//			}
+//			else
 			{
 				IBinding bind = idExpression.getName().resolveBinding();
 				
@@ -2369,7 +2411,7 @@ public class SourceConverterStage2
 			IASTUnaryExpression unaryExpression = (IASTUnaryExpression)expression;
 			print("unary");
 
-			if (isEventualPtrOrRef(unaryExpression.getExpressionType()))
+			if (isEventualPtr(unaryExpression.getExpressionType()))
 			{
 				if (unaryExpression.getOperator() == IASTUnaryExpression.op_postFixIncr)
 				{
@@ -2448,7 +2490,7 @@ public class SourceConverterStage2
 			}
 			else if (unaryExpression.getOperator() == IASTUnaryExpression.op_star)
 			{
-				if (isEventualPtrOrRef(unaryExpression.getOperand().getExpressionType()) &&
+				if (isEventualPtr(unaryExpression.getOperand().getExpressionType()) &&
 					!flags.contains(Flag.ASSIGN_LEFT_SIDE))
 				{	
 					MethodInvocation meth = jast.newMethod()
@@ -2758,6 +2800,7 @@ public class SourceConverterStage2
 		case IASTBinaryExpression.op_shiftRightAssign:
 			return InfixExpression.Operator.RIGHT_SHIFT_SIGNED; // VERIFY
 		default:
+			printerr("compoundAssignmentToInfixOperator");
 			return null;
 		}
 	}
@@ -3572,7 +3615,7 @@ public class SourceConverterStage2
 					.left(paren)
 					.op(InfixExpression.Operator.NOT_EQUALS).toAST();
 
-			if (expType == TypeEnum.OTHER ||
+			if (expType == TypeEnum.OBJECT ||
 				expType == TypeEnum.POINTER ||
 				expType == TypeEnum.REFERENCE)
 			{
@@ -3631,10 +3674,11 @@ public class SourceConverterStage2
 		CHAR,
 		VOID,
 		POINTER,
-		OTHER,
+		OBJECT,
 		ARRAY,
 		ANY,
-		REFERENCE
+		REFERENCE,
+		OTHER
 	};
 
 	/**
@@ -3689,7 +3733,15 @@ public class SourceConverterStage2
 		if (type instanceof ICPPReferenceType)
 			return TypeEnum.REFERENCE;
 
-		return TypeEnum.OTHER;
+		if (type instanceof ICPPClassType)
+			return TypeEnum.OBJECT;
+		
+		if (type instanceof ICPPTemplateTypeParameter)
+			return TypeEnum.OTHER;
+			
+		printerr("Unknown type: " + type.toString());
+		exitOnError();
+		return null;
 	}
 
 	/**
@@ -3769,7 +3821,7 @@ public class SourceConverterStage2
 		
 		// Finally check for the array access operator on a pointer...
 		if (expr instanceof IASTArraySubscriptExpression &&
-			isEventualPtrOrRef(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
+			isEventualPtr(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
 			return true;
 		
 		return false;
@@ -3777,10 +3829,9 @@ public class SourceConverterStage2
 	
 	
 	/**
-	 * Determines if a type will turn into a Ptr or Ref. If so, we should access
-	 * it with .val suffix.
+	 * Determines if a type will turn into a pointer.
 	 */
-	private boolean isEventualPtrOrRef(IType type)
+	private boolean isEventualPtr(IType type)
 	{
 		if (type instanceof IPointerType)
 		{
@@ -3797,7 +3848,13 @@ public class SourceConverterStage2
 			else
 				return false;
 		}
-		else if (type instanceof ICPPReferenceType)
+
+		return false;
+	}
+	
+	private boolean isEventualRef(IType type)
+	{
+		if (type instanceof ICPPReferenceType)
 		{
 			ICPPReferenceType ref = (ICPPReferenceType) type;
 
@@ -3806,10 +3863,8 @@ public class SourceConverterStage2
 			else
 				return true;
 		}
-		else
-		{
-			return false;
-		}
+
+		return false;
 	}
 	
 	/**
@@ -3982,6 +4037,33 @@ public class SourceConverterStage2
 		String complete = getCompleteName(name);
 		return bitfields.contains(complete);
 	}
+	
+	private boolean isBitfield(IASTExpression expr) throws DOMException
+	{
+		// First get rid of enclosing brackets...
+		while (expr instanceof IASTUnaryExpression &&
+				((IASTUnaryExpression) expr).getOperator() == IASTUnaryExpression.op_bracketedPrimary)
+		{
+			expr = ((IASTUnaryExpression) expr).getOperand();
+		}
+		
+		if (expr instanceof IASTIdExpression &&
+			isBitfield(((IASTIdExpression) expr).getName()))
+			return true;
+		
+		return false;
+	}
+	
+	private String getBitfieldSimpleName(IASTExpression expr) throws DOMException
+	{
+		return getSimpleName(((IASTIdExpression) expr).getName());
+	}
+	
+	private void addBitfield(IASTName name) throws DOMException
+	{
+		String complete = getCompleteName(name);
+		bitfields.add(complete);
+	}
 
 	private int findLastLoopId()
 	{
@@ -4038,8 +4120,8 @@ public class SourceConverterStage2
 	// The Java CompilationUnit. We add type declarations (classes, enums) to this...
 	private CompilationUnit unit; 
 
-	// A list of qualified names containing the bitfields...
-	private List<String> bitfields = new ArrayList<String>();
+	// A set of qualified names containing the bitfields...
+	private Set<String> bitfields = new HashSet<String>();
 	
 	private int m_anonEnumCount = 0;
 	
@@ -4116,7 +4198,7 @@ public class SourceConverterStage2
 		unit.recordModifications();
 		ast = unit.getAST(); 
 		jast = new JASTHelper(ast);
-		
+bitfields.add("A::test_with_bit_field");
 		PackageDeclaration packageDeclaration = ast.newPackageDeclaration();
 		unit.setPackage(packageDeclaration);
 		packageDeclaration.setName(ast.newSimpleName("yourpackage")); //TODO
