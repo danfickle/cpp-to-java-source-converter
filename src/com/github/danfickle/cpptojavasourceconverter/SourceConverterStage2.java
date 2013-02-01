@@ -28,11 +28,44 @@ import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
 import org.eclipse.jdt.core.dom.*;
-import org.eclipse.jdt.core.dom.InfixExpression.Operator;
 import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.text.edits.TextEdit;
+import org.stringtemplate.v4.ST;
+import org.stringtemplate.v4.STGroup;
+import org.stringtemplate.v4.STGroupDir;
+
+import com.github.danfickle.cpptojavasourceconverter.Models.CppBitfield;
+import com.github.danfickle.cpptojavasourceconverter.Models.CppEnum;
+import com.github.danfickle.cpptojavasourceconverter.Models.MArrayExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.Models.MArrayExpressionPtr;
+import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpressionBitfield;
+import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpressionEnumerator;
+import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpressionPtr;
+import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpressionBitfield;
+import com.github.danfickle.cpptojavasourceconverter.Models.MCastExpression;
+import com.github.danfickle.cpptojavasourceconverter.Models.MExpression;
+import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpression;
+import com.github.danfickle.cpptojavasourceconverter.Models.MFunctionCallExpression;
+import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpression;
+import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpressionEnumerator;
+import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpressionPtr;
+import com.github.danfickle.cpptojavasourceconverter.Models.MInfixExpression;
+import com.github.danfickle.cpptojavasourceconverter.Models.MInfixExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.Models.MInfixExpressionWithBitfieldOnLeft;
+import com.github.danfickle.cpptojavasourceconverter.Models.MInfixExpressionWithDerefOnLeft;
+import com.github.danfickle.cpptojavasourceconverter.Models.MLiteralExpression;
+import com.github.danfickle.cpptojavasourceconverter.Models.MPostfixExpression;
+import com.github.danfickle.cpptojavasourceconverter.Models.MPostfixExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.Models.MPostfixExpressionPointerDec;
+import com.github.danfickle.cpptojavasourceconverter.Models.MPostfixExpressionPointerInc;
+import com.github.danfickle.cpptojavasourceconverter.Models.MPrefixExpression;
+import com.github.danfickle.cpptojavasourceconverter.Models.MPrefixExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.Models.MTernaryExpression;
+
 
 
 
@@ -43,6 +76,39 @@ import org.eclipse.text.edits.TextEdit;
  */
 public class SourceConverterStage2
 {
+	BitfieldView bitFieldView = new BitfieldView();
+	
+	
+	/**
+	 * Generates a bit field.
+	 */
+	private void generateBitField(IField field, IASTDeclarator declarator) throws DOMException
+	{
+		CppBitfield bitfield = CppBitfield.create(field.getName(), null);
+
+		bitfield.m_bits = eval1Expr(((IASTFieldDeclarator) declarator).getBitFieldSize());
+		bitfield.m_type = cppToJavaType(field.getType());
+		
+		bitFieldView.generateBitField(bitfield);
+	}
+//	IField field = (IField) binding;
+//	TypeDeclaration decl = compositeMap.get(getQualifiedPart(declarator.getName())).tyd;
+
+//	MethodDeclaration methGet = generateBitFieldGetter(bitfield);
+//	decl.bodyDeclarations().add(methGet);
+//
+//	MethodDeclaration methSet = generateBitFieldSetter(bitfield);
+//	decl.bodyDeclarations().add(methSet);
+//
+//	MethodDeclaration methInc = generateBitFieldIncDec(bitfield, true);
+//	decl.bodyDeclarations().add(methInc);
+//	
+//	MethodDeclaration methDec = generateBitFieldIncDec(bitfield, false);
+//	decl.bodyDeclarations().add(methDec);
+
+	
+	
+	
 	/**
 	 * Builds default argument function calls.
 	 * For example:
@@ -271,40 +337,40 @@ public class SourceConverterStage2
 			{
 				for (ICPPASTConstructorChainInitializer chain : chains)
 				{
-					// We may have to call a constructor... 
-					if ((chain.getMemberInitializerId().resolveBinding() instanceof IVariable &&
-						((IVariable)chain.getMemberInitializerId().resolveBinding()).getType() instanceof ICompositeType)) // &&
-						//!(eval1Expr(chain.getInitializerValue()) instanceof ClassInstanceCreation))
-					{
-						ClassInstanceCreation create = jast.newClassCreate()
-								.type(cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()))
-								.withAll(evalExpr(chain.getInitializerValue())).toAST();
-
-						// Match this initializer with the correct field.
-						for (FieldInfo fieldInfo : fields)
-						{
-							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
-								fieldInfo.init = create;
-						}
-					}
-					else if (chain.getInitializerValue() != null)
-					{
-						// Match this initializer with the correct field.
-						for (FieldInfo fieldInfo : fields)
-						{
-							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
-								fieldInfo.init = eval1Expr(chain.getInitializerValue());
-						}
-						
-						if (info.hasSuper && chain.getMemberInitializerId().resolveBinding().getName().equals(info.superClass))
-						{
-							superInit = evalExpr(chain.getInitializerValue());
-						}
-					}
-					else
-					{
-						// TODO...
-					}
+//					// We may have to call a constructor... 
+//					if ((chain.getMemberInitializerId().resolveBinding() instanceof IVariable &&
+//						((IVariable)chain.getMemberInitializerId().resolveBinding()).getType() instanceof ICompositeType)) // &&
+//						//!(eval1Expr(chain.getInitializerValue()) instanceof ClassInstanceCreation))
+//					{
+//						ClassInstanceCreation create = jast.newClassCreate()
+//								.type(cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()))
+//								.withAll(evalExpr(chain.getInitializerValue())).toAST();
+//
+//						// Match this initializer with the correct field.
+//						for (FieldInfo fieldInfo : fields)
+//						{
+//							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
+//								fieldInfo.init = create;
+//						}
+//					}
+//					else if (chain.getInitializerValue() != null)
+//					{
+//						// Match this initializer with the correct field.
+//						for (FieldInfo fieldInfo : fields)
+//						{
+//							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
+//								fieldInfo.init = eval1Expr(chain.getInitializerValue());
+//						}
+//						
+//						if (info.hasSuper && chain.getMemberInitializerId().resolveBinding().getName().equals(info.superClass))
+//						{
+//							superInit = evalExpr(chain.getInitializerValue());
+//						}
+//					}
+//					else
+//					{
+//						// TODO...
+//					}
 				}
 			}
 		}
@@ -354,165 +420,6 @@ public class SourceConverterStage2
 		makeDefaultCalls(func.getDeclarator(), funcBinding, info.tyd);
 	}
 	
-	/**
-	 * Generates getters and setters for bit fields.
-	 * For example:
-	 *   int test_with_bit_field : 1;
-	 * would generate:
-	 * 	 int get__test_with_bit_field()
-	 *   {
-	 *	   return __bitfields & 1;
-	 *   }
-	 *   int set__test_with_bit_field(int val)
-	 *   {
-	 *     __bitfields &= ~1;
-	 *	   __bitfields |= (val << 0) & 1;
-	 *     return val;
-	 *   }
-	 *   int postInc__test_with_bit_field()
-	 *   {
-	 *     int ret = get__test_with_bit_field();
-	 *     set__test_with_bit_field(ret + 1);
-	 *     return ret;
-	 *   }
-	 *   int postDec__test_with_bit_field()
-	 *   {
-	 *     int ret = get__test_with_bit_field();
-	 *     set__test_with_bit_field(ret - 1);
-	 *     return ret;
-	 *   }
-	 */
-	private void generateBitField(IBinding binding, IASTDeclarator declarator) throws DOMException
-	{
-		IField field = (IField) binding;
-		TypeDeclaration decl = compositeMap.get(getQualifiedPart(declarator.getName())).tyd;
-		
-		MethodDeclaration methGet = generateBitFieldGetter(field, declarator);
-		decl.bodyDeclarations().add(methGet);
-
-		MethodDeclaration methSet = generateBitFieldSetter(field, declarator);
-		decl.bodyDeclarations().add(methSet);
-
-		MethodDeclaration methInc = generateBitFieldIncDec(field, declarator, true);
-		decl.bodyDeclarations().add(methInc);
-		
-		MethodDeclaration methDec = generateBitFieldIncDec(field, declarator, false);
-		decl.bodyDeclarations().add(methDec);
-	}
-
-	/**
-	 * Generates a bit field post-increment or decrement method.
-	 */
-	private MethodDeclaration generateBitFieldIncDec(IField field, IASTDeclarator declarator, boolean inc) throws DOMException
-	{
-		JASTHelper.MethodDecl methodInc = jast.newMethodDecl()
-				.returnType(cppToJavaType(field.getType()))
-				.name((inc ? "postInc__" : "postDec__") + field.getName());
-	
-		MethodInvocation methodGetCall = jast.newMethod()
-				.call("get__" + field.getName()).toAST();
-		
-		VariableDeclarationStatement decl = jast.newVarDeclStmt()
-				.name("ret")
-				.type(cppToJavaType(field.getType()))
-				.init(methodGetCall)
-				.toAST();
-		
-		InfixExpression infix = jast.newInfix()
-				.left(ast.newSimpleName("ret"))
-				.right(jast.newNumber(1))
-				.op(inc ? InfixExpression.Operator.PLUS : InfixExpression.Operator.MINUS)
-				.toAST();
-		
-		MethodInvocation methodSetCall = jast.newMethod()
-				.call("set__" + field.getName())
-				.with(infix).toAST();
-		
-		ExpressionStatement stmt = ast.newExpressionStatement(methodSetCall);
-		ReturnStatement retStmt = jast.newReturn(ast.newSimpleName("ret"));
-		
-		Block blk = ast.newBlock();
-		blk.statements().add(decl);
-		blk.statements().add(stmt);
-		blk.statements().add(retStmt);
-		methodInc.toAST().setBody(blk);
-
-		return methodInc.toAST();
-	}
-	
-	/**
-	 * Generates a bitfield set method.
-	 */
-	private MethodDeclaration generateBitFieldSetter(IField field, IASTDeclarator declarator) throws DOMException
-	{
-		JASTHelper.MethodDecl methodSet = jast.newMethodDecl()
-				.returnType(cppToJavaType(field.getType()))
-				.name("set__" + field.getName());
-		
-		SingleVariableDeclaration var = ast.newSingleVariableDeclaration();
-		var.setType(cppToJavaType(field.getType()));
-		var.setName(ast.newSimpleName("val"));
-		methodSet.toAST().parameters().add(var);
-
-		PrefixExpression prefix = ast.newPrefixExpression();
-		prefix.setOperator(PrefixExpression.Operator.COMPLEMENT);
-		prefix.setOperand(ast.newNumberLiteral(String.valueOf(1)));
-
-		Assignment assign = jast.newAssign()
-				.left(ast.newSimpleName("__bitfields"))
-				.right(prefix)
-				.op(Assignment.Operator.BIT_AND_ASSIGN).toAST();
-				
-		ExpressionStatement exprStmt = ast.newExpressionStatement(assign);
-
-		InfixExpression shift = jast.newInfix()
-				.left(ast.newSimpleName("val"))
-				.right(jast.newNumber(0))
-				.op(InfixExpression.Operator.LEFT_SHIFT).toAST();
-
-		ParenthesizedExpression paren = jast.newParen(shift);
-
-		InfixExpression mask = jast.newInfix()
-				.left(paren)
-				.right(jast.newNumber(1))
-				.op(InfixExpression.Operator.AND).toAST();
-
-		Assignment orequal = jast.newAssign()
-				.left(ast.newSimpleName("__bitfields"))
-				.right(mask)
-				.op(Assignment.Operator.BIT_OR_ASSIGN).toAST();
-
-		Block funcBlockSet = ast.newBlock();
-		funcBlockSet.statements().add(exprStmt);
-		funcBlockSet.statements().add(ast.newExpressionStatement(orequal));
-		funcBlockSet.statements().add(jast.newReturn(ast.newSimpleName("val")));
-		methodSet.toAST().setBody(funcBlockSet);
-
-		return methodSet.toAST();
-	}
-	
-	/**
-	 * Generates a bit field get method.
-	 */
-	private MethodDeclaration generateBitFieldGetter(IField field, IASTDeclarator declarator) throws DOMException
-	{
-		JASTHelper.MethodDecl methodBit = jast.newMethodDecl()
-				.returnType(cppToJavaType(field.getType()))
-				.name("get__" + field.getName());
-
-		InfixExpression infix = jast.newInfix()
-				.left(ast.newSimpleName("__bitfields"))
-				.right(jast.newNumber(1))
-				.op(InfixExpression.Operator.AND).toAST();
-		
-		ReturnStatement ret = jast.newReturn(infix);
-
-		Block funcBlock = ast.newBlock();
-		funcBlock.statements().add(ret);
-		methodBit.toAST().setBody(funcBlock);
-
-		return methodBit.toAST();
-	}
 
 	/**
 	 * Generates a Java field, given a C++ field.
@@ -705,7 +612,7 @@ public class SourceConverterStage2
 				{
 					print("bit field");
 					// We replace bit field fields with getter and setter methods...
-					generateBitField(binding, declarator);
+					//generateBitField(binding, declarator);
 				}
 				else if (binding instanceof IField)
 				{
@@ -1135,194 +1042,26 @@ public class SourceConverterStage2
 		return null;
 	}
 
-	/**
-	 * Given a C++ enumeration, converts it to the Java equivalent.
-	 * For example, the following:
-	 * 	enum test_enum { val1, val2 = 1020, val3, val4 = 1045 };
-	 * would produce:
-	 * 	enum test_enum {
-	 *   val1(0), val2(1020), val3((1020) + 1), val4(1045);
-	 *   final int val;
-	 *
-	 *   test_enum(final int enumVal) {
-	 *     val = enumVal;
-	 *   }
-	 *
-	 *   static test_enum fromValue(final int enumVal) {
-	 *      switch (enumVal) {
-	 *      case 0:
-	 *       return val1;
-	 *      case 1020:
-	 *       return val2;
-	 *      case (1020) + 1:
-	 *       return val3;
-	 *      case 1045:
-	 *       return val4;
-	 *      default:
-	 *       throw new ClassCastException();
-	 *      }
-	 *   }
-	 *  }
-	 */
+	//EnumView view = new EnumView();
+
 	private void generateEnumeration(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
 	{
 		IASTEnumerator[] enumerators = enumerationSpecifier.getEnumerators();
 		
-		if (enumerators.length == 0)
+		if (enumerators == null || enumerators.length == 0)
 			return;
-		
-		EnumDeclaration enumd = ast.newEnumDeclaration();
-		CompositeInfo info = compositeMap.get(getQualifiedPart(enumerationSpecifier.getName()));
 
-		if (info != null)
-			info.tyd.bodyDeclarations().add(enumd);
-		else
-			unit.types().add(enumd);
-		
-		String finalName;
+		CppEnum enumModel = CppEnum.create(getSimpleName(enumerationSpecifier.getName()), getQualifiedPart(enumerationSpecifier.getName())); 
+		//EnumDeclaration enumd = view.createEnumDeclaration(enumModel); 
 
-		if (!getSimpleName(enumerationSpecifier.getName()).equals("MISSING"))
-		{
-			finalName = getSimpleName(enumerationSpecifier.getName());
-			enumd.setName(ast.newSimpleName(finalName));
-		}
-		else
-		{
-			// If the enum is anonymous we save the first enum value name
-			// in a map so we can use it as a key to lookup the given name of this
-			// enumeration later...
-			IASTEnumerator first = enumerators[0];
-			String nm = first.getName().resolveBinding().getName();
-			finalName = "AnonEnum" + m_anonEnumCount;
-			enumd.setName(ast.newSimpleName(finalName));
-			m_anonEnumMap.put(nm, finalName);
-			m_anonEnumCount++;
-		}
-
-		IASTExpression lastValue = null;
-		int sinceLastValue = 1;
-		for (int i = 0; i < enumerators.length; i++)
-		{
-			EnumConstantDeclaration enumc = ast.newEnumConstantDeclaration();
-			enumc.setName(ast.newSimpleName(getSimpleName(enumerators[i].getName())));
-			enumd.enumConstants().add(enumc);
-
-			if (enumerators[i].getValue() != null)
-			{
-				enumc.arguments().add(eval1Expr(enumerators[i].getValue()));
-				lastValue = enumerators[i].getValue();
-				sinceLastValue = 1;
-			}
-			else if (lastValue != null)
-			{
-				ParenthesizedExpression paren = jast.newParen(eval1Expr(lastValue));
-
-				InfixExpression plus = jast.newInfix()
-						.left(paren)
-						.right(jast.newNumber(sinceLastValue))
-						.op(InfixExpression.Operator.PLUS).toAST();
-
-				enumc.arguments().add(plus);
-				sinceLastValue++;
-			}
-			else
-			{
-				enumc.arguments().add(jast.newNumber(i));
-			}
-		}
-
-		VariableDeclarationFragment var = ast.newVariableDeclarationFragment();
-		var.setName(ast.newSimpleName("val"));
-		FieldDeclaration field = ast.newFieldDeclaration(var);
-		field.setType(ast.newPrimitiveType(PrimitiveType.INT));
-		field.modifiers().add(ast.newModifier(ModifierKeyword.FINAL_KEYWORD));
-		enumd.bodyDeclarations().add(field);
-
-		MethodDeclaration con = jast.newMethodDecl()
-				.name(finalName)
-				.setCtor(true).toAST();
-		
-		SingleVariableDeclaration var2 = ast.newSingleVariableDeclaration();
-		var2.setType(ast.newPrimitiveType(PrimitiveType.INT));
-		var2.setName(ast.newSimpleName("enumVal"));
-		var2.modifiers().add(ast.newModifier(ModifierKeyword.FINAL_KEYWORD));
-		con.parameters().add(var2);
-
-		Assignment expr = jast.newAssign()
-				.left(ast.newSimpleName("val"))
-				.right(ast.newSimpleName("enumVal"))
-				.op(Assignment.Operator.ASSIGN).toAST();
-		ExpressionStatement exprStmt = ast.newExpressionStatement(expr);
-
-		Block conblk = ast.newBlock();
-		conblk.statements().add(exprStmt);
-		con.setBody(conblk);
-		enumd.bodyDeclarations().add(con);
-
-		MethodDeclaration method = jast.newMethodDecl()
-				.name("fromValue")
-				.setStatic(true)
-				.returnType(jast.newType(finalName)).toAST();
-
-		enumd.bodyDeclarations().add(method);
-
-		SingleVariableDeclaration var3 = ast.newSingleVariableDeclaration();
-		var3.setType(ast.newPrimitiveType(PrimitiveType.INT));
-		var3.setName(ast.newSimpleName("enumVal"));
-		var3.modifiers().add(ast.newModifier(ModifierKeyword.FINAL_KEYWORD));
-		method.parameters().add(var3);
-
-		Block methodblk = ast.newBlock();
-		method.setBody(methodblk);
-		SwitchStatement switchStmt = ast.newSwitchStatement();
-		methodblk.statements().add(switchStmt);
-		switchStmt.setExpression(ast.newSimpleName("enumVal"));
-
-		lastValue = null;
-		sinceLastValue = 1;
-		for (int i = 0; i < enumerators.length; i++)
-		{
-			SwitchCase cs = ast.newSwitchCase();
-			switchStmt.statements().add(cs);
-
-			if (enumerators[i].getValue() != null)
-			{
-				cs.setExpression(eval1Expr(enumerators[i].getValue()));				
-				lastValue = enumerators[i].getValue();
-				sinceLastValue = 1;
-			}
-			else if (lastValue != null)
-			{
-				ParenthesizedExpression paren = jast.newParen(eval1Expr(lastValue));
-				
-				InfixExpression plus = jast.newInfix()
-						.left(paren)
-						.right(jast.newNumber(sinceLastValue))
-						.op(InfixExpression.Operator.PLUS).toAST();
-
-				cs.setExpression(plus);
-				sinceLastValue++;
-			}
-			else
-			{
-				cs.setExpression(ast.newNumberLiteral(String.valueOf(i)));
-			}
-
-			ReturnStatement ret = jast.newReturn(ast.newSimpleName(getSimpleName(enumerators[i].getName())));
-			switchStmt.statements().add(ret);
-		}
-
-		ThrowStatement throwStmt = ast.newThrowStatement();
-
-		ClassInstanceCreation create = jast.newClassCreate()
-				.type(jast.newType("ClassCastException")).toAST();
-				
-		throwStmt.setExpression(create);
-
-		SwitchCase def = ast.newSwitchCase();
-		def.setExpression(null);
-		switchStmt.statements().add(def);
-		switchStmt.statements().add(throwStmt);
+		//CompositeInfo info = compositeMap.get();
+		//
+		//if (info != null)
+//			info.tyd.bodyDeclarations().add(enumd);
+		//else
+//			unit.types().add(enumd);
+		//
+	
 	}
 
 
@@ -2017,21 +1756,21 @@ public class SourceConverterStage2
 		}
 	}
 
-	private Expression eval1Expr(IASTExpression expr) throws DOMException
+	private MExpression eval1Expr(IASTExpression expr) throws DOMException
 	{
-		List<Expression> exprs = evalExpr(expr);
+		List<MExpression> exprs = evalExpr(expr);
 		assert(exprs.size() == 1);
 		return exprs.get(0);
 	}
 	
-	private Expression eval1Expr(IASTExpression expr, EnumSet<Flag> flags) throws DOMException
+	private MExpression eval1Expr(IASTExpression expr, EnumSet<Flag> flags) throws DOMException
 	{
-		List<Expression> exprs = evalExpr(expr, flags);
+		List<MExpression> exprs = evalExpr(expr, flags);
 		assert(exprs.size() == 1);
 		return exprs.get(0);
 	}
 	
-	private List<Expression> evalExpr(IASTExpression expression) throws DOMException
+	private List<MExpression> evalExpr(IASTExpression expression) throws DOMException
 	{
 		return evalExpr(expression, EnumSet.noneOf(Flag.class));
 	}
@@ -2065,309 +1804,77 @@ public class SourceConverterStage2
 		}
 		return expr;
 	}
-	
-	/**
-	 * Given a C++ expression, attempts to convert it into one
-	 * or more Java expressions.
-	 */
-	private List<Expression> evalExpr(IASTExpression expression, EnumSet<Flag> flags) throws DOMException
-	{
-		List<Expression> ret = new ArrayList<Expression>();
 
+	/**
+	 * Given a C++ expression, attempts to convert it into one or more Java expressions.
+	 */
+	private List<MExpression> evalExpr(IASTExpression expression, EnumSet<Flag> flags) throws DOMException
+	{
+		List<MExpression> ret = new ArrayList<MExpression>();
+		
 		if (expression instanceof IASTLiteralExpression)
 		{
-			IASTLiteralExpression literal = (IASTLiteralExpression) expression;
-
-			switch (literal.getKind())
-			{
-			case IASTLiteralExpression.lk_char_constant:
-				CharacterLiteral cl = ast.newCharacterLiteral();
-				cl.setEscapedValue(new String(literal.getValue()));
-				ret.add(cl);
-				break;
-			case IASTLiteralExpression.lk_false:
-				BooleanLiteral bl = ast.newBooleanLiteral(false);
-				ret.add(bl);
-				break;
-			case IASTLiteralExpression.lk_true:
-				BooleanLiteral bl2 = ast.newBooleanLiteral(true);
-				ret.add(bl2);
-				break;
-			case IASTLiteralExpression.lk_float_constant:
-				NumberLiteral fl = ast.newNumberLiteral();
-				fl.setToken(new String(literal.getValue()));
-				ret.add(fl);
-				break;
-			case IASTLiteralExpression.lk_string_literal:
-				StringLiteral sl = ast.newStringLiteral();
-				sl.setLiteralValue(new String(literal.getValue()));
-				ret.add(sl);
-				break;
-			case IASTLiteralExpression.lk_integer_constant:
-				NumberLiteral il = ast.newNumberLiteral();
-				il.setToken(new String(literal.getValue()));
-				ret.add(il);
-				break;
-			case IASTLiteralExpression.lk_this:
-				ThisExpression te = ast.newThisExpression();
-				ret.add(te);
-				break;
-			}
-		}
-		else if (expression instanceof IASTArraySubscriptExpression)
-		{
-			IASTArraySubscriptExpression arraySubscriptExpression = (IASTArraySubscriptExpression)expression;
-			print("Array subscript");
-
-			if (isEventualPtr(arraySubscriptExpression.getArrayExpression().getExpressionType()))
-			{
-				MethodInvocation meth = jast.newMethod()
-						.on(eval1Expr(arraySubscriptExpression.getArrayExpression()))
-						.call("add")
-						.with(eval1Expr(arraySubscriptExpression.getSubscriptExpression())).toAST();
-
-				if (!flags.contains(Flag.ASSIGN_LEFT_SIDE) &&
-					!flags.contains(Flag.IN_ADDRESS_OF))
-				{
-					MethodInvocation meth2 = jast.newMethod()
-						.on(meth)
-						.call("get").toAST();
-					ret.add(meth2);
-				}
-				else
-					ret.add(meth);
-			}
-			else // Normal array.
-			{
-				ArrayAccess array = ast.newArrayAccess(); 
-				array.setArray(eval1Expr(arraySubscriptExpression.getArrayExpression()));
-				array.setIndex(eval1Expr(arraySubscriptExpression.getSubscriptExpression()));
-				ret.add(array);
-			}
-		}
-		else if (expression instanceof IASTBinaryExpression)
-		{
-			IASTBinaryExpression binaryExpression = (IASTBinaryExpression)expression;
-			print("binary expression" + binaryExpression.getRawSignature());
-			evalBinaryExpression(binaryExpression, flags, ret);
-		}
-		else if (expression instanceof IASTCastExpression)
-		{
-			IASTCastExpression castExpression = (IASTCastExpression)expression;
-			print("cast");
-
-			CastExpression cast = ast.newCastExpression();
-			cast.setExpression(eval1Expr(castExpression.getOperand()));
-			cast.setType(evalTypeId(castExpression.getTypeId()));
-			ret.add(cast);
-		}
-		else if (expression instanceof IASTConditionalExpression)
-		{
-			IASTConditionalExpression conditionalExpression = (IASTConditionalExpression)expression;
-			print("conditional");
-
-			ConditionalExpression conditional = ast.newConditionalExpression();
-			conditional.setExpression(eval1Expr(conditionalExpression.getLogicalConditionExpression()));
-			conditional.setThenExpression(eval1Expr(conditionalExpression.getPositiveResultExpression()));
-			conditional.setElseExpression(eval1Expr(conditionalExpression.getNegativeResultExpression()));
-			ret.add(conditional);
-		}
-
-		else if (expression instanceof IASTFieldReference)
-		{
-			IASTFieldReference fieldReference = (IASTFieldReference)expression;
-			print("field reference");
-
-			IBinding binding = fieldReference.getFieldName().resolveBinding();
-			print(binding.getName());
-			
-			FieldAccess field = jast.newField()
-					.on(eval1Expr(fieldReference.getFieldOwner()))
-					.field(getSimpleName(fieldReference.getFieldName())).toAST();
-
-			if (binding instanceof IEnumerator)
-			{
-				// If this is an enum value we use the val field, to get an int
-				// enumeration value.
-				FieldAccess access = jast.newField()
-						.on(field)
-						.field("val").toAST();
-
-				ret.add(access);
-			}
-			else
-			{
-				ret.add(field);
-			}
-		}
-		else if (expression instanceof IASTFunctionCallExpression)
-		{
-			IASTFunctionCallExpression functionCallExpression = (IASTFunctionCallExpression)expression;
-			print("function call");
-			evalFunctionCallExpression(functionCallExpression, flags, ret);
+			evalExprLiteral((IASTLiteralExpression) expression, ret);
 		}
 		else if (expression instanceof IASTIdExpression)
 		{
-			IASTIdExpression idExpression = (IASTIdExpression)expression;
-			print("id expression");
-
-//			if (isBitfield(idExpression.getName()))
-//			{
-//				print("Got bitifield");
-//				MethodInvocation methodGet = jast.newMethod().call("get__" + getSimpleName(idExpression.getName())).toAST();
-//				ret.add(methodGet);
-//			}
-//			else
-			{
-				IBinding bind = idExpression.getName().resolveBinding();
-				
-				if (bind instanceof IEnumerator)
-				{
-					IEnumerator enumerator = (IEnumerator) bind;
-					String enumeration = getSimpleType(((IEnumeration)enumerator.getType()).getName());
-					QualifiedName qual;
-					if (enumeration.equals("MISSING"))
-					{
-						String first = ((IEnumeration)enumerator.getOwner()).getEnumerators()[0].getName();
-						String enumName = m_anonEnumMap.get(first);
-						
-						if (enumName == null)
-							exitOnError();
-						
-						qual = ast.newQualifiedName(ast.newSimpleName(enumName), ast.newSimpleName(getSimpleName(idExpression.getName())));
-					}
-					else
-					{
-						qual = ast.newQualifiedName(ast.newSimpleName(enumeration), ast.newSimpleName(getSimpleName(idExpression.getName())));
-					}
-					FieldAccess fa = jast.newField()
-							.on(qual)
-							.field("val").toAST();
-
-					ret.add(fa);
-				}
-//				else if (isEventualPtrOrRef(idExpression.getExpressionType()))
-//				{
-//					FieldAccess fa = jast.newField()
-//							.on(getSimpleName(idExpression.getName()))
-//							.field("val").toAST();
-//
-//					ret.add(fa);
-//				}
-				else
-				{
-					SimpleName nm = ast.newSimpleName(getSimpleName(idExpression.getName()));
-					ret.add(nm);
-				}
-			}
+			evalExprId((IASTIdExpression) expression, ret, flags);
 		}
-		else if (expression instanceof IASTTypeIdExpression)
+		else if (expression instanceof IASTFieldReference)
 		{
-			IASTTypeIdExpression typeIdExpression = (IASTTypeIdExpression)expression;
-			print("type id");
-			printerr(typeIdExpression.getRawSignature());
-
-			//TODO
-			FieldAccess fa = ast.newFieldAccess();
-			fa.setName(ast.newSimpleName("sizeof"));
-			ret.add(fa);
-			evalTypeId(typeIdExpression.getTypeId());
+			evalExprFieldReference((IASTFieldReference) expression, ret, flags);
 		}
 		else if (expression instanceof IASTUnaryExpression)
 		{
-			IASTUnaryExpression unaryExpression = (IASTUnaryExpression)expression;
-			print("unary");
-			evalUnaryExpression(unaryExpression, flags, ret);
+			evalExprUnary((IASTUnaryExpression) expression, ret, flags);
+		}
+		else if (expression instanceof IASTArraySubscriptExpression)
+		{
+			evalArraySubscriptExpression((IASTArraySubscriptExpression) expression, ret, flags);
+		}
+		else if (expression instanceof IASTBinaryExpression)
+		{
+			evalBinaryExpression((IASTBinaryExpression) expression, ret, flags);
+		}
+		else if (expression instanceof IASTCastExpression)
+		{
+			evalCastExpression((IASTCastExpression) expression, ret, flags);
+		}
+		else if (expression instanceof IASTConditionalExpression)
+		{
+			evalConditionalExpression((IASTConditionalExpression) expression, ret, flags);
+		}
+		else if (expression instanceof IASTFunctionCallExpression)
+		{
+			evalFunctionCallExpression((IASTFunctionCallExpression) expression, ret, flags);
+		}
+		else if (expression instanceof IASTTypeIdExpression)
+		{
+			//evalTypeIdExpression((IASTTypeIdExpression) expression, ret, flags);
 		}
 		else if (expression instanceof ICASTTypeIdInitializerExpression)
 		{
 			ICASTTypeIdInitializerExpression typeIdInitializerExpression = (ICASTTypeIdInitializerExpression)expression;
-			print("type id initializer");
 
 			evalTypeId(typeIdInitializerExpression.getTypeId());
 			evaluate(typeIdInitializerExpression.getInitializer());
 		}
 		else if (expression instanceof ICPPASTDeleteExpression)
 		{
-			ICPPASTDeleteExpression deleteExpression = (ICPPASTDeleteExpression)expression;
-			print("delete");
-
-			if (!deleteExpression.isVectored())
-			{
-				// WRONG
-				ret.add(jast.newMethod()
-						.on(eval1Expr(deleteExpression.getOperand()), true)
-						.call("destruct").toAST());
-			}
-			else
-			{
-				// Call DestructHelper.destructArray(array)...
-				ret.add(jast.newMethod()
-						.on("DestructHelper")
-						.call("destructArray")
-						.with(eval1Expr(deleteExpression.getOperand())).toAST());
-			}
+			evalDeleteExpression((ICPPASTDeleteExpression) expression, ret, flags);
 		}
 		else if (expression instanceof ICPPASTNewExpression)
 		{
-			ICPPASTNewExpression newExpression = (ICPPASTNewExpression)expression;
-			print("new");
-
-			if (!newExpression.isArrayAllocation())
-			{
-				boolean isBasic = false;
-				if (getTypeEnum(newExpression.getExpressionType()) == TypeEnum.POINTER)
-				{
-					TypeEnum teBase = getTypeEnum(getPointerBaseType(newExpression.getExpressionType()));
-					
-					if (teBase == TypeEnum.CHAR || teBase == TypeEnum.NUMBER || teBase == TypeEnum.BOOLEAN)
-					{
-						ret.add(ast.newNumberLiteral("0"));
-						isBasic = true;
-					}
-				}
-				if (!isBasic)
-				{
-					ClassInstanceCreation create = ast.newClassInstanceCreation();
-					//create.setExpression(evaluate(newExpression.getPlacement()))
-					create.setType(evalTypeId(newExpression.getTypeId()));
-
-					if (newExpression.getNewInitializer() instanceof IASTExpressionList)
-					{
-						for (IASTExpression arg : ((IASTExpressionList) newExpression.getNewInitializer()).getExpressions())
-							create.arguments().addAll(evalExpr(arg));
-					}
-					else if (newExpression.getNewInitializer() instanceof IASTExpression)
-					{
-						create.arguments().addAll(evalExpr((IASTExpression) newExpression.getNewInitializer()));
-					}
-
-					ret.add(create);
-				}
-			}
-			else
-			{
-				List<Expression> sizeExprs = new ArrayList<Expression>();
-
-				for (IASTExpression arraySize : newExpression.getNewTypeIdArrayExpressions())
-					sizeExprs.add(eval1Expr(arraySize));
-
-				Expression ex = generateArrayCreationExpression(newExpression.getExpressionType(), sizeExprs);
-				ret.add(ex);
-			}
+			evalNewExpression((ICPPASTNewExpression) expression, ret, flags);
 		}
 		else if (expression instanceof ICPPASTSimpleTypeConstructorExpression)
 		{
 			ICPPASTSimpleTypeConstructorExpression simpleTypeConstructorExpression = (ICPPASTSimpleTypeConstructorExpression)expression;
-			printerr("simple type constructor");
-
 			evalExpr(simpleTypeConstructorExpression.getInitialValue());
 		}
 		else if (expression instanceof IGNUASTCompoundStatementExpression)
 		{
 			IGNUASTCompoundStatementExpression compoundStatementExpression = (IGNUASTCompoundStatementExpression)expression;
-			print("GNU Compound statement");
-
 			evalStmt(compoundStatementExpression.getCompoundStatement());
 		}
 		else if (expression instanceof IASTExpressionList)
@@ -2385,380 +1892,659 @@ public class SourceConverterStage2
 		if (ret.isEmpty())
 			printerr(expression.getClass().getCanonicalName());
 		
-		if (flags.contains(Flag.NEED_BOOLEAN))
-			ret.set(0, makeExpressionBoolean(ret.get(0), expression));
+//		if (flags.contains(Flag.NEED_BOOLEAN))
+//			ret.set(0, makeExpressionBoolean(ret.get(0), expression));
 
 		if (expression != null)
 			print(expression.getClass().getCanonicalName());
 
-		if (ret.isEmpty())
-			ret.add(ast.newNumberLiteral("0")); // FIXME
 
+		expressions.add(ret.get(0));
 		return ret;
 	}
 
-	private void evalUnaryExpression(IASTUnaryExpression expr, EnumSet<Flag> flags, List<Expression> ret) throws DOMException
+	private void evalNewExpression(ICPPASTNewExpression expr, List<MExpression> ret, EnumSet<Flag> flags)
+	{
+		//			if (!newExpression.isArrayAllocation())
+//		{
+//			boolean isBasic = false;
+//			if (getTypeEnum(newExpression.getExpressionType()) == TypeEnum.POINTER)
+//			{
+//				TypeEnum teBase = getTypeEnum(getPointerBaseType(newExpression.getExpressionType()));
+//				
+//				if (teBase == TypeEnum.CHAR || teBase == TypeEnum.NUMBER || teBase == TypeEnum.BOOLEAN)
+//				{
+//					ret.add(ast.newNumberLiteral("0"));
+//					isBasic = true;
+//				}
+//			}
+//			if (!isBasic)
+//			{
+//				ClassInstanceCreation create = ast.newClassInstanceCreation();
+//				//create.setExpression(evaluate(newExpression.getPlacement()))
+//				create.setType(evalTypeId(newExpression.getTypeId()));
+//
+//				if (newExpression.getNewInitializer() instanceof IASTExpressionList)
+//				{
+//					for (IASTExpression arg : ((IASTExpressionList) newExpression.getNewInitializer()).getExpressions())
+//						create.arguments().addAll(evalExpr(arg));
+//				}
+//				else if (newExpression.getNewInitializer() instanceof IASTExpression)
+//				{
+//					create.arguments().addAll(evalExpr((IASTExpression) newExpression.getNewInitializer()));
+//				}
+//
+//				ret.add(create);
+//			}
+//		}
+//		else
+//		{
+//			List<Expression> sizeExprs = new ArrayList<Expression>();
+//
+//			for (IASTExpression arraySize : newExpression.getNewTypeIdArrayExpressions())
+//				sizeExprs.add(eval1Expr(arraySize));
+//
+//			Expression ex = generateArrayCreationExpression(newExpression.getExpressionType(), sizeExprs);
+//			ret.add(ex);
+//		}
+	}
+
+	private void evalDeleteExpression(ICPPASTDeleteExpression expr, List<MExpression> ret, EnumSet<Flag> flags)
+	{
+		
+//		if (!deleteExpression.isVectored())
+//		{
+//			// WRONG
+//			ret.add(jast.newMethod()
+//					.on(eval1Expr(deleteExpression.getOperand()), true)
+//					.call("destruct").toAST());
+//		}
+//		else
+//		{
+//			// Call DestructHelper.destructArray(array)...
+//			ret.add(jast.newMethod()
+//					.on("DestructHelper")
+//					.call("destructArray")
+//					.with(eval1Expr(deleteExpression.getOperand())).toAST());
+//		}
+
+		
+	}
+	
+	
+	private String getEnumerationName(IEnumerator enumerator) throws DOMException
+	{
+		String enumeration = getSimpleType(((IEnumeration) enumerator.getType()).getName());
+
+		if (enumeration.equals("MISSING"))
+		{
+			String first = ((IEnumeration) enumerator.getOwner()).getEnumerators()[0].getName();
+			String enumName = m_anonEnumMap.get(first);
+			
+			if (enumName == null)
+				exitOnError();
+			
+			return enumName;
+		}
+		
+		return enumeration;
+	}
+	
+	
+
+	private void evalExprId(IASTIdExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	{
+		if (isBitfield(expr.getName()))
+		{
+			MIdentityExpressionBitfield ident = new MIdentityExpressionBitfield();
+			ident.ident = getSimpleName(expr.getName());
+			ret.add(ident);
+		}
+		else if (expr.getName().resolveBinding() instanceof IEnumerator)
+		{
+			MIdentityExpressionEnumerator ident = new MIdentityExpressionEnumerator();
+			ident.enumName = getEnumerationName((IEnumerator) expr.getName().resolveBinding());
+			ident.ident = getSimpleName(expr.getName());
+			ret.add(ident);
+		}
+		else if (isEventualPtr(expr.getExpressionType()))
+		{
+			MIdentityExpressionPtr ident = new MIdentityExpressionPtr();
+			ident.ident = getSimpleName(expr.getName());
+			ret.add(ident);
+		}
+		else
+		{
+			MIdentityExpressionPlain ident = new MIdentityExpressionPlain();
+			ident.ident = getSimpleName(expr.getName());
+			ret.add(ident);
+		}
+	}
+
+	private void evalExprFieldReference(IASTFieldReference expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	{
+		if (isBitfield(expr.getFieldName()))
+		{
+			MFieldReferenceExpressionBitfield field = new MFieldReferenceExpressionBitfield();
+			field.object = eval1Expr(expr.getFieldOwner());
+			field.field = getSimpleName(expr.getFieldName());
+			ret.add(field);
+		}
+		else if (expr.getFieldName().resolveBinding() instanceof IEnumerator)
+		{
+			MFieldReferenceExpressionEnumerator field = new MFieldReferenceExpressionEnumerator();
+			field.object = eval1Expr(expr.getFieldOwner());
+			field.field = getSimpleName(expr.getFieldName());
+			ret.add(field);
+		}
+		else if (isEventualPtr(expr.getExpressionType()))
+		{
+			MFieldReferenceExpressionPtr field = new MFieldReferenceExpressionPtr();
+			field.object = eval1Expr(expr.getFieldOwner());
+			field.field = getSimpleName(expr.getFieldName());
+			ret.add(field);
+		}
+		else
+		{
+			MFieldReferenceExpressionPlain field = new MFieldReferenceExpressionPlain();
+			field.object = eval1Expr(expr.getFieldOwner());
+			field.field = getSimpleName(expr.getFieldName());
+			ret.add(field);
+		}
+	}
+
+
+	private void evalConditionalExpression(IASTConditionalExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException 
+	{
+		MTernaryExpression ternary = new MTernaryExpression();
+		
+		ternary.condition = eval1Expr(expr.getLogicalConditionExpression());
+		ternary.positive = eval1Expr(expr.getPositiveResultExpression());
+		ternary.negative = eval1Expr(expr.getNegativeResultExpression());
+		
+		ret.add(ternary);
+	}
+
+	private void evalCastExpression(IASTCastExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	{
+		MCastExpression cast = new MCastExpression();
+		cast.operand = eval1Expr(expr.getOperand());
+		// TODO cast.setType(evalTypeId(castExpression.getTypeId()));
+	}
+
+	private void evalArraySubscriptExpression(IASTArraySubscriptExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	{
+		if (isEventualPtr(expr.getArrayExpression().getExpressionType()))
+		{
+			MArrayExpressionPtr ptr = new MArrayExpressionPtr();
+			ptr.operand = eval1Expr(expr.getArrayExpression());
+			ptr.subscript.addAll(evalExpr(expr.getSubscriptExpression()));
+			ptr.leftSide = flags.contains(Flag.ASSIGN_LEFT_SIDE);
+			ret.add(ptr);
+		}
+		else
+		{
+			MArrayExpressionPlain array = new MArrayExpressionPlain();
+			array.operand = eval1Expr(expr.getArrayExpression());
+			array.subscript.addAll(evalExpr(expr.getSubscriptExpression()));
+			array.leftSide = flags.contains(Flag.ASSIGN_LEFT_SIDE);
+			ret.add(array);
+		}
+	}
+
+	private void evalExprLiteral(IASTLiteralExpression lit, List<MExpression> ret) 
+	{
+		MLiteralExpression out = new MLiteralExpression();
+		
+		switch (lit.getKind())
+		{
+		case IASTLiteralExpression.lk_false:
+			out.literal = "false";
+			break;
+		case IASTLiteralExpression.lk_true:
+			out.literal = "true";
+			break;
+		case IASTLiteralExpression.lk_char_constant:
+		case IASTLiteralExpression.lk_float_constant:
+		case IASTLiteralExpression.lk_string_literal:
+		case IASTLiteralExpression.lk_integer_constant:
+			out.literal = String.valueOf(lit.getValue());
+			break;
+		case IASTLiteralExpression.lk_this:
+			out.literal = "this";
+			break;
+		}
+		
+		ret.add(out);
+	}
+
+	List<MExpression> expressions = new ArrayList<MExpression>();
+	
+	
+	private void evalExprUnary(IASTUnaryExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
 		if (isEventualPtr(expr.getExpressionType()))
 		{
 			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
 			{
-				MethodInvocation meth = jast.newMethod()
-						.on(eval1Expr(expr.getOperand()))
-						.call("postinc").toAST();
-				ret.add(meth);
+				MPostfixExpressionPointerInc post = new MPostfixExpressionPointerInc();
+				post.operand = eval1Expr(expr.getOperand());
+				ret.add(post);
 			}
 			else if (expr.getOperator() == IASTUnaryExpression.op_postFixDecr)
 			{
-				MethodInvocation meth = jast.newMethod()
-						.on(eval1Expr(expr.getOperand()))
-						.call("postdec").toAST();
-				ret.add(meth);
-			}
-			else if (expr.getOperator() == IASTUnaryExpression.op_star)
-			{
-				printerr(expr.getOperand().getRawSignature() + expr.getOperator() + flags.toString());
-				
-				if (!flags.contains(Flag.ASSIGN_LEFT_SIDE))
-				{
-					MethodInvocation meth = jast.newMethod()
-							.on(eval1Expr(expr.getOperand()))
-							.call("get").toAST();
-					ret.add(meth);
-				}
-				else
-				{
-					ret.add(eval1Expr(expr.getOperand()));
-				}
-			}
-			else if (expr.getOperator() == IASTUnaryExpression.op_amper)
-			{
-				ret.add(eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_ADDRESS_OF)));
-			}
-			else if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr)
-			{
-				MethodInvocation meth = jast.newMethod()
-						.on(eval1Expr(expr.getOperand()))
-						.call("adjust")
-						.with(jast.newNumber(-1)).toAST();
-				ret.add(meth);
-			}
-			else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
-			{
-				ret.add(eval1Expr(expr.getOperand(), flags));
-			}
-			else
-			{
-				printerr("" + expr.getOperator());
-				MethodInvocation meth = jast.newMethod()
-						.on(eval1Expr(expr.getOperand()))
-						.call("adjust")
-						.with(jast.newNumber(1)).toAST();
-				ret.add(meth);
-			}
-		}
-		else if (isBitfield(expr.getOperand()))
-		{
-			if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr ||
-				expr.getOperator() == IASTUnaryExpression.op_prefixIncr)
-			{
-				// --test_with_bit_field
-				//  converts to:
-				// set__test_with_bit_field(get__test_with_bit_field() - 1);
-				InfixExpression infix = ast.newInfixExpression();
-				infix.setOperator(expr.getOperator() == IASTUnaryExpression.op_prefixIncr ? InfixExpression.Operator.PLUS : InfixExpression.Operator.MINUS);
-				infix.setLeftOperand(eval1Expr(expr.getOperand()));
-				infix.setRightOperand(jast.newNumber(1));
-			
-				MethodInvocation meth = jast.newMethod()
-						.call("set__" + getBitfieldSimpleName(expr.getOperand()))
-						.with(infix).toAST();
-			
-				ret.add(meth);
-			}
-			else if (expr.getOperator() == IASTUnaryExpression.op_postFixDecr ||
-					expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
-			{
-				// test_with_bit_field++
-				//  converts to:
-				// postInc__test_with_bit_field()
-				MethodInvocation meth = jast.newMethod()
-						.call((expr.getOperator() == IASTUnaryExpression.op_postFixDecr ? "postDec__" : "postInc__")
-								+ getBitfieldSimpleName(expr.getOperand())).toAST();
-				
-				ret.add(meth);
+				MPostfixExpressionPointerDec post = new MPostfixExpressionPointerDec();
+				post.operand = eval1Expr(expr.getOperand());
+				ret.add(post);
 			}
 		}
 		else if (isPostfixExpression(expr.getOperator()))
 		{
-			PostfixExpression post = ast.newPostfixExpression();
-			post.setOperator(evalUnaryPostfixOperator(expr.getOperator()));
-			post.setOperand(eval1Expr(expr.getOperand()));
-			ret.add(post);
+			MPostfixExpressionPlain postfix = new MPostfixExpressionPlain();
+			postfix.operand = eval1Expr(expr.getOperand());
+			postfix.operator = evalUnaryPostfixOperator(expr.getOperator());
+			ret.add(postfix);
 		}
 		else if (isPrefixExpression(expr.getOperator()))
 		{
-			PrefixExpression pre = ast.newPrefixExpression();
-			pre.setOperator(evalUnaryPrefixOperator(expr.getOperator()));
-			pre.setOperand(eval1Expr(expr.getOperand()));
+			MPrefixExpressionPlain pre = new MPrefixExpressionPlain();
+			pre.operand = eval1Expr(expr.getOperand());
+			pre.operator = evalUnaryPrefixOperator(expr.getOperator());
 			ret.add(pre);
 		}
-		else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
-		{
-			ParenthesizedExpression paren = jast.newParen(eval1Expr(expr.getOperand(), flags));
-			ret.add(paren);
-		}
-		else if (expr.getOperator() == IASTUnaryExpression.op_star)
-		{
-			if (isEventualPtr(expr.getOperand().getExpressionType()) &&
-				!flags.contains(Flag.ASSIGN_LEFT_SIDE))
-			{	
-				MethodInvocation meth = jast.newMethod()
-					.on(eval1Expr(expr.getOperand()))
-					.call("get").toAST();
-				ret.add(meth);
-			}
-			else
-				ret.addAll(evalExpr(expr.getOperand()));
-		}
-		else if (expr.getOperator() == IASTUnaryExpression.op_amper)
-		{
-			ret.addAll(evalExpr(expr.getOperand()));
-		}
-		else
-		{
-			// TODO
-			print("todo");
-			print("" + expr.getOperator());
-			ret.add(ast.newStringLiteral());
-
-		}
+		
+		
+		
+		//			else if (expr.getOperator() == IASTUnaryExpression.op_star)
+//			{
+//				printerr(expr.getOperand().getRawSignature() + expr.getOperator() + flags.toString());
+//				
+//				if (!flags.contains(Flag.ASSIGN_LEFT_SIDE))
+//				{
+//					MethodInvocation meth = jast.newMethod()
+//							.on(eval1Expr(expr.getOperand()))
+//							.call("get").toAST();
+//					ret.add(meth);
+//				}
+//				else
+//				{
+//					ret.add(eval1Expr(expr.getOperand()));
+//				}
+//			}
+//			else if (expr.getOperator() == IASTUnaryExpression.op_amper)
+//			{
+////				ret.add(eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_ADDRESS_OF)));
+//			}
+//			else if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr)
+//			{
+////				MethodInvocation meth = jast.newMethod()
+////						.on(eval1Expr(expr.getOperand()))
+////						.call("adjust")
+////						.with(jast.newNumber(-1)).toAST();
+////				ret.add(meth);
+//			}
+//			else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
+//			{
+////				ret.add(eval1Expr(expr.getOperand(), flags));
+//			}
+//			else
+//			{
+//				printerr("" + expr.getOperator());
+////				MethodInvocation meth = jast.newMethod()
+////						.on(eval1Expr(expr.getOperand()))
+////						.call("adjust")
+////						.with(jast.newNumber(1)).toAST();
+////				ret.add(meth);
+//			}
+//		}
+//		else if (isBitfield(expr.getOperand()))
+//		{
+//			if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr ||
+//				expr.getOperator() == IASTUnaryExpression.op_prefixIncr)
+//			{
+//				// --test_with_bit_field
+//				//  converts to:
+//				// set__test_with_bit_field(get__test_with_bit_field() - 1);
+//				InfixExpression infix = ast.newInfixExpression();
+//				infix.setOperator(expr.getOperator() == IASTUnaryExpression.op_prefixIncr ? InfixExpression.Operator.PLUS : InfixExpression.Operator.MINUS);
+//				infix.setLeftOperand(eval1Expr(expr.getOperand()));
+//				infix.setRightOperand(jast.newNumber(1));
+//			
+//				MethodInvocation meth = jast.newMethod()
+//						.call("set__" + getBitfieldSimpleName(expr.getOperand()))
+//						.with(infix).toAST();
+//			
+//				ret.add(meth);
+//			}
+//			else if (expr.getOperator() == IASTUnaryExpression.op_postFixDecr ||
+//					expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
+//			{
+//				// test_with_bit_field++
+//				//  converts to:
+//				// postInc__test_with_bit_field()
+//				MethodInvocation meth = jast.newMethod()
+//						.call((expr.getOperator() == IASTUnaryExpression.op_postFixDecr ? "postDec__" : "postInc__")
+//								+ getBitfieldSimpleName(expr.getOperand())).toAST();
+//				
+//				ret.add(meth);
+//			}
+//		}
+//		else if (isPostfixExpression(expr.getOperator()))
+//		{
+//			PostfixExpression post = ast.newPostfixExpression();
+//			post.setOperator(evalUnaryPostfixOperator(expr.getOperator()));
+//			post.setOperand(eval1Expr(expr.getOperand()));
+//			ret.add(post);
+//		}
+//		else if (isPrefixExpression(expr.getOperator()))
+//		{
+//			PrefixExpression pre = ast.newPrefixExpression();
+//			pre.setOperator(evalUnaryPrefixOperator(expr.getOperator()));
+//			pre.setOperand(eval1Expr(expr.getOperand()));
+//			ret.add(pre);
+//		}
+//		else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
+//		{
+//			ParenthesizedExpression paren = jast.newParen(eval1Expr(expr.getOperand(), flags));
+//			ret.add(paren);
+//		}
+//		else if (expr.getOperator() == IASTUnaryExpression.op_star)
+//		{
+//			if (isEventualPtr(expr.getOperand().getExpressionType()) &&
+//				!flags.contains(Flag.ASSIGN_LEFT_SIDE))
+//			{	
+//				MethodInvocation meth = jast.newMethod()
+//					.on(eval1Expr(expr.getOperand()))
+//					.call("get").toAST();
+//				ret.add(meth);
+//			}
+//			else
+//				ret.addAll(evalExpr(expr.getOperand()));
+//		}
+//		else if (expr.getOperator() == IASTUnaryExpression.op_amper)
+//		{
+//			ret.addAll(evalExpr(expr.getOperand()));
+//		}
+//		else
+//		{
+//			// TODO
+//			print("todo");
+//			print("" + expr.getOperator());
+//			ret.add(ast.newStringLiteral());
+//
+//		}
 
 		
 	}
 
 
-	private void evalFunctionCallExpression(IASTFunctionCallExpression expr, EnumSet<Flag> flags, List<Expression> ret) throws DOMException
+	private void evalFunctionCallExpression(IASTFunctionCallExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
-		Expression funcCallExpr;
+		MFunctionCallExpression func = new MFunctionCallExpression();
+		func.name = eval1Expr(expr.getFunctionNameExpression());
+		//func.args = // TODO
+		ret.add(func);
 		
-		if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
-			((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
-		{
-			ICPPClassType con = (ICPPClassType) ((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding();
-
-			ClassInstanceCreation create = ast.newClassInstanceCreation();
-			create.setType(jast.newType(con.getName()));
-			
-			funcCallExpr = (create);
-			
-			if (expr.getParameterExpression() instanceof IASTExpressionList)
-			{
-				IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
-				for (IASTExpression arg : list.getExpressions())
-				{
-					Expression exarg = eval1Expr(arg, EnumSet.of(Flag.IN_METHOD_ARGS));
-					exarg = callCopyIfNeeded(exarg, arg, flags);
-					create.arguments().add(exarg);
-				}
-			}
-			else if (expr.getParameterExpression() instanceof IASTExpression)
-			{
-				Expression arg = eval1Expr((IASTExpression) expr.getParameterExpression(), EnumSet.of(Flag.IN_METHOD_ARGS));
-				arg = callCopyIfNeeded(arg, (IASTExpression) expr.getParameterExpression(), flags);
-				create.arguments().add(arg);
-			}
-			
-			if ((getTypeEnum(expr.getExpressionType()) == TypeEnum.OBJECT) &&
-				!(flags.contains(Flag.IS_RET_VAL)) &&
-				!(flags.contains(Flag.IN_METHOD_ARGS)))
-			{
-				MethodInvocation method2 = createAddItemCall(funcCallExpr); 
-				ret.add(method2);
-			}
-			else
-				ret.add(funcCallExpr);
-		}
-		else
-		{
-			JASTHelper.Method method = jast.newMethod();
-			if (expr.getFunctionNameExpression() instanceof IASTFieldReference)
-			{
-				IASTFieldReference fr = (IASTFieldReference) expr.getFunctionNameExpression();
-
-				method.on(eval1Expr(fr.getFieldOwner()))
-					.call(getSimpleName(fr.getFieldName()));
-			}
-			else if (expr.getFunctionNameExpression() instanceof IASTIdExpression)
-			{
-				IASTIdExpression id = (IASTIdExpression) expr.getFunctionNameExpression();
-
-				if (getSimpleName(id.getName()).equals("max") || getSimpleName(id.getName()).equals("min"))
-				{
-					method.on("Math");
-				}
-
-				method.call(getSimpleName(id.getName()));
-			}
-
-			if (expr.getParameterExpression() instanceof IASTExpressionList)
-			{
-				IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
-				for (IASTExpression arg : list.getExpressions())
-				{
-					Expression exarg = eval1Expr(arg, EnumSet.of(Flag.IN_METHOD_ARGS));
-					exarg = callCopyIfNeeded(exarg, arg, flags);
-					method.with(exarg);
-				}
-			}
-			else if (expr.getParameterExpression() instanceof IASTExpression)
-			{
-				Expression exarg = eval1Expr(expr.getParameterExpression(), EnumSet.of(Flag.IN_METHOD_ARGS));
-				exarg = callCopyIfNeeded(exarg, expr.getParameterExpression(), flags);
-				method.with(exarg);
-			}
-			funcCallExpr = (method.toAST());
-
-			if ((getTypeEnum(expr.getExpressionType()) == TypeEnum.OBJECT) &&
-				!(flags.contains(Flag.IS_RET_VAL)) &&
-				!(flags.contains(Flag.IN_METHOD_ARGS)))
-			{
-				MethodInvocation method2 = createAddItemCall(funcCallExpr); 
-				ret.add(method2);
-			}
-			else
-				ret.add(funcCallExpr);
-		}
+		
+		
+		//		Expression funcCallExpr;
+//		
+//		if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
+//			((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
+//		{
+//			ICPPClassType con = (ICPPClassType) ((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding();
+//
+//			ClassInstanceCreation create = ast.newClassInstanceCreation();
+//			create.setType(jast.newType(con.getName()));
+//			
+//			funcCallExpr = (create);
+//			
+//			if (expr.getParameterExpression() instanceof IASTExpressionList)
+//			{
+//				IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
+//				for (IASTExpression arg : list.getExpressions())
+//				{
+//					Expression exarg = eval1Expr(arg, EnumSet.of(Flag.IN_METHOD_ARGS));
+//					exarg = callCopyIfNeeded(exarg, arg, flags);
+//					create.arguments().add(exarg);
+//				}
+//			}
+//			else if (expr.getParameterExpression() instanceof IASTExpression)
+//			{
+//				Expression arg = eval1Expr((IASTExpression) expr.getParameterExpression(), EnumSet.of(Flag.IN_METHOD_ARGS));
+//				arg = callCopyIfNeeded(arg, (IASTExpression) expr.getParameterExpression(), flags);
+//				create.arguments().add(arg);
+//			}
+//			
+//			if ((getTypeEnum(expr.getExpressionType()) == TypeEnum.OBJECT) &&
+//				!(flags.contains(Flag.IS_RET_VAL)) &&
+//				!(flags.contains(Flag.IN_METHOD_ARGS)))
+//			{
+//				MethodInvocation method2 = createAddItemCall(funcCallExpr); 
+//				ret.add(method2);
+//			}
+//			else
+//				ret.add(funcCallExpr);
+//		}
+//		else
+//		{
+//			JASTHelper.Method method = jast.newMethod();
+//			if (expr.getFunctionNameExpression() instanceof IASTFieldReference)
+//			{
+//				IASTFieldReference fr = (IASTFieldReference) expr.getFunctionNameExpression();
+//
+//				method.on(eval1Expr(fr.getFieldOwner()))
+//					.call(getSimpleName(fr.getFieldName()));
+//			}
+//			else if (expr.getFunctionNameExpression() instanceof IASTIdExpression)
+//			{
+//				IASTIdExpression id = (IASTIdExpression) expr.getFunctionNameExpression();
+//
+//				if (getSimpleName(id.getName()).equals("max") || getSimpleName(id.getName()).equals("min"))
+//				{
+//					method.on("Math");
+//				}
+//
+//				method.call(getSimpleName(id.getName()));
+//			}
+//
+//			if (expr.getParameterExpression() instanceof IASTExpressionList)
+//			{
+//				IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
+//				for (IASTExpression arg : list.getExpressions())
+//				{
+//					Expression exarg = eval1Expr(arg, EnumSet.of(Flag.IN_METHOD_ARGS));
+//					exarg = callCopyIfNeeded(exarg, arg, flags);
+//					method.with(exarg);
+//				}
+//			}
+//			else if (expr.getParameterExpression() instanceof IASTExpression)
+//			{
+//				Expression exarg = eval1Expr(expr.getParameterExpression(), EnumSet.of(Flag.IN_METHOD_ARGS));
+//				exarg = callCopyIfNeeded(exarg, expr.getParameterExpression(), flags);
+//				method.with(exarg);
+//			}
+//			funcCallExpr = (method.toAST());
+//
+//			if ((getTypeEnum(expr.getExpressionType()) == TypeEnum.OBJECT) &&
+//				!(flags.contains(Flag.IS_RET_VAL)) &&
+//				!(flags.contains(Flag.IN_METHOD_ARGS)))
+//			{
+//				MethodInvocation method2 = createAddItemCall(funcCallExpr); 
+//				ret.add(method2);
+//			}
+//			else
+//				ret.add(funcCallExpr);
+//		}
 
 		
 	}
 
 
-	private void evalBinaryExpression(IASTBinaryExpression expr, EnumSet<Flag> flags, List<Expression> ret) throws DOMException 
+	private void evalBinaryExpression(IASTBinaryExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException 
 	{
-		if (expr instanceof IASTImplicitNameOwner &&
-				((IASTImplicitNameOwner) expr).getImplicitNames().length != 0 &&
-				((IASTImplicitNameOwner) expr).getImplicitNames()[0].isOperator())
+		if (isBitfield(expr.getOperand1()))
 		{
-			String name = ((IASTImplicitNameOwner) expr).getImplicitNames()[0].resolveBinding().getName();
-			//TODO Unknown functions.
-			String replace = normalizeName(name);
-
-			if (((IASTImplicitNameOwner) expr).getImplicitNames()[0].resolveBinding() instanceof ICPPMethod)
-			{
-				MethodInvocation method = jast.newMethod()
-						.on(eval1Expr(expr.getOperand1()))
-						.call(replace)
-						.with(eval1Expr(expr.getOperand2())).toAST();
-				ret.add(method);
-			}
-			else if (((IASTImplicitNameOwner) expr).getImplicitNames()[0].resolveBinding() instanceof ICPPFunction)
-			{
-				MethodInvocation method = jast.newMethod()
-						.on("Globals")
-						.call(replace)
-						.with(eval1Expr(expr.getOperand1()))
-						.with(eval1Expr(expr.getOperand2())).toAST();
-				ret.add(method);
-			}
-			else
-			{
-				assert(false);
-			}
+			MInfixExpressionWithBitfieldOnLeft infix = new MInfixExpressionWithBitfieldOnLeft();
+			
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			infix.operator = evaluateBinaryOperator(expr.getOperator());
+			ret.add(infix);
 		}
-		else if (isAssignmentExpression(expr.getOperator()))
+		else if(isEventualPtrDeref(expr.getOperand1()))
 		{
-			if (isEventualPtrDeref(expr.getOperand1()) &&
-				expr.getOperator() == IASTBinaryExpression.op_assign)
-			{
-				// ptr[0] = 5;  or  *ptr = 5; 
-				//  convert to:
-				// ptr.set(5);
-				MethodInvocation meth = jast.newMethod()
-						.on(eval1Expr(expr.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
-						.call("set")
-						.with(eval1Expr(expr.getOperand2())).toAST();
-				
-				ret.add(meth);
-			}
-			else if (isEventualPtrDeref(expr.getOperand1()))
-			{
-				// (*ptr) += 5  or  ptr[0] += 5
-				//  convert to:
-				// ptr.set(ptr.get() + 5);
-				InfixExpression infix = ast.newInfixExpression();
-				infix.setOperator(compoundAssignmentToInfixOperator(expr.getOperator()));
-				infix.setRightOperand(eval1Expr(expr.getOperand2()));
-				infix.setLeftOperand(eval1Expr(expr.getOperand1()));
-				
-				MethodInvocation meth = jast.newMethod()
-						.on(eval1Expr(expr.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
-						.call("set")
-						.with(infix).toAST();
-				
-				ret.add(meth);
-			}
-			else if (isBitfield(expr.getOperand1()) &&
-					 expr.getOperator() == IASTBinaryExpression.op_assign)
-			{
-				// test_with_bit_field = 4;
-				//  converts to:
-				// set__test_with_bit_field(4)
-				MethodInvocation meth = jast.newMethod()
-						.call("set__" + getBitfieldSimpleName(expr.getOperand1()))
-						.with(eval1Expr(expr.getOperand2())).toAST();
-				
-				ret.add(meth);
-			}
-			else if (isBitfield(expr.getOperand1()))
-			{
-				// test_with_bit_field += 3;
-				//  converts to:
-				// set__test_with_bit_field(get__test_with_bit_field() + 3);
-				InfixExpression infix = ast.newInfixExpression();
-				infix.setOperator(compoundAssignmentToInfixOperator(expr.getOperator()));
-				infix.setRightOperand(eval1Expr(expr.getOperand2()));
-				infix.setLeftOperand(eval1Expr(expr.getOperand1()));
-				
-				MethodInvocation meth = jast.newMethod()
-						.on(eval1Expr(expr.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
-						.call("set__" + getBitfieldSimpleName(expr.getOperand1()))
-						.with(infix).toAST();
-				
-				ret.add(meth);
-			}
-			else
-			{
-				// Normal assignment.
-				Assignment assign = jast.newAssign()
-						.left(eval1Expr(expr.getOperand1()))
-						.right(eval1Expr(expr.getOperand2()))
-						.op(evaluateBinaryAssignmentOperator(expr.getOperator())).toAST();
-
-				ret.add(assign);
-			}
+			MInfixExpressionWithDerefOnLeft infix = new MInfixExpressionWithDerefOnLeft();
+			
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			infix.operator = evaluateBinaryOperator(expr.getOperator());
+			ret.add(infix);
 		}
-		else // Non assignment, non-overloaded binary expression.
+		else
 		{
-			if (isEventualPtr(expr.getOperand1().getExpressionType()))
-			{
-				MethodInvocation meth = jast.newMethod()
-						.on(eval1Expr(expr.getOperand1()))
-						.call("add")
-						.with(eval1Expr(expr.getOperand2())).toAST();
-				ret.add(meth);
-			}
-			else
-			{
-				boolean fSubsNeedBooleans = needBooleanExpressions(expr.getOperator());
-				InfixExpression infix = jast.newInfix()
-						.left(eval1Expr(expr.getOperand1(), fSubsNeedBooleans ? EnumSet.of(Flag.NEED_BOOLEAN) : EnumSet.noneOf(Flag.class)))
-						.right(eval1Expr(expr.getOperand2(), fSubsNeedBooleans ? EnumSet.of(Flag.NEED_BOOLEAN) : EnumSet.noneOf(Flag.class)))
-						.op(evaluateBinaryOperator(expr.getOperator())).toAST();
-
-				ret.add(infix);
-			}
+			MInfixExpressionPlain infix = new MInfixExpressionPlain();
+			
+			System.err.println("CRAPCRAP");
+			
+			
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			infix.operator = evaluateBinaryOperator(expr.getOperator());
+			ret.add(infix);
 		}
+		
+//		
+//		
+//		
+//		
+//		
+//		
+//		
+//		
+//		//		if (expr instanceof IASTImplicitNameOwner &&
+////				((IASTImplicitNameOwner) expr).getImplicitNames().length != 0 &&
+////				((IASTImplicitNameOwner) expr).getImplicitNames()[0].isOperator())
+////		{
+////			String name = ((IASTImplicitNameOwner) expr).getImplicitNames()[0].resolveBinding().getName();
+////			//TODO Unknown functions.
+////			String replace = normalizeName(name);
+////
+////			if (((IASTImplicitNameOwner) expr).getImplicitNames()[0].resolveBinding() instanceof ICPPMethod)
+////			{
+////				MethodInvocation method = jast.newMethod()
+////						.on(eval1Expr(expr.getOperand1()))
+////						.call(replace)
+////						.with(eval1Expr(expr.getOperand2())).toAST();
+////				ret.add(method);
+////			}
+////			else if (((IASTImplicitNameOwner) expr).getImplicitNames()[0].resolveBinding() instanceof ICPPFunction)
+////			{
+////				MethodInvocation method = jast.newMethod()
+////						.on("Globals")
+////						.call(replace)
+////						.with(eval1Expr(expr.getOperand1()))
+////						.with(eval1Expr(expr.getOperand2())).toAST();
+////				ret.add(method);
+////			}
+////			else
+////			{
+////				assert(false);
+////			}
+////		}
+//		else if (isAssignmentExpression(expr.getOperator()))
+//		{
+//			if (isEventualPtrDeref(expr.getOperand1()) &&
+//				expr.getOperator() == IASTBinaryExpression.op_assign)
+//			{
+//				// ptr[0] = 5;  or  *ptr = 5; 
+//				//  convert to:
+//				// ptr.set(5);
+//				MethodInvocation meth = jast.newMethod()
+//						.on(eval1Expr(expr.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
+//						.call("set")
+//						.with(eval1Expr(expr.getOperand2())).toAST();
+//				
+//				ret.add(meth);
+//			}
+//			else if (isEventualPtrDeref(expr.getOperand1()))
+//			{
+//				// (*ptr) += 5  or  ptr[0] += 5
+//				//  convert to:
+//				// ptr.set(ptr.get() + 5);
+//				InfixExpression infix = ast.newInfixExpression();
+//				infix.setOperator(compoundAssignmentToInfixOperator(expr.getOperator()));
+//				infix.setRightOperand(eval1Expr(expr.getOperand2()));
+//				infix.setLeftOperand(eval1Expr(expr.getOperand1()));
+//				
+//				MethodInvocation meth = jast.newMethod()
+//						.on(eval1Expr(expr.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
+//						.call("set")
+//						.with(infix).toAST();
+//				
+//				ret.add(meth);
+//			}
+//			else if (isBitfield(expr.getOperand1()) &&
+//					 expr.getOperator() == IASTBinaryExpression.op_assign)
+//			{
+//				// test_with_bit_field = 4;
+//				//  converts to:
+//				// set__test_with_bit_field(4)
+//				MethodInvocation meth = jast.newMethod()
+//						.call("set__" + getBitfieldSimpleName(expr.getOperand1()))
+//						.with(eval1Expr(expr.getOperand2())).toAST();
+//				
+//				ret.add(meth);
+//			}
+//			else if (isBitfield(expr.getOperand1()))
+//			{
+//				// test_with_bit_field += 3;
+//				//  converts to:
+//				// set__test_with_bit_field(get__test_with_bit_field() + 3);
+//				InfixExpression infix = ast.newInfixExpression();
+//				infix.setOperator(compoundAssignmentToInfixOperator(expr.getOperator()));
+//				infix.setRightOperand(eval1Expr(expr.getOperand2()));
+//				infix.setLeftOperand(eval1Expr(expr.getOperand1()));
+//				
+//				MethodInvocation meth = jast.newMethod()
+//						.on(eval1Expr(expr.getOperand1(), EnumSet.of(Flag.ASSIGN_LEFT_SIDE)))
+//						.call("set__" + getBitfieldSimpleName(expr.getOperand1()))
+//						.with(infix).toAST();
+//				
+//				ret.add(meth);
+//			}
+//			else
+//			{
+//				// Normal assignment.
+//				Assignment assign = jast.newAssign()
+//						.left(eval1Expr(expr.getOperand1()))
+//						.right(eval1Expr(expr.getOperand2()))
+//						.op(evaluateBinaryAssignmentOperator(expr.getOperator())).toAST();
+//
+//				ret.add(assign);
+//			}
+//		}
+//		else // Non assignment, non-overloaded binary expression.
+//		{
+//			if (isEventualPtr(expr.getOperand1().getExpressionType()))
+//			{
+//				MethodInvocation meth = jast.newMethod()
+//						.on(eval1Expr(expr.getOperand1()))
+//						.call("add")
+//						.with(eval1Expr(expr.getOperand2())).toAST();
+//				ret.add(meth);
+//			}
+//			else
+//			{
+//				boolean fSubsNeedBooleans = needBooleanExpressions(expr.getOperator());
+//				InfixExpression infix = jast.newInfix()
+//						.left(eval1Expr(expr.getOperand1(), fSubsNeedBooleans ? EnumSet.of(Flag.NEED_BOOLEAN) : EnumSet.noneOf(Flag.class)))
+//						.right(eval1Expr(expr.getOperand2(), fSubsNeedBooleans ? EnumSet.of(Flag.NEED_BOOLEAN) : EnumSet.noneOf(Flag.class)))
+//						.op(evaluateBinaryOperator(expr.getOperator())).toAST();
+//
+//				ret.add(infix);
+//			}
+//		}
 
 		
 	}
@@ -2781,42 +2567,40 @@ public class SourceConverterStage2
 	/**
 	 * Converts a C++ postfix operator to a Java one.
 	 */
-	private PostfixExpression.Operator evalUnaryPostfixOperator(int operator) 
+	private String evalUnaryPostfixOperator(int operator) 
 	{
 		switch(operator)
 		{
 		case IASTUnaryExpression.op_postFixDecr:
-			return PostfixExpression.Operator.DECREMENT;
+			return "--";
 		case IASTUnaryExpression.op_postFixIncr:
-			return PostfixExpression.Operator.INCREMENT;
+			return "++";
 		default:
-			assert(false);
-			return null;
+			throw new IllegalArgumentException();
 		}
 	}
 
 	/**
 	 * Converts a C++ prefix operator to a C++ one.
 	 */
-	private PrefixExpression.Operator evalUnaryPrefixOperator(int operator) 
+	private String evalUnaryPrefixOperator(int operator) 
 	{
 		switch(operator)
 		{
 		case IASTUnaryExpression.op_prefixDecr:
-			return PrefixExpression.Operator.DECREMENT;
+			return "--";
 		case IASTUnaryExpression.op_prefixIncr:
-			return PrefixExpression.Operator.INCREMENT;
+			return "++";
 		case IASTUnaryExpression.op_not:
-			return PrefixExpression.Operator.NOT;
+			return "!";
 		case IASTUnaryExpression.op_plus:
-			return PrefixExpression.Operator.PLUS;
+			return "+";
 		case IASTUnaryExpression.op_minus:
-			return PrefixExpression.Operator.MINUS;
+			return "-";
 		case IASTUnaryExpression.op_tilde:
-			return PrefixExpression.Operator.COMPLEMENT;
+			return "~";
 		default:
-			assert(false);
-			return null;
+			throw new IllegalArgumentException();
 		}
 	}
 
@@ -2940,48 +2724,48 @@ public class SourceConverterStage2
 	/**
 	 * Converts the CDT binary operator to a JDT binary operator.
 	 */
-	private Operator evaluateBinaryOperator(int operator)
+	private String evaluateBinaryOperator(int operator)
 	{
 		switch (operator)
 		{
 		case IASTBinaryExpression.op_binaryAnd:
-			return InfixExpression.Operator.AND;
+			return "&";
 		case IASTBinaryExpression.op_binaryOr:
-			return InfixExpression.Operator.OR;
+			return "|";
 		case IASTBinaryExpression.op_binaryXor:
-			return InfixExpression.Operator.XOR;
+			return "^";
 		case IASTBinaryExpression.op_divide:
-			return InfixExpression.Operator.DIVIDE;
+			return "/";
 		case IASTBinaryExpression.op_equals:
-			return InfixExpression.Operator.EQUALS;
+			return "==";
 		case IASTBinaryExpression.op_plus:
-			return InfixExpression.Operator.PLUS;
+			return "+";
 		case IASTBinaryExpression.op_minus:
-			return InfixExpression.Operator.MINUS;
+			return "-";
 		case IASTBinaryExpression.op_multiply:
-			return InfixExpression.Operator.TIMES;
+			return "*";
 		case IASTBinaryExpression.op_notequals:
-			return InfixExpression.Operator.NOT_EQUALS;
+			return "!=";
 		case IASTBinaryExpression.op_greaterEqual:
-			return InfixExpression.Operator.GREATER_EQUALS;
+			return ">=";
 		case IASTBinaryExpression.op_greaterThan:
-			return InfixExpression.Operator.GREATER;
+			return ">";
 		case IASTBinaryExpression.op_lessEqual:
-			return InfixExpression.Operator.LESS_EQUALS;
+			return "<=";
 		case IASTBinaryExpression.op_lessThan:
-			return InfixExpression.Operator.LESS;
+			return "<";
 		case IASTBinaryExpression.op_logicalAnd:
-			return InfixExpression.Operator.CONDITIONAL_AND;
+			return "&&";
 		case IASTBinaryExpression.op_logicalOr:
-			return InfixExpression.Operator.CONDITIONAL_OR;
+			return "||";
 		case IASTBinaryExpression.op_modulo:
-			return InfixExpression.Operator.REMAINDER;
+			return "%";
 		case IASTBinaryExpression.op_shiftLeft:
-			return InfixExpression.Operator.LEFT_SHIFT;
+			return "<<";
 		case IASTBinaryExpression.op_shiftRight:
-			return InfixExpression.Operator.RIGHT_SHIFT_SIGNED; // TODO
+			return ">>";
 		default:
-			return InfixExpression.Operator.TIMES; // TODO
+			throw new IllegalArgumentException();
 		}
 	}
 
@@ -2994,40 +2778,40 @@ public class SourceConverterStage2
 	{
 		List<Expression> ret = new ArrayList<Expression>();
 
-		if (initializer instanceof IASTEqualsInitializer)
-		{
-			IASTEqualsInitializer equals = (IASTEqualsInitializer) initializer;
-			print("equals initializer");
-
-			if (equals.getInitializerClause() instanceof IASTExpression)
-				ret.addAll(evalExpr((IASTExpression) equals.getInitializerClause()));
-			else if (equals.getInitializerClause() instanceof IASTInitializerList)
-			{
-				// Don't yet support this
-				printerr("equals intializer list");
-				//exitOnError();
-			}
-		}
-		else if (initializer instanceof IASTInitializerList)
-		{
-			IASTInitializerList initializerList = (IASTInitializerList)initializer;
-			print("initializer list");
-
-			for (IASTInitializer childInitializer : initializerList.getInitializers())
-				ret.addAll(evaluate(childInitializer));
-		}
-		else if (initializer instanceof ICPPASTConstructorInitializer)
-		{
-			ICPPASTConstructorInitializer constructorInitializer = (ICPPASTConstructorInitializer)initializer;
-			print("constructor initializer");
-
-			ret.addAll(evalExpr(constructorInitializer.getExpression()));
-		}
-		else if (initializer != null)
-		{
-			printerr("Unsupported initializer type: " + initializer.getClass().getCanonicalName());
-			exitOnError();
-		}
+//		if (initializer instanceof IASTEqualsInitializer)
+//		{
+//			IASTEqualsInitializer equals = (IASTEqualsInitializer) initializer;
+//			print("equals initializer");
+//
+//			if (equals.getInitializerClause() instanceof IASTExpression)
+//				ret.addAll(evalExpr((IASTExpression) equals.getInitializerClause()));
+//			else if (equals.getInitializerClause() instanceof IASTInitializerList)
+//			{
+//				// Don't yet support this
+//				printerr("equals intializer list");
+//				//exitOnError();
+//			}
+//		}
+//		else if (initializer instanceof IASTInitializerList)
+//		{
+//			IASTInitializerList initializerList = (IASTInitializerList)initializer;
+//			print("initializer list");
+//
+//			for (IASTInitializer childInitializer : initializerList.getInitializers())
+//				ret.addAll(evaluate(childInitializer));
+//		}
+//		else if (initializer instanceof ICPPASTConstructorInitializer)
+//		{
+//			ICPPASTConstructorInitializer constructorInitializer = (ICPPASTConstructorInitializer)initializer;
+//			print("constructor initializer");
+//
+//			ret.addAll(evalExpr(constructorInitializer.getExpression()));
+//		}
+//		else if (initializer != null)
+//		{
+//			printerr("Unsupported initializer type: " + initializer.getClass().getCanonicalName());
+//			exitOnError();
+//		}
 		return ret;
 	}
 
@@ -3223,49 +3007,49 @@ public class SourceConverterStage2
 	 */
 	private List<Expression> evaluateForInitializer(IASTStatement stmt) throws DOMException
 	{
-		if (stmt instanceof IASTExpressionStatement)
-		{
-			IASTExpressionStatement expressionStatement = (IASTExpressionStatement) stmt;
-			print("Expression");
-
-			return evalExpr(expressionStatement.getExpression());
-		}
-		else if (stmt instanceof IASTDeclarationStatement)
-		{
-			IASTDeclarationStatement decl = (IASTDeclarationStatement) stmt;
-			print("declaration");
-
-			List<SimpleName> list = evaluateDeclarationReturnNames(decl.getDeclaration());
-			List<Expression> inits = evaluateDeclarationReturnInitializers(decl.getDeclaration(), true);
-			List<Type> types = evaluateDeclarationReturnTypes(decl.getDeclaration());
-
-			List<Expression> ret = new ArrayList<Expression>();
-
-			for (int i = 0; i < list.size(); i++)
-			{
-				VariableDeclarationFragment fr = ast.newVariableDeclarationFragment();
-				fr.setName(list.get(i));
-				fr.setInitializer(inits.get(i));
-				VariableDeclarationExpression expr = ast.newVariableDeclarationExpression(fr);
-				expr.setType(types.get(i));
-				ret.add(expr);
-			}
-
-			return ret;
-		}
-		else if (stmt instanceof IASTNullStatement)
-		{
-			return null;
-			//
-//			List<Expression> ret = new ArrayList<Expression>();			
-//				ret.add(ast.newBooleanLiteral(true)); // FIXME.
-//				return ret;
-		}
-		else if (stmt != null)
-		{
-			printerr("Another kind of intializer:" + stmt.getClass().getCanonicalName());
-			exitOnError();
-		}
+//		if (stmt instanceof IASTExpressionStatement)
+//		{
+//			IASTExpressionStatement expressionStatement = (IASTExpressionStatement) stmt;
+//			print("Expression");
+//
+//			return evalExpr(expressionStatement.getExpression());
+//		}
+//		else if (stmt instanceof IASTDeclarationStatement)
+//		{
+//			IASTDeclarationStatement decl = (IASTDeclarationStatement) stmt;
+//			print("declaration");
+//
+//			List<SimpleName> list = evaluateDeclarationReturnNames(decl.getDeclaration());
+//			List<Expression> inits = evaluateDeclarationReturnInitializers(decl.getDeclaration(), true);
+//			List<Type> types = evaluateDeclarationReturnTypes(decl.getDeclaration());
+//
+//			List<Expression> ret = new ArrayList<Expression>();
+//
+//			for (int i = 0; i < list.size(); i++)
+//			{
+//				VariableDeclarationFragment fr = ast.newVariableDeclarationFragment();
+//				fr.setName(list.get(i));
+//				fr.setInitializer(inits.get(i));
+//				VariableDeclarationExpression expr = ast.newVariableDeclarationExpression(fr);
+//				expr.setType(types.get(i));
+//				ret.add(expr);
+//			}
+//
+//			return ret;
+//		}
+//		else if (stmt instanceof IASTNullStatement)
+//		{
+//			return null;
+//			//
+////			List<Expression> ret = new ArrayList<Expression>();			
+////				ret.add(ast.newBooleanLiteral(true)); // FIXME.
+////				return ret;
+//		}
+//		else if (stmt != null)
+//		{
+//			printerr("Another kind of intializer:" + stmt.getClass().getCanonicalName());
+//			exitOnError();
+//		}
 		return null;
 	}
 	
@@ -3420,7 +3204,7 @@ public class SourceConverterStage2
 			IASTCaseStatement caseStatement = (IASTCaseStatement) statement;
 			print("case");
 			SwitchCase cs = ast.newSwitchCase();
-			cs.setExpression(eval1Expr(caseStatement.getExpression()));
+			//cs.setExpression(eval1Expr(caseStatement.getExpression()));
 			ret.add(cs);
 		}
 		else if (statement instanceof IASTContinueStatement)
@@ -3512,38 +3296,38 @@ public class SourceConverterStage2
 
 			DoStatement dos = ast.newDoStatement();
 			dos.setBody(surround(eval1Stmt(doStatement.getBody(), EnumSet.of(Flag.IS_LOOP))));
-			dos.setExpression(eval1Expr(doStatement.getCondition(), EnumSet.of(Flag.NEED_BOOLEAN)));
+			//dos.setExpression(eval1Expr(doStatement.getCondition(), EnumSet.of(Flag.NEED_BOOLEAN)));
 			ret.add(dos);
 		}
 		else if (statement instanceof IASTExpressionStatement)
 		{
 			IASTExpressionStatement expressionStatement = (IASTExpressionStatement)statement;
 			print("Expression");
-
-			ret.add(ast.newExpressionStatement(eval1Expr(expressionStatement.getExpression())));
+			eval1Expr(expressionStatement.getExpression());
+			//ret.add(ast.newExpressionStatement(eval1Expr(expressionStatement.getExpression())));
 		}
 		else if (statement instanceof IASTForStatement)
 		{
 			IASTForStatement forStatement = (IASTForStatement)statement;
 			print("For");
 
-			if (forStatement instanceof ICPPASTForStatement)
-				;//evaluate(((ICPPASTForStatement)forStatement).getConditionDeclaration());
-
-			ForStatement fs = ast.newForStatement();
-			List<Expression> inits = evaluateForInitializer(forStatement.getInitializerStatement());
-			Expression expr = eval1Expr(forStatement.getConditionExpression(), EnumSet.of(Flag.NEED_BOOLEAN));
-			List<Expression> updaters = evalExpr(forStatement.getIterationExpression());
-
-			if (inits != null)
-				fs.initializers().addAll(inits);
-			if (expr != null)
-				fs.setExpression(expr);
-			if (updaters.get(0) != null)
-				fs.updaters().addAll(updaters);
-
-			fs.setBody(surround(eval1Stmt(forStatement.getBody(), EnumSet.of(Flag.IS_LOOP))));
-			ret.add(fs);
+//			if (forStatement instanceof ICPPASTForStatement)
+//				;//evaluate(((ICPPASTForStatement)forStatement).getConditionDeclaration());
+//
+//			ForStatement fs = ast.newForStatement();
+//			List<Expression> inits = evaluateForInitializer(forStatement.getInitializerStatement());
+//			Expression expr = eval1Expr(forStatement.getConditionExpression(), EnumSet.of(Flag.NEED_BOOLEAN));
+//			List<Expression> updaters = evalExpr(forStatement.getIterationExpression());
+//
+//			if (inits != null)
+//				fs.initializers().addAll(inits);
+//			if (expr != null)
+//				fs.setExpression(expr);
+//			if (updaters.get(0) != null)
+//				fs.updaters().addAll(updaters);
+//
+//			fs.setBody(surround(eval1Stmt(forStatement.getBody(), EnumSet.of(Flag.IS_LOOP))));
+//			ret.add(fs);
 		}
 		else if (statement instanceof IASTIfStatement)
 		{
@@ -3559,7 +3343,7 @@ public class SourceConverterStage2
 			}
 			else
 			{
-				ifs.setExpression(eval1Expr(ifStatement.getConditionExpression(), EnumSet.of(Flag.NEED_BOOLEAN)));
+				//ifs.setExpression(eval1Expr(ifStatement.getConditionExpression(), EnumSet.of(Flag.NEED_BOOLEAN)));
 			}
 
 			ifs.setThenStatement(surround(eval1Stmt(ifStatement.getThenClause())));
@@ -3575,66 +3359,66 @@ public class SourceConverterStage2
 		}
 		else if (statement instanceof IASTReturnStatement)
 		{
-			IASTReturnStatement returnStatement = (IASTReturnStatement)statement;
-			print("return");
-
-			JASTHelper.Method method = jast.newMethod()
-						.on("StackHelper")
-						.call("cleanup");
-			ReturnStatement ret2 = ast.newReturnStatement();
-			
-			if (returnStatement.getReturnValue() != null)
-			{
-				if (((returnStatement.getReturnValue().getExpressionType() instanceof ICompositeType ||
-					(returnStatement.getReturnValue().getExpressionType() instanceof IQualifierType &&
-					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)))) 
-					/* !(eval1Expr(returnStatement.getReturnValue()) instanceof ClassInstanceCreation))) */
-				{
-					// Call copy method on returned value...
-					Expression create = eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flag.IS_RET_VAL));
-					
-					if (!(create instanceof ClassInstanceCreation))
-					{
-						create = jast.newMethod()
-							.on(eval1Expr(returnStatement.getReturnValue()))
-							.call("copy").toAST();
-					}
-
-					if (m_nextVariableId != 0)
-						method.with(create);
-					else
-						ret2.setExpression(create);
-				}
-				else
-				{
-					if (m_nextVariableId != 0)
-						method.with(eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flag.IS_RET_VAL)));
-					else
-						ret2.setExpression(eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flag.IS_RET_VAL)));
-				}	
-
-				if (m_nextVariableId != 0)
-				{
-					method.with("__stack").with(0);
-					ret2.setExpression(method.toAST());
-				}
-				ret.add(ret2);
-			}
-			else
-			{
-				if (m_nextVariableId != 0)
-				{
-					Block blk = ast.newBlock();
-					method.with(ast.newNullLiteral())
-						.with("__stack")
-						.with(0);
-					blk.statements().add(ast.newExpressionStatement(method.toAST()));
-					blk.statements().add(ret2);
-					ret.add(blk);
-				}
-				else
-					ret.add(ret2);
-			}
+//			IASTReturnStatement returnStatement = (IASTReturnStatement)statement;
+//			print("return");
+//
+//			JASTHelper.Method method = jast.newMethod()
+//						.on("StackHelper")
+//						.call("cleanup");
+//			ReturnStatement ret2 = ast.newReturnStatement();
+//			
+//			if (returnStatement.getReturnValue() != null)
+//			{
+//				if (((returnStatement.getReturnValue().getExpressionType() instanceof ICompositeType ||
+//					(returnStatement.getReturnValue().getExpressionType() instanceof IQualifierType &&
+//					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)))) 
+//					/* !(eval1Expr(returnStatement.getReturnValue()) instanceof ClassInstanceCreation))) */
+//				{
+//					// Call copy method on returned value...
+//					Expression create = eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flag.IS_RET_VAL));
+//					
+//					if (!(create instanceof ClassInstanceCreation))
+//					{
+//						create = jast.newMethod()
+//							.on(eval1Expr(returnStatement.getReturnValue()))
+//							.call("copy").toAST();
+//					}
+//
+//					if (m_nextVariableId != 0)
+//						method.with(create);
+//					else
+//						ret2.setExpression(create);
+//				}
+//				else
+//				{
+//					if (m_nextVariableId != 0)
+//						method.with(eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flag.IS_RET_VAL)));
+//					else
+//						ret2.setExpression(eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flag.IS_RET_VAL)));
+//				}	
+//
+//				if (m_nextVariableId != 0)
+//				{
+//					method.with("__stack").with(0);
+//					ret2.setExpression(method.toAST());
+//				}
+//				ret.add(ret2);
+//			}
+//			else
+//			{
+//				if (m_nextVariableId != 0)
+//				{
+//					Block blk = ast.newBlock();
+//					method.with(ast.newNullLiteral())
+//						.with("__stack")
+//						.with(0);
+//					blk.statements().add(ast.newExpressionStatement(method.toAST()));
+//					blk.statements().add(ret2);
+//					ret.add(blk);
+//				}
+//				else
+//					ret.add(ret2);
+//			}
 		}
 		else if (statement instanceof IASTSwitchStatement)
 		{
@@ -3667,7 +3451,7 @@ public class SourceConverterStage2
 			}
 			else
 			{
-				swt.setExpression(evalExpr(switchStatement.getControllerExpression()).get(0));
+				//swt.setExpression(evalExpr(switchStatement.getControllerExpression()).get(0));
 			}
 
 			if (switchStatement.getBody() instanceof IASTCompoundStatement)
@@ -3702,7 +3486,7 @@ public class SourceConverterStage2
 			}
 			else
 			{
-				whs.setExpression(eval1Expr(whileStatement.getCondition(), EnumSet.of(Flag.NEED_BOOLEAN)));
+				//whs.setExpression(eval1Expr(whileStatement.getCondition(), EnumSet.of(Flag.NEED_BOOLEAN)));
 			}
 
 			whs.setBody(surround(eval1Stmt(whileStatement.getBody(), EnumSet.of(Flag.IS_LOOP))));
@@ -3918,16 +3702,16 @@ public class SourceConverterStage2
 	private List<Expression> getArraySizeExpressions(IType type) throws DOMException
 	{
 		List<Expression> ret = new ArrayList<Expression>();
-
-		IArrayType arr = (IArrayType) type;
-		ret.add(eval1Expr(arr.getArraySizeExpression()));
-
-		while (arr.getType() instanceof IArrayType)
-		{
-			IArrayType arr2 = (IArrayType) arr.getType();
-			ret.add(eval1Expr(arr2.getArraySizeExpression()));
-			arr = arr2;
-		}
+//
+//		IArrayType arr = (IArrayType) type;
+//		ret.add(eval1Expr(arr.getArraySizeExpression()));
+//
+//		while (arr.getType() instanceof IArrayType)
+//		{
+//			IArrayType arr2 = (IArrayType) arr.getType();
+//			ret.add(eval1Expr(arr2.getArraySizeExpression()));
+//			arr = arr2;
+//		}
 
 		return ret;
 	}
@@ -4371,6 +4155,18 @@ bitfields.add("A::test_with_bit_field");
 			e.printStackTrace();
 		}
 
+		
+		STGroup group = new STGroupDir("/home/daniel/workspace/cpp-to-java-source-converter/templates");
+		System.err.println("!!!!" + expressions.size());
+		for (MExpression expr : expressions)
+		{
+			ST test2 = group.getInstanceOf("expression_tp");
+			test2.add("expr_obj", expr);
+			System.err.println("####" + test2.render());
+		}
+		
+		
+		
 		char[] contents = null;
 		try {
 			Document doc = new Document();
