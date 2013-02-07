@@ -175,6 +175,12 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <elseif(expr_obj.isCompoundWithDerefOnLeft)>
     <expression_tp(expr_obj.left, true, false)>set(<expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>)
 
+  <elseif(expr_obj.isDeleteObjectSingle)>
+    <expression_tp(expr_obj.operand, false, false)>.destruct()
+
+  <elseif(expr_obj.isDeleteObjectMultiple)>
+    DestructHelper.destructArray(<expression_tp(expr_obj.operand, false, false)>)
+
   <endif>
 
 <endif>

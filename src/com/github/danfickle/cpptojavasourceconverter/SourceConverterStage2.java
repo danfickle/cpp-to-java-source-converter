@@ -1835,7 +1835,7 @@ public class SourceConverterStage2
 		}
 		else if (expression instanceof ICPPASTDeleteExpression)
 		{
-			evalDeleteExpression((ICPPASTDeleteExpression) expression, ret, flags);
+			evalExprDelete((ICPPASTDeleteExpression) expression, ret, flags);
 		}
 		else if (expression instanceof ICPPASTNewExpression)
 		{
@@ -1923,26 +1923,28 @@ public class SourceConverterStage2
 //		}
 	}
 
-	private void evalDeleteExpression(ICPPASTDeleteExpression expr, List<MExpression> ret, EnumSet<Flag> flags)
+	private void evalExprDelete(ICPPASTDeleteExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
-		
-//		if (!deleteExpression.isVectored())
-//		{
-//			// WRONG
-//			ret.add(jast.newMethod()
-//					.on(eval1Expr(deleteExpression.getOperand()), true)
-//					.call("destruct").toAST());
-//		}
-//		else
-//		{
-//			// Call DestructHelper.destructArray(array)...
-//			ret.add(jast.newMethod()
-//					.on("DestructHelper")
-//					.call("destructArray")
-//					.with(eval1Expr(deleteExpression.getOperand())).toAST());
-//		}
-
-		
+		if (isObjectPtr(expr.getOperand().getExpressionType()))
+		{
+			if (expr.isVectored())
+			{
+				MDeleteObjectMultiple del = new MDeleteObjectMultiple();
+				del.operand = eval1Expr(expr.getOperand());
+				ret.add(del);
+			}
+			else
+			{
+				MDeleteObjectSingle del = new MDeleteObjectSingle();
+				del.operand = eval1Expr(expr.getOperand());
+				ret.add(del);
+			}
+		}
+		else
+		{
+			MEmptyExpression emp = new MEmptyExpression();
+			ret.add(emp);
+		}
 	}
 	
 	
@@ -1968,7 +1970,7 @@ public class SourceConverterStage2
 
 	private void evalExprId(IASTIdExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
-		if (isBitfield(expr.getName()) && !flags.contains(Flag.IN_FUNC_NAME))
+		if (isBitfield(expr.getName()))
 		{
 			MIdentityExpressionBitfield ident = new MIdentityExpressionBitfield();
 			ident.ident = getSimpleName(expr.getName());
@@ -2299,7 +2301,7 @@ public class SourceConverterStage2
 			if (expr.getOperator() == IASTBinaryExpression.op_assign)
 			{
 				MInfixAssignmentWithBitfieldOnLeft infix = new MInfixAssignmentWithBitfieldOnLeft();
-				infix.left = eval1Expr(expr.getOperand1(), EnumSet.of(Flag.IN_FUNC_NAME));
+				infix.left = eval1Expr(expr.getOperand1());
 				infix.right = eval1Expr(expr.getOperand2());
 				ret.add(infix);
 			}
@@ -2350,16 +2352,9 @@ public class SourceConverterStage2
 		else
 		{
 			MInfixExpressionPlain infix = new MInfixExpressionPlain();
-
-			EnumSet<Flag> newFlags = EnumSet.copyOf(flags);
-			newFlags.add(Flag.IN_FUNC_NAME);
-
-			infix.left = eval1Expr(expr.getOperand1(), newFlags);
+			infix.left = eval1Expr(expr.getOperand1());
 			infix.right = eval1Expr(expr.getOperand2());
-//			infix.hasCorrectedOperator = infix.correctedOperator != null;
-//
-//			if (!infix.hasCorrectedOperator)
-				infix.operator = evaluateBinaryOperator(expr.getOperator());
+			infix.operator = evaluateBinaryOperator(expr.getOperator());
 			
 			ret.add(infix);
 		}
@@ -3693,6 +3688,17 @@ public class SourceConverterStage2
 		return false;
 	}
 	
+	private boolean isObjectPtr(IType type) throws DOMException
+	{
+		if (type instanceof IPointerType)
+		{
+			IPointerType pointer = (IPointerType) type;
+			
+			if (getTypeEnum(pointer.getType()) == TypeEnum.OBJECT)
+				return true;
+		}
+		return false;
+	}
 	
 	/**
 	 * Determines if a type will turn into a pointer.
@@ -3991,8 +3997,7 @@ public class SourceConverterStage2
 		IS_RET_VAL,
 		IN_METHOD_ARGS,
 		ASSIGN_LEFT_SIDE,
-		IN_ADDRESS_OF,
-		IN_FUNC_NAME;
+		IN_ADDRESS_OF;
 	}
 	
 	// The Java AST. We need this to create AST nodes...

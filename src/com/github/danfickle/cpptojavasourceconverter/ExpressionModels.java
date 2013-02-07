@@ -49,6 +49,11 @@ class ExpressionModels
 		public String ident;
 	}
 	
+	abstract static class MDeleteExpression extends MExpression
+	{
+		public MExpression operand;
+	}
+	
 	// 1
 	static class MArrayExpressionPlain extends MArrayExpression
 	{
@@ -268,5 +273,23 @@ class ExpressionModels
 		
 		public MExpression operand;
 		public String type = "int"; // TODO
+	}
+	
+	// 40
+	static class MDeleteObjectSingle extends MDeleteExpression
+	{
+		public boolean isDeleteObjectSingle = true;
+	}
+	
+	// 41
+	static class MDeleteObjectMultiple extends MDeleteExpression
+	{
+		public boolean isDeleteObjectMultiple = true;
+	}
+	
+	// 42
+	static class MEmptyExpression extends MExpression
+	{
+		public boolean isEmpty = true;
 	}
 }

@@ -13,6 +13,7 @@ int func(int a)
   int * ptr;
   int myint;
   cls myclass;
+  cls * ptr_cls;
 
   arr[1];   // 1  -> Plain array access
   ptr[2];   // 2  -> Pointer array access
@@ -87,6 +88,16 @@ int func(int a)
   this->_c = 2;  // -> Field deref assignment
   this->_c | 3;  // -> Field deref infix
   this->_c += 4; // -> Field deref compound
+
+  //ptr = new int[10];     // -> New expression basic array
+  //ptr_cls = new cls[11]; // -> New expression object
+  //ptr = new int;         // -> New expression single basic
+  //ptr_cls = new cls;     // -> New expression single object
+
+  delete ptr;           // -> Basic type delete
+  delete ptr_cls;       // -> Object type delete
+  delete [] ptr_cls;    // -> Object array delete
+
 
   //int zz = (int) _b;
 
