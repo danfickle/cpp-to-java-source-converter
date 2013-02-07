@@ -198,12 +198,6 @@ class ExpressionModels
 		public boolean isPostfix = true;
 	}
 
-	// 22
-	static class MPostfixExpressionPointer extends MPostfixExpression
-	{
-		public boolean isPostfixPointer = true;
-	}
-	
 	// 23
 	static class MPostfixExpressionPointerInc extends MPostfixExpression
 	{

@@ -1997,7 +1997,7 @@ public class SourceConverterStage2
 
 	private void evalExprFieldReference(IASTFieldReference expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
-		if (isBitfield(expr.getFieldName()) && !flags.contains(Flag.IN_FUNC_NAME))
+		if (isBitfield(expr.getFieldName()))
 		{
 			MFieldReferenceExpressionBitfield field = new MFieldReferenceExpressionBitfield();
 			field.object = eval1Expr(expr.getFieldOwner());
@@ -2123,13 +2123,6 @@ public class SourceConverterStage2
 				pre.operand = eval1Expr(expr.getOperand());
 				ret.add(pre);
 			}
-			else if (isPostfixExpression(expr.getOperator()))
-			{
-				MPostfixExpressionPointer post = new MPostfixExpressionPointer();
-				post.operand = eval1Expr(expr.getOperand());
-				post.operator = evalUnaryPostfixOperator(expr.getOperator());
-				ret.add(post);
-			}
 			else if (isPrefixExpression(expr.getOperator()))
 			{
 				MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
@@ -2149,33 +2142,30 @@ public class SourceConverterStage2
 			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
 			{
 				MPostfixExpressionBitfieldInc post = new MPostfixExpressionBitfieldInc();
-				post.operand = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME));
+				post.operand = eval1Expr(expr.getOperand());
 				ret.add(post);
 			}
 			else if (expr.getOperator() == IASTUnaryExpression.op_postFixDecr)
 			{
 				MPostfixExpressionBitfieldDec post = new MPostfixExpressionBitfieldDec();
-				post.operand = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME));
+				post.operand = eval1Expr(expr.getOperand());
 				ret.add(post);
 			}
 			if (expr.getOperator() == IASTUnaryExpression.op_prefixIncr)
 			{
 				MPrefixExpressionBitfieldInc post = new MPrefixExpressionBitfieldInc();
-				post.set = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME));
 				post.operand = eval1Expr(expr.getOperand());
 				ret.add(post);
 			}
 			else if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr)
 			{
 				MPrefixExpressionBitfieldDec post = new MPrefixExpressionBitfieldDec();
-				post.set = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME));
 				post.operand = eval1Expr(expr.getOperand());
 				ret.add(post);
 			}
 			else if (isPrefixExpression(expr.getOperator()))
 			{
 				MPrefixExpressionBitfield pre = new MPrefixExpressionBitfield();
-				pre.set = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME)); 
 				pre.operand = eval1Expr(expr.getOperand());
 				pre.operator = evalUnaryPrefixOperator(expr.getOperator());
 				ret.add(pre);
@@ -2332,12 +2322,30 @@ public class SourceConverterStage2
 		}
 		else if(isEventualPtrDeref(expr.getOperand1()))
 		{
-			MInfixExpressionWithDerefOnLeft infix = new MInfixExpressionWithDerefOnLeft();
-			
-			infix.left = eval1Expr(expr.getOperand1());
-			infix.right = eval1Expr(expr.getOperand2());
-			infix.operator = evaluateBinaryOperator(expr.getOperator());
-			ret.add(infix);
+			if (expr.getOperator() == IASTBinaryExpression.op_assign)
+			{
+				MInfixAssignmentWithDerefOnLeft infix = new MInfixAssignmentWithDerefOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = evaluateBinaryOperator(expr.getOperator());
+				ret.add(infix);
+			}
+			else if (isAssignmentExpression(expr.getOperator()))
+			{
+				MCompoundWithDerefOnLeft infix = new MCompoundWithDerefOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = compoundAssignmentToInfixOperator(expr.getOperator());
+				ret.add(infix);
+			}
+			else
+			{
+				MInfixExpressionWithDerefOnLeft infix = new MInfixExpressionWithDerefOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = evaluateBinaryOperator(expr.getOperator());
+				ret.add(infix);
+			}
 		}
 		else
 		{
@@ -3673,6 +3681,10 @@ public class SourceConverterStage2
 			((IASTUnaryExpression) expr).getOperator() == IASTUnaryExpression.op_star)
 			return true;
 		
+		if (expr instanceof IASTFieldReference &&
+			((IASTFieldReference) expr).isPointerDereference())
+			return true;
+		
 		// Finally check for the array access operator on a pointer...
 		if (expr instanceof IASTArraySubscriptExpression &&
 			isEventualPtr(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
@@ -4107,6 +4119,8 @@ bitfields.add("_b");
 		{
 			ST test2 = group.getInstanceOf("expression_tp");
 			test2.add("expr_obj", expr);
+			test2.add("want_lvalue_obj", false);
+			test2.add("want_lvalue_field", false);
 			System.err.println("####" + test2.render());
 		}
 		

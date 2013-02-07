@@ -12,6 +12,7 @@ int func(int a)
   int arr[2];
   int * ptr;
   int myint;
+  cls myclass;
 
   arr[1];   // 1  -> Plain array access
   ptr[2];   // 2  -> Pointer array access
@@ -69,15 +70,23 @@ int func(int a)
   this._b ^ 23;  // -> Bitfield field reference infix
   this._b *= 24; // -> Bitfield field reference compound
 
+  myclass._b = 25; // -> Field reference bitfield
 
+  ptr[2] = 2;  // -> Pointer array assignment
+  ptr[2] | 3;  // -> Pointer array infix
+  ptr[2] += 4; // -> Pointer array compound
 
+  *ptr = 2;  // -> Pointer deref assignment
+  *ptr | 3;  // -> Pointer deref infix
+  *ptr += 4; // -> Pointer deref compound
 
+  *this._c = 2;  // -> Field deref assignment
+  *this._c | 3;  // -> Field deref infix
+  *this._c += 4; // -> Field deref compound
 
-
-
-
-  ptr[2] = 2; // -> Pointer array assignment
-
+  this->_c = 2;  // -> Field deref assignment
+  this->_c | 3;  // -> Field deref infix
+  this->_c += 4; // -> Field deref compound
 
   //int zz = (int) _b;
 
