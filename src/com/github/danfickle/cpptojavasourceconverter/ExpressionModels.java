@@ -7,7 +7,7 @@ import org.eclipse.cdt.core.dom.ast.IASTExpression;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.Type;
 
-class Models
+class ExpressionModels
 {
 	abstract static class MExpression
 	{}
@@ -16,17 +16,13 @@ class Models
 	{
 		public MExpression operand;
 		public List<MExpression> subscript = new ArrayList<MExpression>(1);
-		public boolean leftSide;
+		public boolean leftSide; //TODO
 	}
 	
-	static class MArrayExpressionPlain extends MArrayExpression
+	abstract static class MFieldReferenceExpression extends MExpression
 	{
-		public boolean isArray = true;
-	}
-
-	static class MArrayExpressionPtr extends MArrayExpression
-	{
-		public boolean isPtrArray = true;
+		public MExpression object;
+		public String field;
 	}
 	
 	abstract static class MInfixExpression extends MExpression
@@ -36,41 +32,96 @@ class Models
 		public String operator;
 	}
 	
-	static class MInfixExpressionWithBitfieldOnLeft extends MInfixExpression
+	abstract static class MPrefixExpression extends MExpression
 	{
-		public boolean isInfixWithBitfieldOnLeft = true;
+		public MExpression operand;
+		public String operator;
 	}
 	
-	static class MInfixExpressionWithDerefOnLeft extends MInfixExpression
+	abstract static class MPostfixExpression extends MExpression
 	{
-		public boolean isInfixWithDerefOnLeft = true;
-	}
-	
-	static class MInfixExpressionPlain extends MInfixExpression
-	{
-		public boolean isInfix = true;
+		public MExpression operand;
+		public String operator;
 	}
 	
 	abstract static class MIdentityExpression extends MExpression
 	{
 		public String ident;
 	}
+	
+	// 1
+	static class MArrayExpressionPlain extends MArrayExpression
+	{
+		public boolean isArray = true;
+	}
 
+	// 2
+	static class MArrayExpressionPtr extends MArrayExpression
+	{
+		public boolean isPtrArray = true;
+	}
+	
+	// 3
+	static class MInfixExpressionWithBitfieldOnLeft extends MInfixExpression
+	{
+		public boolean isInfixWithBitfieldOnLeft = true;
+	}
+
+	// 4
+	static class MInfixExpressionWithDerefOnLeft extends MInfixExpression
+	{
+		public boolean isInfixWithDerefOnLeft = true;
+	}
+
+	// 35
+	static class MInfixAssignmentWithBitfieldOnLeft extends MInfixExpression
+	{
+		public boolean isAssignmentWithBitfieldOnLeft = true;
+	}
+
+	// 36
+	static class MInfixAssignmentWithDerefOnLeft extends MInfixExpression
+	{
+		public boolean isAssignmentWithDerefOnLeft = true;
+	}
+
+	// 37
+	static class MCompoundWithBitfieldOnLeft extends MInfixExpression
+	{
+		public boolean isCompoundWithBitfieldOnLeft = true;
+	}
+
+	// 38
+	static class MCompoundWithDerefOnLeft extends MInfixExpression
+	{
+		public boolean isCompoundWithDerefOnLeft = true;
+	}
+	
+	// 5
+	static class MInfixExpressionPlain extends MInfixExpression
+	{
+		public boolean isInfix = true;
+	}
+
+	// 7
 	static class MIdentityExpressionPlain extends MIdentityExpression
 	{
 		public boolean isIdentity = true;
 	}
 	
+	// 8
 	static class MIdentityExpressionBitfield extends MIdentityExpression
 	{
 		public boolean isIdentityBitfield = true;
 	}
 
+	// 9
 	static class MIdentityExpressionPtr extends MIdentityExpression
 	{
 		public boolean isIdentityPtr = true;
 	}
 	
+	// 10
 	static class MIdentityExpressionEnumerator extends MIdentityExpression
 	{
 		public boolean isIdentityEnumerator = true;
@@ -78,6 +129,7 @@ class Models
 		public String enumName;
 	}
 	
+	// 11
 	static class MTernaryExpression extends MExpression
 	{
 		public boolean isTernary = true;
@@ -86,33 +138,32 @@ class Models
 		public MExpression negative;
 		public MExpression positive;
 	}
-	
-	abstract static class MFieldReferenceExpression extends MExpression
-	{
-		public MExpression object;
-		public String field;
-	}
 
+	// 12
 	static class MFieldReferenceExpressionPlain extends MFieldReferenceExpression
 	{
 		public boolean isFieldReference = true;
 	}
 
+	// 13
 	static class MFieldReferenceExpressionBitfield extends MFieldReferenceExpression
 	{
 		public boolean isFieldReferenceBitfield = true;
 	}
 	
+	// 14
 	static class MFieldReferenceExpressionPtr extends MFieldReferenceExpression
 	{
 		public boolean isFieldReferencePtr = true;
 	}
 	
+	// 15
 	static class MFieldReferenceExpressionEnumerator extends MFieldReferenceExpression
 	{
 		public boolean isFieldReferenceEnumerator = true;
 	}
 	
+	// 16
 	static class MFunctionCallExpression extends MExpression
 	{
 		public boolean isFunctionCall = true;
@@ -121,6 +172,7 @@ class Models
 		public List<MExpression> args;
 	}
 	
+	// 17
 	static class MLiteralExpression extends MExpression
 	{
 		public boolean isLiteral = true;
@@ -128,43 +180,94 @@ class Models
 		public String literal;
 	}
 	
-	static class MPrefixExpression extends MExpression
-	{
-		public MExpression operand;
-		public String operator;
-	}
-
+	// 18
 	static class MPrefixExpressionPlain extends MPrefixExpression
 	{
 		public boolean isPrefix = true;
 	}
 
+	// 19
 	static class MPrefixExpressionPointer extends MPrefixExpression
 	{
 		public boolean isPrefixPointer = true;
 	}
-
-	static class MPostfixExpression extends MExpression
-	{
-		public MExpression operand;
-		public String operator;
-	}
 	
+	// 21
 	static class MPostfixExpressionPlain extends MPostfixExpression
 	{
 		public boolean isPostfix = true;
 	}
 
+	// 22
+	static class MPostfixExpressionPointer extends MPostfixExpression
+	{
+		public boolean isPostfixPointer = true;
+	}
+	
+	// 23
 	static class MPostfixExpressionPointerInc extends MPostfixExpression
 	{
 		public boolean isPostfixPointerInc = true;
 	}
 
+	// 24
 	static class MPostfixExpressionPointerDec extends MPostfixExpression
 	{
 		public boolean isPostfixPointerDec = true;
 	}
+
+	// 25
+	static class MPrefixExpressionPointerInc extends MPrefixExpression
+	{
+		public boolean isPrefixPointerInc = true;
+	}
+
+	// 26
+	static class MPrefixExpressionPointerDec extends MPrefixExpression
+	{
+		public boolean isPrefixPointerDec = true;
+	}
 	
+	// 27
+	static class MPrefixExpressionPointerStar extends MPrefixExpression
+	{
+		public boolean isPrefixPointerStar = true;
+	}
+	
+	// 28
+	static class MPostfixExpressionBitfieldInc extends MPostfixExpression
+	{
+		public boolean isPostfixBitfieldInc = true;
+	}
+	
+	// 29
+	static class MPostfixExpressionBitfieldDec extends MPostfixExpression
+	{
+		public boolean isPostfixBitfieldDec = true;
+	}
+
+	// 33
+	static class MPrefixExpressionBitfieldInc extends MPrefixExpression
+	{
+		public MExpression set;
+		public boolean isPrefixBitfieldInc = true;
+	}
+	
+	// 34
+	static class MPrefixExpressionBitfieldDec extends MPrefixExpression
+	{
+		public MExpression set;
+		public boolean isPrefixBitfieldDec = true;
+	}	
+	
+	// 31
+	static class MPrefixExpressionBitfield extends MPrefixExpression
+	{
+		public MExpression set;
+		public boolean isPrefixBitfield = true;
+	}
+	
+	// 32
 	static class MCastExpression extends MExpression
 	{
 		public boolean isCast = true;
@@ -172,54 +275,4 @@ class Models
 		public MExpression operand;
 		public String type = "int"; // TODO
 	}
-	
-	
-	
-	
-	
-	static class CppEnumerator
-	{
-		String m_simpleName;
-		MExpression m_value;
-		
-		static CppEnumerator create(String simpleName, MExpression value)
-		{
-			CppEnumerator ret = new CppEnumerator();
-			ret.m_simpleName = simpleName;
-			ret.m_value = value;
-			return ret;
-		}
-	}
-	
-	static class CppEnum
-	{
-		String m_simpleName;
-		String m_qualified;
-		List<CppEnumerator> m_enumerators;
-
-		static CppEnum create(String simpleName, String qualified)
-		{
-			CppEnum ret = new CppEnum();
-			ret.m_simpleName = simpleName;
-			ret.m_qualified = qualified;
-			return ret;
-		}
-	}
-	
-	static class CppBitfield
-	{
-		String m_simpleName;
-		String m_qualified;
-		Type m_type;
-		MExpression m_bits;
-
-		static CppBitfield create(String simpleName, String qualified)
-		{
-			CppBitfield ret = new CppBitfield();
-			ret.m_simpleName = simpleName;
-			ret.m_qualified = qualified;
-			return ret;
-		}
-	}
 }
-

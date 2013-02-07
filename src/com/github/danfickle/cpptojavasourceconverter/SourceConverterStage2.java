@@ -36,35 +36,9 @@ import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupDir;
 
-import com.github.danfickle.cpptojavasourceconverter.Models.CppBitfield;
-import com.github.danfickle.cpptojavasourceconverter.Models.CppEnum;
-import com.github.danfickle.cpptojavasourceconverter.Models.MArrayExpressionPlain;
-import com.github.danfickle.cpptojavasourceconverter.Models.MArrayExpressionPtr;
-import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpressionBitfield;
-import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpressionEnumerator;
-import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpressionPlain;
-import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpressionPtr;
-import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpressionBitfield;
-import com.github.danfickle.cpptojavasourceconverter.Models.MCastExpression;
-import com.github.danfickle.cpptojavasourceconverter.Models.MExpression;
-import com.github.danfickle.cpptojavasourceconverter.Models.MFieldReferenceExpression;
-import com.github.danfickle.cpptojavasourceconverter.Models.MFunctionCallExpression;
-import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpression;
-import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpressionEnumerator;
-import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpressionPlain;
-import com.github.danfickle.cpptojavasourceconverter.Models.MIdentityExpressionPtr;
-import com.github.danfickle.cpptojavasourceconverter.Models.MInfixExpression;
-import com.github.danfickle.cpptojavasourceconverter.Models.MInfixExpressionPlain;
-import com.github.danfickle.cpptojavasourceconverter.Models.MInfixExpressionWithBitfieldOnLeft;
-import com.github.danfickle.cpptojavasourceconverter.Models.MInfixExpressionWithDerefOnLeft;
-import com.github.danfickle.cpptojavasourceconverter.Models.MLiteralExpression;
-import com.github.danfickle.cpptojavasourceconverter.Models.MPostfixExpression;
-import com.github.danfickle.cpptojavasourceconverter.Models.MPostfixExpressionPlain;
-import com.github.danfickle.cpptojavasourceconverter.Models.MPostfixExpressionPointerDec;
-import com.github.danfickle.cpptojavasourceconverter.Models.MPostfixExpressionPointerInc;
-import com.github.danfickle.cpptojavasourceconverter.Models.MPrefixExpression;
-import com.github.danfickle.cpptojavasourceconverter.Models.MPrefixExpressionPlain;
-import com.github.danfickle.cpptojavasourceconverter.Models.MTernaryExpression;
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppBitfield;
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppEnum;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 
 
 
@@ -1828,21 +1802,21 @@ public class SourceConverterStage2
 		{
 			evalExprUnary((IASTUnaryExpression) expression, ret, flags);
 		}
+		else if (expression instanceof IASTConditionalExpression)
+		{
+			evalExprConditional((IASTConditionalExpression) expression, ret, flags);
+		}
 		else if (expression instanceof IASTArraySubscriptExpression)
 		{
-			evalArraySubscriptExpression((IASTArraySubscriptExpression) expression, ret, flags);
+			evalExprArraySubscript((IASTArraySubscriptExpression) expression, ret, flags);
 		}
 		else if (expression instanceof IASTBinaryExpression)
 		{
-			evalBinaryExpression((IASTBinaryExpression) expression, ret, flags);
+			evalExprBinary((IASTBinaryExpression) expression, ret, flags);
 		}
 		else if (expression instanceof IASTCastExpression)
 		{
 			evalCastExpression((IASTCastExpression) expression, ret, flags);
-		}
-		else if (expression instanceof IASTConditionalExpression)
-		{
-			evalConditionalExpression((IASTConditionalExpression) expression, ret, flags);
 		}
 		else if (expression instanceof IASTFunctionCallExpression)
 		{
@@ -1898,8 +1872,8 @@ public class SourceConverterStage2
 		if (expression != null)
 			print(expression.getClass().getCanonicalName());
 
-
-		expressions.add(ret.get(0));
+		if (!ret.isEmpty())
+			expressions.add(ret.get(0));
 		return ret;
 	}
 
@@ -1994,7 +1968,7 @@ public class SourceConverterStage2
 
 	private void evalExprId(IASTIdExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
-		if (isBitfield(expr.getName()))
+		if (isBitfield(expr.getName()) && !flags.contains(Flag.IN_FUNC_NAME))
 		{
 			MIdentityExpressionBitfield ident = new MIdentityExpressionBitfield();
 			ident.ident = getSimpleName(expr.getName());
@@ -2023,7 +1997,7 @@ public class SourceConverterStage2
 
 	private void evalExprFieldReference(IASTFieldReference expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
-		if (isBitfield(expr.getFieldName()))
+		if (isBitfield(expr.getFieldName()) && !flags.contains(Flag.IN_FUNC_NAME))
 		{
 			MFieldReferenceExpressionBitfield field = new MFieldReferenceExpressionBitfield();
 			field.object = eval1Expr(expr.getFieldOwner());
@@ -2037,7 +2011,7 @@ public class SourceConverterStage2
 			field.field = getSimpleName(expr.getFieldName());
 			ret.add(field);
 		}
-		else if (isEventualPtr(expr.getExpressionType()))
+		else if (isEventualPtr(expr.getExpressionType()) && expr.isPointerDereference())
 		{
 			MFieldReferenceExpressionPtr field = new MFieldReferenceExpressionPtr();
 			field.object = eval1Expr(expr.getFieldOwner());
@@ -2054,7 +2028,7 @@ public class SourceConverterStage2
 	}
 
 
-	private void evalConditionalExpression(IASTConditionalExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException 
+	private void evalExprConditional(IASTConditionalExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException 
 	{
 		MTernaryExpression ternary = new MTernaryExpression();
 		
@@ -2072,7 +2046,7 @@ public class SourceConverterStage2
 		// TODO cast.setType(evalTypeId(castExpression.getTypeId()));
 	}
 
-	private void evalArraySubscriptExpression(IASTArraySubscriptExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalExprArraySubscript(IASTArraySubscriptExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
 		if (isEventualPtr(expr.getArrayExpression().getExpressionType()))
 		{
@@ -2137,7 +2111,77 @@ public class SourceConverterStage2
 				post.operand = eval1Expr(expr.getOperand());
 				ret.add(post);
 			}
+			else if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr)
+			{
+				MPrefixExpressionPointerDec pre = new MPrefixExpressionPointerDec();
+				pre.operand = eval1Expr(expr.getOperand());
+				ret.add(pre);
+			}
+			else if (expr.getOperator() == IASTUnaryExpression.op_prefixIncr)
+			{
+				MPrefixExpressionPointerInc pre = new MPrefixExpressionPointerInc();
+				pre.operand = eval1Expr(expr.getOperand());
+				ret.add(pre);
+			}
+			else if (isPostfixExpression(expr.getOperator()))
+			{
+				MPostfixExpressionPointer post = new MPostfixExpressionPointer();
+				post.operand = eval1Expr(expr.getOperand());
+				post.operator = evalUnaryPostfixOperator(expr.getOperator());
+				ret.add(post);
+			}
+			else if (isPrefixExpression(expr.getOperator()))
+			{
+				MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
+				pre.operand = eval1Expr(expr.getOperand());
+				pre.operator = evalUnaryPrefixOperator(expr.getOperator());
+				ret.add(pre);
+			}
 		}
+		else if (expr.getOperator() == IASTUnaryExpression.op_star)
+		{
+			MPrefixExpressionPointerStar pre = new MPrefixExpressionPointerStar();
+			pre.operand = eval1Expr(expr.getOperand());
+			ret.add(pre);
+		}
+		else if (isBitfield(expr.getOperand()))
+		{
+			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
+			{
+				MPostfixExpressionBitfieldInc post = new MPostfixExpressionBitfieldInc();
+				post.operand = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME));
+				ret.add(post);
+			}
+			else if (expr.getOperator() == IASTUnaryExpression.op_postFixDecr)
+			{
+				MPostfixExpressionBitfieldDec post = new MPostfixExpressionBitfieldDec();
+				post.operand = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME));
+				ret.add(post);
+			}
+			if (expr.getOperator() == IASTUnaryExpression.op_prefixIncr)
+			{
+				MPrefixExpressionBitfieldInc post = new MPrefixExpressionBitfieldInc();
+				post.set = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME));
+				post.operand = eval1Expr(expr.getOperand());
+				ret.add(post);
+			}
+			else if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr)
+			{
+				MPrefixExpressionBitfieldDec post = new MPrefixExpressionBitfieldDec();
+				post.set = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME));
+				post.operand = eval1Expr(expr.getOperand());
+				ret.add(post);
+			}
+			else if (isPrefixExpression(expr.getOperator()))
+			{
+				MPrefixExpressionBitfield pre = new MPrefixExpressionBitfield();
+				pre.set = eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_FUNC_NAME)); 
+				pre.operand = eval1Expr(expr.getOperand());
+				pre.operator = evalUnaryPrefixOperator(expr.getOperator());
+				ret.add(pre);
+			}
+		}
+		// TODO else if (isEnumerator())
 		else if (isPostfixExpression(expr.getOperator()))
 		{
 			MPostfixExpressionPlain postfix = new MPostfixExpressionPlain();
@@ -2152,129 +2196,6 @@ public class SourceConverterStage2
 			pre.operator = evalUnaryPrefixOperator(expr.getOperator());
 			ret.add(pre);
 		}
-		
-		
-		
-		//			else if (expr.getOperator() == IASTUnaryExpression.op_star)
-//			{
-//				printerr(expr.getOperand().getRawSignature() + expr.getOperator() + flags.toString());
-//				
-//				if (!flags.contains(Flag.ASSIGN_LEFT_SIDE))
-//				{
-//					MethodInvocation meth = jast.newMethod()
-//							.on(eval1Expr(expr.getOperand()))
-//							.call("get").toAST();
-//					ret.add(meth);
-//				}
-//				else
-//				{
-//					ret.add(eval1Expr(expr.getOperand()));
-//				}
-//			}
-//			else if (expr.getOperator() == IASTUnaryExpression.op_amper)
-//			{
-////				ret.add(eval1Expr(expr.getOperand(), EnumSet.of(Flag.IN_ADDRESS_OF)));
-//			}
-//			else if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr)
-//			{
-////				MethodInvocation meth = jast.newMethod()
-////						.on(eval1Expr(expr.getOperand()))
-////						.call("adjust")
-////						.with(jast.newNumber(-1)).toAST();
-////				ret.add(meth);
-//			}
-//			else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
-//			{
-////				ret.add(eval1Expr(expr.getOperand(), flags));
-//			}
-//			else
-//			{
-//				printerr("" + expr.getOperator());
-////				MethodInvocation meth = jast.newMethod()
-////						.on(eval1Expr(expr.getOperand()))
-////						.call("adjust")
-////						.with(jast.newNumber(1)).toAST();
-////				ret.add(meth);
-//			}
-//		}
-//		else if (isBitfield(expr.getOperand()))
-//		{
-//			if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr ||
-//				expr.getOperator() == IASTUnaryExpression.op_prefixIncr)
-//			{
-//				// --test_with_bit_field
-//				//  converts to:
-//				// set__test_with_bit_field(get__test_with_bit_field() - 1);
-//				InfixExpression infix = ast.newInfixExpression();
-//				infix.setOperator(expr.getOperator() == IASTUnaryExpression.op_prefixIncr ? InfixExpression.Operator.PLUS : InfixExpression.Operator.MINUS);
-//				infix.setLeftOperand(eval1Expr(expr.getOperand()));
-//				infix.setRightOperand(jast.newNumber(1));
-//			
-//				MethodInvocation meth = jast.newMethod()
-//						.call("set__" + getBitfieldSimpleName(expr.getOperand()))
-//						.with(infix).toAST();
-//			
-//				ret.add(meth);
-//			}
-//			else if (expr.getOperator() == IASTUnaryExpression.op_postFixDecr ||
-//					expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
-//			{
-//				// test_with_bit_field++
-//				//  converts to:
-//				// postInc__test_with_bit_field()
-//				MethodInvocation meth = jast.newMethod()
-//						.call((expr.getOperator() == IASTUnaryExpression.op_postFixDecr ? "postDec__" : "postInc__")
-//								+ getBitfieldSimpleName(expr.getOperand())).toAST();
-//				
-//				ret.add(meth);
-//			}
-//		}
-//		else if (isPostfixExpression(expr.getOperator()))
-//		{
-//			PostfixExpression post = ast.newPostfixExpression();
-//			post.setOperator(evalUnaryPostfixOperator(expr.getOperator()));
-//			post.setOperand(eval1Expr(expr.getOperand()));
-//			ret.add(post);
-//		}
-//		else if (isPrefixExpression(expr.getOperator()))
-//		{
-//			PrefixExpression pre = ast.newPrefixExpression();
-//			pre.setOperator(evalUnaryPrefixOperator(expr.getOperator()));
-//			pre.setOperand(eval1Expr(expr.getOperand()));
-//			ret.add(pre);
-//		}
-//		else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
-//		{
-//			ParenthesizedExpression paren = jast.newParen(eval1Expr(expr.getOperand(), flags));
-//			ret.add(paren);
-//		}
-//		else if (expr.getOperator() == IASTUnaryExpression.op_star)
-//		{
-//			if (isEventualPtr(expr.getOperand().getExpressionType()) &&
-//				!flags.contains(Flag.ASSIGN_LEFT_SIDE))
-//			{	
-//				MethodInvocation meth = jast.newMethod()
-//					.on(eval1Expr(expr.getOperand()))
-//					.call("get").toAST();
-//				ret.add(meth);
-//			}
-//			else
-//				ret.addAll(evalExpr(expr.getOperand()));
-//		}
-//		else if (expr.getOperator() == IASTUnaryExpression.op_amper)
-//		{
-//			ret.addAll(evalExpr(expr.getOperand()));
-//		}
-//		else
-//		{
-//			// TODO
-//			print("todo");
-//			print("" + expr.getOperator());
-//			ret.add(ast.newStringLiteral());
-//
-//		}
-
-		
 	}
 
 
@@ -2381,16 +2302,33 @@ public class SourceConverterStage2
 	}
 
 
-	private void evalBinaryExpression(IASTBinaryExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException 
+	private void evalExprBinary(IASTBinaryExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException 
 	{
 		if (isBitfield(expr.getOperand1()))
 		{
-			MInfixExpressionWithBitfieldOnLeft infix = new MInfixExpressionWithBitfieldOnLeft();
-			
-			infix.left = eval1Expr(expr.getOperand1());
-			infix.right = eval1Expr(expr.getOperand2());
-			infix.operator = evaluateBinaryOperator(expr.getOperator());
-			ret.add(infix);
+			if (expr.getOperator() == IASTBinaryExpression.op_assign)
+			{
+				MInfixAssignmentWithBitfieldOnLeft infix = new MInfixAssignmentWithBitfieldOnLeft();
+				infix.left = eval1Expr(expr.getOperand1(), EnumSet.of(Flag.IN_FUNC_NAME));
+				infix.right = eval1Expr(expr.getOperand2());
+				ret.add(infix);
+			}
+			else if (isAssignmentExpression(expr.getOperator()))
+			{
+				MCompoundWithBitfieldOnLeft infix = new MCompoundWithBitfieldOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = compoundAssignmentToInfixOperator(expr.getOperator());
+				ret.add(infix);
+			}
+			else
+			{
+				MInfixExpressionWithBitfieldOnLeft infix = new MInfixExpressionWithBitfieldOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = evaluateBinaryOperator(expr.getOperator());
+				ret.add(infix);
+			}
 		}
 		else if(isEventualPtrDeref(expr.getOperand1()))
 		{
@@ -2404,13 +2342,17 @@ public class SourceConverterStage2
 		else
 		{
 			MInfixExpressionPlain infix = new MInfixExpressionPlain();
-			
-			System.err.println("CRAPCRAP");
-			
-			
-			infix.left = eval1Expr(expr.getOperand1());
+
+			EnumSet<Flag> newFlags = EnumSet.copyOf(flags);
+			newFlags.add(Flag.IN_FUNC_NAME);
+
+			infix.left = eval1Expr(expr.getOperand1(), newFlags);
 			infix.right = eval1Expr(expr.getOperand2());
-			infix.operator = evaluateBinaryOperator(expr.getOperator());
+//			infix.hasCorrectedOperator = infix.correctedOperator != null;
+//
+//			if (!infix.hasCorrectedOperator)
+				infix.operator = evaluateBinaryOperator(expr.getOperator());
+			
 			ret.add(infix);
 		}
 		
@@ -2641,32 +2583,32 @@ public class SourceConverterStage2
 	/**
 	 * Converts a C++ binary assignment operator to a Java one.
 	 */
-	private Assignment.Operator evaluateBinaryAssignmentOperator(int operator) 
+	private String evaluateBinaryAssignmentOperator(int operator) 
 	{
 		switch (operator)
 		{
 		case IASTBinaryExpression.op_assign:
-			return Assignment.Operator.ASSIGN;
+			return "=";
 		case IASTBinaryExpression.op_binaryAndAssign:
-			return Assignment.Operator.BIT_AND_ASSIGN;
+			return "&=";
 		case IASTBinaryExpression.op_binaryOrAssign:
-			return Assignment.Operator.BIT_OR_ASSIGN;
+			return "|=";
 		case IASTBinaryExpression.op_binaryXorAssign:
-			return Assignment.Operator.BIT_XOR_ASSIGN;
+			return "^=";
 		case IASTBinaryExpression.op_divideAssign:
-			return Assignment.Operator.DIVIDE_ASSIGN;
+			return "/=";
 		case IASTBinaryExpression.op_plusAssign:
-			return Assignment.Operator.PLUS_ASSIGN;
+			return "+=";
 		case IASTBinaryExpression.op_minusAssign:
-			return Assignment.Operator.MINUS_ASSIGN;
+			return "-=";
 		case IASTBinaryExpression.op_multiplyAssign:
-			return Assignment.Operator.TIMES_ASSIGN;
+			return "*=";
 		case IASTBinaryExpression.op_shiftLeftAssign:
-			return Assignment.Operator.LEFT_SHIFT_ASSIGN;
+			return "<<=";
 		case IASTBinaryExpression.op_shiftRightAssign:
-			return Assignment.Operator.RIGHT_SHIFT_SIGNED_ASSIGN; // TODO
+			return ">>="; // VERIFY
 		default:
-			return Assignment.Operator.ASSIGN; // TODO
+			return null;
 		}
 	}
 
@@ -2693,30 +2635,29 @@ public class SourceConverterStage2
 		}
 	}
 
-	private InfixExpression.Operator compoundAssignmentToInfixOperator(int op)
+	private String compoundAssignmentToInfixOperator(int op)
 	{
 		switch (op)
 		{
 		case IASTBinaryExpression.op_binaryAndAssign:
-			return InfixExpression.Operator.AND;
+			return "&";
 		case IASTBinaryExpression.op_binaryOrAssign:
-			return InfixExpression.Operator.OR;
+			return "|";
 		case IASTBinaryExpression.op_binaryXorAssign:
-			return InfixExpression.Operator.XOR;
+			return "^"; 
 		case IASTBinaryExpression.op_divideAssign:
-			return InfixExpression.Operator.DIVIDE;
+			return "/";
 		case IASTBinaryExpression.op_plusAssign:
-			return InfixExpression.Operator.PLUS;
+			return "+";
 		case IASTBinaryExpression.op_minusAssign:
-			return InfixExpression.Operator.MINUS;
+			return "-";
 		case IASTBinaryExpression.op_multiplyAssign:
-			return InfixExpression.Operator.TIMES;
+			return "*";
 		case IASTBinaryExpression.op_shiftLeftAssign:
-			return InfixExpression.Operator.LEFT_SHIFT;
+			return "<<";
 		case IASTBinaryExpression.op_shiftRightAssign:
-			return InfixExpression.Operator.RIGHT_SHIFT_SIGNED; // VERIFY
+			return ">>"; // VERIFY
 		default:
-			printerr("compoundAssignmentToInfixOperator");
 			return null;
 		}
 	}
@@ -2728,6 +2669,8 @@ public class SourceConverterStage2
 	{
 		switch (operator)
 		{
+		case IASTBinaryExpression.op_assign:
+			return "=";
 		case IASTBinaryExpression.op_binaryAnd:
 			return "&";
 		case IASTBinaryExpression.op_binaryOr:
@@ -2765,7 +2708,7 @@ public class SourceConverterStage2
 		case IASTBinaryExpression.op_shiftRight:
 			return ">>";
 		default:
-			throw new IllegalArgumentException();
+			return evaluateBinaryAssignmentOperator(operator);
 		}
 	}
 
@@ -4036,7 +3979,8 @@ public class SourceConverterStage2
 		IS_RET_VAL,
 		IN_METHOD_ARGS,
 		ASSIGN_LEFT_SIDE,
-		IN_ADDRESS_OF
+		IN_ADDRESS_OF,
+		IN_FUNC_NAME;
 	}
 	
 	// The Java AST. We need this to create AST nodes...
@@ -4125,7 +4069,8 @@ public class SourceConverterStage2
 		unit.recordModifications();
 		ast = unit.getAST(); 
 		jast = new JASTHelper(ast);
-bitfields.add("A::test_with_bit_field");
+bitfields.add("cls::_b");
+bitfields.add("_b");
 		PackageDeclaration packageDeclaration = ast.newPackageDeclaration();
 		unit.setPackage(packageDeclaration);
 		packageDeclaration.setName(ast.newSimpleName("yourpackage")); //TODO

@@ -12,7 +12,9 @@ import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
-import com.github.danfickle.cpptojavasourceconverter.Models.CppBitfield;
+
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppBitfield;
+
 
 
 ///**
