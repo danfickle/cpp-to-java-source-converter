@@ -7,6 +7,8 @@ import org.eclipse.cdt.core.dom.ast.IASTExpression;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.Type;
 
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
+
 class ExpressionModels
 {
 	abstract static class MExpression
@@ -292,4 +294,42 @@ class ExpressionModels
 	{
 		public boolean isEmpty = true;
 	}
+	
+	// 43
+	static class MNewArrayExpression extends MExpression
+	{
+		public boolean isBasicNewArray = true;
+
+		public List<MExpression> sizes = new ArrayList<MExpression>();
+		public String type;
+	}
+	
+	// 44
+	static class MNewArrayExpressionObject extends MExpression
+	{
+		public boolean isObjectNewArray = true;
+
+		public List<MExpression> sizes = new ArrayList<MExpression>();
+		public String type;
+	}
+	
+	// 45
+	static class MNewExpression extends MExpression
+	{
+		public boolean isNewSingle = true;
+		
+		public String type;
+		public MExpression argument;
+	}
+	
+	// 46
+	static class MNewExpressionObject extends MExpression
+	{
+		public boolean isNewObject = true;
+		
+		public String type;
+		public List<MExpression> arguments = new ArrayList<MExpression>();
+	}
+	
+	
 }

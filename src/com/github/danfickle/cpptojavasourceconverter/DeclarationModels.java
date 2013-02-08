@@ -1,54 +1,35 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.eclipse.jdt.core.dom.Type;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
 
 class DeclarationModels 
 {
+	abstract static class CppDeclaration { }
+	
 	static class CppEnumerator
 	{
-		String m_simpleName;
-		MExpression m_value;
-		
-		static CppEnumerator create(String simpleName, MExpression value)
-		{
-			CppEnumerator ret = new CppEnumerator();
-			ret.m_simpleName = simpleName;
-			ret.m_value = value;
-			return ret;
-		}
+		public boolean isEnumerator = true;
+		public String name;
+		public MExpression value;
 	}
 	
-	static class CppEnum
+	static class CppEnum extends CppDeclaration
 	{
-		String m_simpleName;
-		String m_qualified;
-		List<CppEnumerator> m_enumerators;
-
-		static CppEnum create(String simpleName, String qualified)
-		{
-			CppEnum ret = new CppEnum();
-			ret.m_simpleName = simpleName;
-			ret.m_qualified = qualified;
-			return ret;
-		}
+		public boolean isEnum = true;
+		public String simpleName;
+		public String qualified;
+		public List<CppEnumerator> enumerators = new ArrayList<CppEnumerator>();
 	}
 	
-	static class CppBitfield
+	static class CppBitfield extends CppDeclaration
 	{
-		String m_simpleName;
-		String m_qualified;
-		Type m_type;
-		MExpression m_bits;
-
-		static CppBitfield create(String simpleName, String qualified)
-		{
-			CppBitfield ret = new CppBitfield();
-			ret.m_simpleName = simpleName;
-			ret.m_qualified = qualified;
-			return ret;
-		}
+		public boolean isBitfield = true;
+		public String name;
+		public String qualified;
+		public String type;
+		public MExpression bits;
 	}
-
 }

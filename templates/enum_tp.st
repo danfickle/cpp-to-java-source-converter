@@ -31,7 +31,7 @@ enum_tp(name, enumerators, type) ::= <<
 !>
 enum <name>
 {
-  <enumerators:{e | <e.name>(<e.value>)}; separator=", \n">;
+  <enumerators:{e | <e.name>(<expression_tp(e.value, false, false)>)}; separator=", \n">;
 
   final <type> val;
 
@@ -44,7 +44,7 @@ enum <name>
   {
      switch (enumVal)
      {
-       <enumerators:{e | case (<e.value>): return <e.name>;<\n>}>
+       <enumerators:{e | case (<expression_tp(e.value, false, false)>): return <e.name>;<\n>}>
        default: throw new ClassCastException();
      }
   }

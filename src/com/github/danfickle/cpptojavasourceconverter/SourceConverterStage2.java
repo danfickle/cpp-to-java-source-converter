@@ -37,7 +37,9 @@ import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupDir;
 
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppBitfield;
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppEnum;
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppEnumerator;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 
 
@@ -50,38 +52,17 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
  */
 public class SourceConverterStage2
 {
-	BitfieldView bitFieldView = new BitfieldView();
+	List<CppDeclaration> decls = new ArrayList<CppDeclaration>();
 	
 	
-	/**
-	 * Generates a bit field.
-	 */
-	private void generateBitField(IField field, IASTDeclarator declarator) throws DOMException
+	private void evalDeclBitfield(IField field, IASTDeclarator declarator) throws DOMException
 	{
-		CppBitfield bitfield = CppBitfield.create(field.getName(), null);
-
-		bitfield.m_bits = eval1Expr(((IASTFieldDeclarator) declarator).getBitFieldSize());
-		bitfield.m_type = cppToJavaType(field.getType());
-		
-		bitFieldView.generateBitField(bitfield);
+		CppBitfield bitfield = new CppBitfield();
+		bitfield.name = field.getName();
+		bitfield.bits = eval1Expr(((IASTFieldDeclarator) declarator).getBitFieldSize());
+		bitfield.type = cppToJavaType(field.getType());
+		decls.add(bitfield);
 	}
-//	IField field = (IField) binding;
-//	TypeDeclaration decl = compositeMap.get(getQualifiedPart(declarator.getName())).tyd;
-
-//	MethodDeclaration methGet = generateBitFieldGetter(bitfield);
-//	decl.bodyDeclarations().add(methGet);
-//
-//	MethodDeclaration methSet = generateBitFieldSetter(bitfield);
-//	decl.bodyDeclarations().add(methSet);
-//
-//	MethodDeclaration methInc = generateBitFieldIncDec(bitfield, true);
-//	decl.bodyDeclarations().add(methInc);
-//	
-//	MethodDeclaration methDec = generateBitFieldIncDec(bitfield, false);
-//	decl.bodyDeclarations().add(methDec);
-
-	
-	
 	
 	/**
 	 * Builds default argument function calls.
@@ -421,7 +402,7 @@ public class SourceConverterStage2
 		if (ifield.getType().toString().isEmpty())
 			field.setType(jast.newType("AnonClass" + (m_anonClassCount - 1)));
 		else
-			field.setType(cppToJavaType(ifield.getType()));
+			field.setType(jast.newType(cppToJavaType(ifield.getType()) + "1"));
 
 		TypeDeclaration decl = compositeMap.get(getQualifiedPart(declarator.getName())).tyd;
 		decl.bodyDeclarations().add(field);
@@ -443,7 +424,7 @@ public class SourceConverterStage2
 		if (ifield.getType().toString().isEmpty())
 			field.setType(jast.newType("AnonClass" + (m_anonClassCount - 1)));
 		else
-			field.setType(cppToJavaType(ifield.getType()));
+			field.setType(jast.newType(cppToJavaType(ifield.getType())));
 
 		field.modifiers().add(ast.newModifier(ModifierKeyword.STATIC_KEYWORD));
 		
@@ -586,7 +567,7 @@ public class SourceConverterStage2
 				{
 					print("bit field");
 					// We replace bit field fields with getter and setter methods...
-					//generateBitField(binding, declarator);
+					evalDeclBitfield((IField) binding, declarator);
 				}
 				else if (binding instanceof IField)
 				{
@@ -811,7 +792,7 @@ public class SourceConverterStage2
 			for (IParameter param : params)
 			{	
 				SingleVariableDeclaration var = ast.newSingleVariableDeclaration();
-				var.setType(cppToJavaType(param.getType()));
+				var.setType(jast.newType(cppToJavaType(param.getType()) + "1"));
 
 				print("Found param: " + param.getName());
 
@@ -837,7 +818,7 @@ public class SourceConverterStage2
 		{
 			IFunction func = (IFunction) funcBinding;
 			IFunctionType funcType = func.getType();
-			return cppToJavaType(funcType.getReturnType(), true, false);
+			return jast.newType(cppToJavaType(funcType.getReturnType(), true, false) + "1");
 		}
 
 		printerr("Unexpected binding for return type: " + funcBinding.getClass().getCanonicalName());
@@ -867,7 +848,7 @@ public class SourceConverterStage2
 
 					if (binding instanceof IVariable)
 					{
-						ret.add(cppToJavaType(((IVariable) binding).getType()));
+						ret.add(jast.newType(cppToJavaType(((IVariable) binding).getType()) + "1"));
 					}
 				}
 			}
@@ -1005,7 +986,7 @@ public class SourceConverterStage2
 //				print("cpp simple");
 //			}
 
-			return evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned());
+			return jast.newType(evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned()));
 		}
 		else if (declSpecifier instanceof ICASTDeclSpecifier)
 		{
@@ -1016,26 +997,52 @@ public class SourceConverterStage2
 		return null;
 	}
 
-	//EnumView view = new EnumView();
-
-	private void generateEnumeration(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
+	private void evalDeclEnum(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
 	{
 		IASTEnumerator[] enumerators = enumerationSpecifier.getEnumerators();
 		
 		if (enumerators == null || enumerators.length == 0)
 			return;
 
-		CppEnum enumModel = CppEnum.create(getSimpleName(enumerationSpecifier.getName()), getQualifiedPart(enumerationSpecifier.getName())); 
-		//EnumDeclaration enumd = view.createEnumDeclaration(enumModel); 
+		CppEnum enumModel = new CppEnum();
+		enumModel.simpleName = getSimpleName(enumerationSpecifier.getName());
+		enumModel.qualified = getQualifiedPart(enumerationSpecifier.getName()); 
+		
+		int nextValue = 0;
+		int sinceLastValue = 1;
+		MExpression lastValue = null;
+		
+		for (IASTEnumerator e : enumerators)
+		{
+			CppEnumerator enumerator = new CppEnumerator();
+			enumerator.name = getSimpleName(e.getName());
 
-		//CompositeInfo info = compositeMap.get();
-		//
-		//if (info != null)
-//			info.tyd.bodyDeclarations().add(enumd);
-		//else
-//			unit.types().add(enumd);
-		//
-	
+			if (e.getValue() != null)
+			{
+				enumerator.value = eval1Expr(e.getValue());
+				lastValue = enumerator.value;
+			}
+			else if (lastValue != null)
+			{
+				MInfixExpressionPlain infix = new MInfixExpressionPlain();
+				MLiteralExpression num = new MLiteralExpression();
+				num.literal = String.valueOf(sinceLastValue++);
+				infix.left = lastValue;
+				infix.right = num;
+				infix.operator = "+";
+				enumerator.value = infix;
+			}
+			else
+			{
+				MLiteralExpression num = new MLiteralExpression();
+				num.literal = String.valueOf(nextValue++);
+				enumerator.value = num;
+			}
+			
+			enumModel.enumerators.add(enumerator);
+		}
+		
+		decls.add(enumModel);
 	}
 
 
@@ -1316,7 +1323,7 @@ public class SourceConverterStage2
 								.with(qual).toAST();
 
 						CastExpression cast = ast.newCastExpression();
-						cast.setType(cppToJavaType(fieldInfo.field.getType()));
+						//cast.setType(cppToJavaType(fieldInfo.field.getType()));
 						cast.setExpression(meth3);
 						
 						Assignment assign = jast.newAssign()
@@ -1340,7 +1347,7 @@ public class SourceConverterStage2
 								.with(qual).toAST();
 
 						CastExpression cast = ast.newCastExpression();
-						cast.setType(cppToJavaType(fieldInfo.field.getType()));
+						//cast.setType(cppToJavaType(fieldInfo.field.getType()));
 						cast.setExpression(meth3);
 						
 						Assignment assign = jast.newAssign()
@@ -1401,7 +1408,7 @@ public class SourceConverterStage2
 		else if (declSpecifier instanceof IASTEnumerationSpecifier)
 		{
 			IASTEnumerationSpecifier enumerationSpecifier = (IASTEnumerationSpecifier)declSpecifier;
-			generateEnumeration(enumerationSpecifier);
+			evalDeclEnum(enumerationSpecifier);
 		}
 		else if (declSpecifier instanceof IASTNamedTypeSpecifier)
 		{
@@ -1458,63 +1465,63 @@ public class SourceConverterStage2
 		}
 	}
 	
-	private Expression generateArrayCreationExpression(IType tp, List<Expression> sizeExprs) throws DOMException
-	{
-		Type jtp = null;
-		boolean isBasic = false;
-		
-		if ((getTypeEnum(tp) == TypeEnum.ARRAY))
-		{
-			jtp = cppToJavaType(getArrayBaseType(tp));
-			TypeEnum te = getTypeEnum(getArrayBaseType(tp));
-			isBasic = te == TypeEnum.BOOLEAN || te == TypeEnum.CHAR || te == TypeEnum.NUMBER; 
-		}
-		else if ((getTypeEnum(tp) == TypeEnum.POINTER))
-		{
-			jtp = cppToJavaType(getPointerBaseType(tp));
-			TypeEnum te = getTypeEnum(getPointerBaseType(tp));
-			isBasic = te == TypeEnum.BOOLEAN || te == TypeEnum.CHAR || te == TypeEnum.NUMBER; 
-		}
-		else
-		{
-			printerr("unexpected type here: " + tp.getClass().getCanonicalName());
-			System.exit(-1);
-		}
-
-		if (!isBasic)
-		{
-			TypeLiteral tl = ast.newTypeLiteral();
-			tl.setType(jtp);
-
-			MethodInvocation meth = jast.newMethod()
-					.on("CreateHelper")
-					.call("allocateArray")
-					.with(tl)
-					.withArguments(sizeExprs).toAST();
-
-			CastExpression cast = ast.newCastExpression();
-			cast.setExpression(meth);
-			cast.setType(cppToJavaType(tp));
-
-			return cast;
-		}
-		else
-		{
-			ArrayCreation create = ast.newArrayCreation();
-			if ((jtp instanceof ArrayType))
-			{
-				create.setType((ArrayType) jtp);
-			}
-			else
-			{
-				ArrayType arr = ast.newArrayType(jtp);
-				create.setType(arr);
-			}
-			
-			create.dimensions().addAll(sizeExprs);
-			return create;
-		}
-	}
+//	private MExpression generateArrayCreationExpression(IType tp, List<MExpression> sizeExprs) throws DOMException
+//	{
+//		Type jtp = null;
+//		boolean isBasic = false;
+//		
+//		if ((getTypeEnum(tp) == TypeEnum.ARRAY))
+//		{
+//			jtp = cppToJavaType(getArrayBaseType(tp));
+//			TypeEnum te = getTypeEnum(getArrayBaseType(tp));
+//			isBasic = te == TypeEnum.BOOLEAN || te == TypeEnum.CHAR || te == TypeEnum.NUMBER; 
+//		}
+//		else if ((getTypeEnum(tp) == TypeEnum.POINTER))
+//		{
+//			jtp = cppToJavaType(getPointerBaseType(tp));
+//			TypeEnum te = getTypeEnum(getPointerBaseType(tp));
+//			isBasic = te == TypeEnum.BOOLEAN || te == TypeEnum.CHAR || te == TypeEnum.NUMBER; 
+//		}
+//		else
+//		{
+//			printerr("unexpected type here: " + tp.getClass().getCanonicalName());
+//			System.exit(-1);
+//		}
+//
+//		if (!isBasic)
+//		{
+//			TypeLiteral tl = ast.newTypeLiteral();
+//			tl.setType(jtp);
+//
+//			MethodInvocation meth = jast.newMethod()
+//					.on("CreateHelper")
+//					.call("allocateArray")
+//					.with(tl)
+//					.withArguments(sizeExprs).toAST();
+//
+//			CastExpression cast = ast.newCastExpression();
+//			cast.setExpression(meth);
+//			cast.setType(cppToJavaType(tp));
+//
+//			return cast;
+//		}
+//		else
+//		{
+//			ArrayCreation create = ast.newArrayCreation();
+//			if ((jtp instanceof ArrayType))
+//			{
+//				create.setType((ArrayType) jtp);
+//			}
+//			else
+//			{
+//				ArrayType arr = ast.newArrayType(jtp);
+//				create.setType(arr);
+//			}
+//			
+//			create.dimensions().addAll(sizeExprs);
+//			return create;
+//		}
+//	}
 	
 	private MethodInvocation createAddItemCall(Expression item)
 	{
@@ -1554,7 +1561,7 @@ public class SourceConverterStage2
 					if (type == TypeEnum.OBJECT || type == TypeEnum.REFERENCE)
 					{
 						ClassInstanceCreation create = jast.newClassCreate()
-								.type(cppToJavaType(var.getType()))
+								//.type(cppToJavaType(var.getType()))
 								.withAll(evaluate(decl.getInitializer())).toAST();
 						
 						if (wrap)
@@ -1568,8 +1575,8 @@ public class SourceConverterStage2
 					else if (type == TypeEnum.ARRAY)
 					{
 						print("Found array");
-						Expression ex = generateArrayCreationExpression(var.getType(), getArraySizeExpressions(var.getType()));
-
+						//Expression ex = jast.newType(generateArrayCreationExpression(var.getType(), getArraySizeExpressions(var.getType())));
+						Expression ex = jast.newNumber(0);
 						TypeEnum te = getTypeEnum(getArrayBaseType(var.getType()));
 						
 						if ((te == TypeEnum.OBJECT || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER) &&
@@ -1689,42 +1696,42 @@ public class SourceConverterStage2
 	/**
 	 * Returns the Java simple type for the corresponding C++ type. 
 	 */
-	private Type evaluateSimpleType(int type, boolean isShort, boolean isLongLong, boolean isUnsigned)
+	private String evaluateSimpleType(int type, boolean isShort, boolean isLongLong, boolean isUnsigned)
 	{
 		switch (type)
 		{
 		case IASTSimpleDeclSpecifier.t_char:
 			print("char");
-			return ast.newPrimitiveType(PrimitiveType.BYTE);
+			return "byte";
 		case IASTSimpleDeclSpecifier.t_int:
 			print("int");
 			if (isShort)
-				return ast.newPrimitiveType(PrimitiveType.SHORT);
+				return "short";
 			else if (isLongLong)
-				return ast.newPrimitiveType(PrimitiveType.LONG);
+				return "long";
 			else
-				return ast.newPrimitiveType(PrimitiveType.INT);
+				return "int";
 		case IASTSimpleDeclSpecifier.t_float:
 			print("float");
-			return ast.newPrimitiveType(PrimitiveType.FLOAT);
+			return "float";
 		case IASTSimpleDeclSpecifier.t_double:
 			print("double");
-			return ast.newPrimitiveType(PrimitiveType.DOUBLE);
+			return "double";
 		case IASTSimpleDeclSpecifier.t_unspecified:
 			print("unspecified");
 			if (isUnsigned)
-				return ast.newPrimitiveType(PrimitiveType.INT);
+				return "int";
 			else
-				return null;
+				return "int";
 		case IASTSimpleDeclSpecifier.t_void:
 			print("void");
-			return ast.newPrimitiveType(PrimitiveType.VOID);
+			return "void";
 		case ICPPASTSimpleDeclSpecifier.t_bool:
 			print("bool");
-			return ast.newPrimitiveType(PrimitiveType.BOOLEAN);
+			return "boolean";
 		case ICPPASTSimpleDeclSpecifier.t_wchar_t:
 			print("wchar_t");
-			return ast.newPrimitiveType(PrimitiveType.CHAR);
+			return "char";
 		default:
 			return null;
 		}
@@ -1814,6 +1821,14 @@ public class SourceConverterStage2
 		{
 			evalExprBinary((IASTBinaryExpression) expression, ret, flags);
 		}
+		else if (expression instanceof ICPPASTDeleteExpression)
+		{
+			evalExprDelete((ICPPASTDeleteExpression) expression, ret, flags);
+		}
+		else if (expression instanceof ICPPASTNewExpression)
+		{
+			evalExprNew((ICPPASTNewExpression) expression, ret, flags);
+		}
 		else if (expression instanceof IASTCastExpression)
 		{
 			evalCastExpression((IASTCastExpression) expression, ret, flags);
@@ -1832,14 +1847,6 @@ public class SourceConverterStage2
 
 			evalTypeId(typeIdInitializerExpression.getTypeId());
 			evaluate(typeIdInitializerExpression.getInitializer());
-		}
-		else if (expression instanceof ICPPASTDeleteExpression)
-		{
-			evalExprDelete((ICPPASTDeleteExpression) expression, ret, flags);
-		}
-		else if (expression instanceof ICPPASTNewExpression)
-		{
-			evalNewExpression((ICPPASTNewExpression) expression, ret, flags);
 		}
 		else if (expression instanceof ICPPASTSimpleTypeConstructorExpression)
 		{
@@ -1877,50 +1884,60 @@ public class SourceConverterStage2
 		return ret;
 	}
 
-	private void evalNewExpression(ICPPASTNewExpression expr, List<MExpression> ret, EnumSet<Flag> flags)
+	private void evalExprNew(ICPPASTNewExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
-		//			if (!newExpression.isArrayAllocation())
-//		{
-//			boolean isBasic = false;
-//			if (getTypeEnum(newExpression.getExpressionType()) == TypeEnum.POINTER)
-//			{
-//				TypeEnum teBase = getTypeEnum(getPointerBaseType(newExpression.getExpressionType()));
-//				
-//				if (teBase == TypeEnum.CHAR || teBase == TypeEnum.NUMBER || teBase == TypeEnum.BOOLEAN)
-//				{
-//					ret.add(ast.newNumberLiteral("0"));
-//					isBasic = true;
-//				}
-//			}
-//			if (!isBasic)
-//			{
-//				ClassInstanceCreation create = ast.newClassInstanceCreation();
-//				//create.setExpression(evaluate(newExpression.getPlacement()))
-//				create.setType(evalTypeId(newExpression.getTypeId()));
-//
-//				if (newExpression.getNewInitializer() instanceof IASTExpressionList)
-//				{
-//					for (IASTExpression arg : ((IASTExpressionList) newExpression.getNewInitializer()).getExpressions())
-//						create.arguments().addAll(evalExpr(arg));
-//				}
-//				else if (newExpression.getNewInitializer() instanceof IASTExpression)
-//				{
-//					create.arguments().addAll(evalExpr((IASTExpression) newExpression.getNewInitializer()));
-//				}
-//
-//				ret.add(create);
-//			}
-//		}
-//		else
-//		{
-//			List<Expression> sizeExprs = new ArrayList<Expression>();
-//
-//			for (IASTExpression arraySize : newExpression.getNewTypeIdArrayExpressions())
-//				sizeExprs.add(eval1Expr(arraySize));
-//
-//			Expression ex = generateArrayCreationExpression(newExpression.getExpressionType(), sizeExprs);
-//			ret.add(ex);
-//		}
+		if (expr.isArrayAllocation() && !isObjectPtr(expr.getExpressionType()))
+		{
+			MNewArrayExpression ptr = new MNewArrayExpression();
+			
+			for (IASTExpression arraySize : expr.getNewTypeIdArrayExpressions())
+				ptr.sizes.add(eval1Expr(arraySize));
+
+			ptr.type = cppToJavaType(expr.getExpressionType());
+			ret.add(ptr);
+		}
+		else if (expr.isArrayAllocation() && isObjectPtr(expr.getExpressionType()))
+		{
+			MNewArrayExpressionObject ptr = new MNewArrayExpressionObject();
+			
+			for (IASTExpression arraySize : expr.getNewTypeIdArrayExpressions())
+				ptr.sizes.add(eval1Expr(arraySize));
+
+			ptr.type = cppToJavaType(expr.getExpressionType());
+			ret.add(ptr);
+		}
+		else if (!isObjectPtr(expr.getExpressionType()))
+		{
+			MNewExpression ptr = new MNewExpression();
+			ptr.type = cppToJavaType(expr.getExpressionType());
+			
+			if (expr.getNewInitializer() != null)
+				ptr.argument = eval1Expr(expr.getNewInitializer());
+			else
+			{
+				MLiteralExpression lit = new MLiteralExpression();
+				lit.literal = "0";
+				ptr.argument = lit;
+			}
+			ret.add(ptr);
+		}
+		else
+		{
+			MNewExpressionObject ptr = new MNewExpressionObject();
+			ptr.type = cppToJavaType(expr.getExpressionType());
+
+			if (expr.getNewInitializer() instanceof IASTExpressionList)
+			{
+				for (IASTExpression arg : ((IASTExpressionList) expr.getNewInitializer()).getExpressions())
+					ptr.arguments.addAll(evalExpr(arg));
+			}
+			else if (expr.getNewInitializer() instanceof IASTExpression)
+			{
+				ptr.arguments.addAll(evalExpr((IASTExpression) expr.getNewInitializer()));
+			}
+			
+			ret.add(ptr);
+		}
 	}
 
 	private void evalExprDelete(ICPPASTDeleteExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
@@ -3662,7 +3679,7 @@ public class SourceConverterStage2
 		return ret;
 	}
 
-	private Type cppToJavaType(IType type) throws DOMException
+	private String cppToJavaType(IType type) throws DOMException
 	{
 		return cppToJavaType(type, false, false);
 	}
@@ -3746,11 +3763,11 @@ public class SourceConverterStage2
 	private List<Type> getTypeParams(ICPPTemplateArgument[] typeParams) throws DOMException
 	{
 		List<Type> types = new ArrayList<Type>();
-		for (ICPPTemplateArgument param : typeParams)
-		{
-			if (param.getTypeValue() != null)
-				types.add(cppToJavaType(param.getTypeValue(), false, true));
-		}
+//		for (ICPPTemplateArgument param : typeParams)
+//		{
+//			if (param.getTypeValue() != null)
+//				types.add(cppToJavaType(param.getTypeValue(), false, true));
+//		}
 		return types;
 	}
 	
@@ -3758,7 +3775,7 @@ public class SourceConverterStage2
 	/**
 	 * Attempts to convert a CDT type to a JDT type.
 	 */
-	private Type cppToJavaType(IType type, boolean retValue, boolean needBoxed) throws DOMException
+	private String cppToJavaType(IType type, boolean retValue, boolean needBoxed) throws DOMException
 	{
 		if (type instanceof IBasicType)
 		{
@@ -3766,33 +3783,32 @@ public class SourceConverterStage2
 			IBasicType basic = (IBasicType) type;
 			
 			if (needBoxed)
-				return jast.newType(evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned()));
+				return evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 			return evaluateSimpleType(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 		}
 		else if (type instanceof IArrayType)
 		{
 			IArrayType array = (IArrayType) type;
-			ArrayType arr = ast.newArrayType(cppToJavaType(array.getType()));
-			return arr;
+			return cppToJavaType(array.getType());
 		}
 		else if (type instanceof ICompositeType)
 		{
 			ICompositeType comp = (ICompositeType) type;
-			Type simple = jast.newType(getSimpleType(comp.getName()));
+			String simple = getSimpleType(comp.getName());
 
-			printerr(comp.getClass().getCanonicalName());
+			//printerr(comp.getClass().getCanonicalName());
 			
-			if (type instanceof ICPPTemplateInstance)
-			{
-				ICPPTemplateInstance template = (ICPPTemplateInstance) type;
-				print("template instance");
-
-				ParameterizedType param = ast.newParameterizedType(simple);
-				List<Type> list = getTypeParams(template.getTemplateArguments());
-				param.typeArguments().addAll(list);
-				return param;
-			}
-			else
+//			if (type instanceof ICPPTemplateInstance)
+//			{
+//				ICPPTemplateInstance template = (ICPPTemplateInstance) type;
+//				print("template instance");
+//
+//				ParameterizedType param = ast.newParameterizedType(simple);
+//				List<Type> list = getTypeParams(template.getTemplateArguments());
+//				param.typeArguments().addAll(list);
+//				return param;
+//			}
+//			else
 			{
 				return simple;
 			}
@@ -3807,9 +3823,7 @@ public class SourceConverterStage2
 
 			if (ptrCount == 2)
 			{
-				ParameterizedType paramType = ast.newParameterizedType(jast.newType("Ptr"));
-				paramType.typeArguments().add(cppToJavaType(((IPointerType)pointer.getType()).getType()));
-				return paramType;
+				return "Ptr" + cppToJavaType(pointer.getType());
 			}
 			else if (pointer.getType() instanceof IBasicType || (pointer.getType() instanceof ITypedef && ((ITypedef)(pointer.getType())).getType() instanceof IBasicType))
 			{
@@ -3819,8 +3833,8 @@ public class SourceConverterStage2
 				else
 					basic = (IBasicType) pointer.getType();
 
-				String basicStr = evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
-				SimpleType simpleType = jast.newType("Ptr" + basicStr);
+				String basicStr = evaluateSimpleType(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
+				String simpleType = basicStr;
 				return simpleType;
 			}
 			else if (ptrCount == 1)
@@ -3846,15 +3860,15 @@ public class SourceConverterStage2
 					basic = (IBasicType) ref.getType();
 
 				String basicStr = evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
-				SimpleType simpleType = jast.newType("Ref" + basicStr);
+				String simpleType = "Ref" + basicStr;
 				return simpleType;
 			}
-			else
-			{
-				ParameterizedType paramType = ast.newParameterizedType(jast.newType("Ref"));    		  
-				paramType.typeArguments().add(cppToJavaType(ref.getType(), false, true));  		  
-				return paramType;
-			}
+//			else
+//			{
+//				ParameterizedType paramType = ast.newParameterizedType(jast.newType("Ref"));    		  
+//				paramType.typeArguments().add(cppToJavaType(ref.getType(), false, true));  		  
+//				return paramType;
+//			}
 		}
 		else if (type instanceof IQualifierType)
 		{
@@ -3866,7 +3880,7 @@ public class SourceConverterStage2
 			IProblemBinding prob = (IProblemBinding) type;
 			printerr("PROBLEM:" + prob.getMessage() + prob.getFileName() + prob.getLineNumber());
 
-			return jast.newType("PROBLEM__");
+			return "PROBLEM__";
 		}
 		else if (type instanceof ITypedef)
 		{
@@ -3876,25 +3890,25 @@ public class SourceConverterStage2
 		else if (type instanceof IEnumeration)
 		{
 			IEnumeration enumeration = (IEnumeration) type;
-			return jast.newType(getSimpleType(enumeration.getName()));
+			return getSimpleType(enumeration.getName());
 		}
 		else if (type instanceof IFunctionType)
 		{
 			IFunctionType func = (IFunctionType) type;
-			return jast.newType("FunctionPointer");
+			return "FunctionPointer";
 		}
 		else if (type instanceof IProblemType)
 		{
 			IProblemType prob = (IProblemType)type; 
 			printerr("Problem type: " + prob.getMessage());
 			//exitOnError();
-			return jast.newType("PROBLEM");
+			return "PROBLEM";
 		}
 		else if (type instanceof ICPPTemplateTypeParameter)
 		{
 			ICPPTemplateTypeParameter template = (ICPPTemplateTypeParameter) type;
 			print("template type");
-			return jast.newType(template.toString());
+			return template.toString();
 		}
 		else if (type != null)
 		{
@@ -4129,6 +4143,12 @@ bitfields.add("_b");
 			System.err.println("####" + test2.render());
 		}
 		
+		for (CppDeclaration decl : decls)
+		{
+			ST test3 = group.getInstanceOf("declaration_tp");
+			test3.add("decl", decl);
+			//System.err.println("!!!!" + test3.render());
+		}
 		
 		
 		char[] contents = null;

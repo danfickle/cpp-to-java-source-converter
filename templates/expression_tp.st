@@ -181,6 +181,19 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <elseif(expr_obj.isDeleteObjectMultiple)>
     DestructHelper.destructArray(<expression_tp(expr_obj.operand, false, false)>)
 
+  <elseif(expr_obj.isBasicNewArray)>
+    PTR.new<expr_obj.type>Ptr(new <expr_obj.type><expr_obj.sizes:{s | [<expression_tp(s, false, false)>]}; separator=", ">)
+
+  <elseif(expr_obj.isObjectNewArray)>
+    PTR.newObjPtr(CreateHelper.allocateArray(<expr_obj.type>.class, <expr_obj.sizes:{s | <expression_tp(s, false, false)>}; separator=", ">)
+
+  <elseif(expr_obj.isNewSingle)>
+    PTR.new<expr_obj.type>Ptr(<expression_tp(expr_obj.argument, false, false)>)
+
+  <elseif(expr_obj.isNewObject)>
+    new <expr_obj.type>(<expr_obj.arguments:{a | <expression_tp(a, false, false)>}; separator=", ">)
+
+
   <endif>
 
 <endif>

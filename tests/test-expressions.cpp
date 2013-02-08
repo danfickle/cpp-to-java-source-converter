@@ -6,6 +6,8 @@ class cls
   int _b : 8;
   int * _c;
   //bb _d;
+cls() { }
+ cls(int a, int b) {}
 
 int func(int a)
 {
@@ -89,14 +91,17 @@ int func(int a)
   this->_c | 3;  // -> Field deref infix
   this->_c += 4; // -> Field deref compound
 
-  //ptr = new int[10];     // -> New expression basic array
-  //ptr_cls = new cls[11]; // -> New expression object
-  //ptr = new int;         // -> New expression single basic
-  //ptr_cls = new cls;     // -> New expression single object
-
   delete ptr;           // -> Basic type delete
   delete ptr_cls;       // -> Object type delete
   delete [] ptr_cls;    // -> Object array delete
+
+  ptr = new int[10];        // -> New expression basic array
+  ptr_cls = new cls[11];    // -> New expression object
+  ptr = new int;            // -> New expression single basic
+  ptr = new int(23);        // -> New expression single basic with arg
+  ptr_cls = new cls;        // -> New expression single object
+  ptr_cls = new cls(1, 2);  // -> New expression single object with args
+
 
 
   //int zz = (int) _b;
