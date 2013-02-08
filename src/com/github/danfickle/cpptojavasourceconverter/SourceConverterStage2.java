@@ -1021,6 +1021,7 @@ public class SourceConverterStage2
 			{
 				enumerator.value = eval1Expr(e.getValue());
 				lastValue = enumerator.value;
+				sinceLastValue = 1;
 			}
 			else if (lastValue != null)
 			{
@@ -1523,15 +1524,13 @@ public class SourceConverterStage2
 //		}
 //	}
 	
-	private MethodInvocation createAddItemCall(Expression item)
+	private MExpression createAddItemCall(MExpression item)
 	{
-		MethodInvocation meth = jast.newMethod()
-				.on("StackHelper").call("addItem")
-				.with(item)
-				.with(m_nextVariableId)
-				.with("__stack").toAST();
+		MAddItemCall add = new MAddItemCall();
+		add.operand = item;
+		add.nextFreeStackId = m_nextVariableId;
 		incrementLocalVariableId();
-		return meth;
+		return add;
 	}
 	
 	/**
@@ -1563,11 +1562,11 @@ public class SourceConverterStage2
 						ClassInstanceCreation create = jast.newClassCreate()
 								//.type(cppToJavaType(var.getType()))
 								.withAll(evaluate(decl.getInitializer())).toAST();
-						
+						wrap = false;
 						if (wrap)
 						{
-							MethodInvocation meth = createAddItemCall(create);
-							ret.set(ret.size() - 1, meth);
+							//MethodInvocation meth = createAddItemCall(create);
+							//ret.set(ret.size() - 1, meth);
 						}
 						else
 							ret.set(ret.size() - 1, create);
@@ -1579,11 +1578,12 @@ public class SourceConverterStage2
 						Expression ex = jast.newNumber(0);
 						TypeEnum te = getTypeEnum(getArrayBaseType(var.getType()));
 						
+						wrap = false;
 						if ((te == TypeEnum.OBJECT || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER) &&
 							wrap)
 						{
-							MethodInvocation meth = createAddItemCall(ex);
-							ret.set(ret.size() - 1, meth);
+//							MethodInvocation meth = createAddItemCall(ex);
+//							ret.set(ret.size() - 1, meth);
 						}
 						else
 							ret.set(ret.size() - 1, ex);
@@ -1756,32 +1756,35 @@ public class SourceConverterStage2
 		return evalExpr(expression, EnumSet.noneOf(Flag.class));
 	}
 	
-	private Expression callCopyIfNeeded(Expression expr, IASTExpression cppExpr, EnumSet<Flag> flags) throws DOMException
+	private MExpression callCopyIfNeeded(MExpression expr, IASTExpression cppExpr, EnumSet<Flag> flags) throws DOMException
 	{
 		TypeEnum te = getTypeEnum(cppExpr.getExpressionType());
-		if (flags.contains(Flag.IS_RET_VAL) && expr instanceof ClassInstanceCreation)
+
+		if (flags.contains(Flag.IS_RET_VAL) && expr instanceof MClassInstanceCreation)
 		{
 			return expr;
 		}
 		else if (flags.contains(Flag.IS_RET_VAL) && te == TypeEnum.OBJECT)
 		{
-			MethodInvocation method = jast.newMethod()
-					.on(expr)
-					.call("copy").toAST();			
-			return method;
+			MFunctionCallExpression copy = new MFunctionCallExpression();
+			MFieldReferenceExpressionPlain field = new MFieldReferenceExpressionPlain();
+			field.field = "copy";
+			field.object = expr;
+			copy.name = field;
+			return copy;
 		}
-		else if (te == TypeEnum.OBJECT && !(expr instanceof ClassInstanceCreation))
+		else if (te == TypeEnum.OBJECT && !(expr instanceof MClassInstanceCreation))
 		{
-			MethodInvocation method = jast.newMethod()
-					.on(expr)
-					.call("copy").toAST();
-			MethodInvocation addItem = createAddItemCall(method);
-			return addItem;
+			MFunctionCallExpression copy = new MFunctionCallExpression();
+			MFieldReferenceExpressionPlain field = new MFieldReferenceExpressionPlain();
+			field.field = "copy";
+			field.object = expr;
+			copy.name = field;
+			return createAddItemCall(copy);	
 		}
 		else if (te == TypeEnum.OBJECT)
 		{
-			MethodInvocation addItem = createAddItemCall(expr);
-			return addItem;
+			return createAddItemCall(expr);
 		}
 		return expr;
 	}
@@ -1829,13 +1832,13 @@ public class SourceConverterStage2
 		{
 			evalExprNew((ICPPASTNewExpression) expression, ret, flags);
 		}
+		else if (expression instanceof IASTFunctionCallExpression)
+		{
+			evalExprFuncCall((IASTFunctionCallExpression) expression, ret, flags);
+		}
 		else if (expression instanceof IASTCastExpression)
 		{
 			evalCastExpression((IASTCastExpression) expression, ret, flags);
-		}
-		else if (expression instanceof IASTFunctionCallExpression)
-		{
-			evalFunctionCallExpression((IASTFunctionCallExpression) expression, ret, flags);
 		}
 		else if (expression instanceof IASTTypeIdExpression)
 		{
@@ -2208,106 +2211,40 @@ public class SourceConverterStage2
 	}
 
 
-	private void evalFunctionCallExpression(IASTFunctionCallExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalExprFuncCall(IASTFunctionCallExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
-		MFunctionCallExpression func = new MFunctionCallExpression();
-		func.name = eval1Expr(expr.getFunctionNameExpression());
-		//func.args = // TODO
-		ret.add(func);
+		MFunctionCallExpressionParent func;
 		
-		
-		
-		//		Expression funcCallExpr;
-//		
-//		if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
-//			((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
-//		{
-//			ICPPClassType con = (ICPPClassType) ((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding();
-//
-//			ClassInstanceCreation create = ast.newClassInstanceCreation();
-//			create.setType(jast.newType(con.getName()));
-//			
-//			funcCallExpr = (create);
-//			
-//			if (expr.getParameterExpression() instanceof IASTExpressionList)
-//			{
-//				IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
-//				for (IASTExpression arg : list.getExpressions())
-//				{
-//					Expression exarg = eval1Expr(arg, EnumSet.of(Flag.IN_METHOD_ARGS));
-//					exarg = callCopyIfNeeded(exarg, arg, flags);
-//					create.arguments().add(exarg);
-//				}
-//			}
-//			else if (expr.getParameterExpression() instanceof IASTExpression)
-//			{
-//				Expression arg = eval1Expr((IASTExpression) expr.getParameterExpression(), EnumSet.of(Flag.IN_METHOD_ARGS));
-//				arg = callCopyIfNeeded(arg, (IASTExpression) expr.getParameterExpression(), flags);
-//				create.arguments().add(arg);
-//			}
-//			
-//			if ((getTypeEnum(expr.getExpressionType()) == TypeEnum.OBJECT) &&
-//				!(flags.contains(Flag.IS_RET_VAL)) &&
-//				!(flags.contains(Flag.IN_METHOD_ARGS)))
-//			{
-//				MethodInvocation method2 = createAddItemCall(funcCallExpr); 
-//				ret.add(method2);
-//			}
-//			else
-//				ret.add(funcCallExpr);
-//		}
-//		else
-//		{
-//			JASTHelper.Method method = jast.newMethod();
-//			if (expr.getFunctionNameExpression() instanceof IASTFieldReference)
-//			{
-//				IASTFieldReference fr = (IASTFieldReference) expr.getFunctionNameExpression();
-//
-//				method.on(eval1Expr(fr.getFieldOwner()))
-//					.call(getSimpleName(fr.getFieldName()));
-//			}
-//			else if (expr.getFunctionNameExpression() instanceof IASTIdExpression)
-//			{
-//				IASTIdExpression id = (IASTIdExpression) expr.getFunctionNameExpression();
-//
-//				if (getSimpleName(id.getName()).equals("max") || getSimpleName(id.getName()).equals("min"))
-//				{
-//					method.on("Math");
-//				}
-//
-//				method.call(getSimpleName(id.getName()));
-//			}
-//
-//			if (expr.getParameterExpression() instanceof IASTExpressionList)
-//			{
-//				IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
-//				for (IASTExpression arg : list.getExpressions())
-//				{
-//					Expression exarg = eval1Expr(arg, EnumSet.of(Flag.IN_METHOD_ARGS));
-//					exarg = callCopyIfNeeded(exarg, arg, flags);
-//					method.with(exarg);
-//				}
-//			}
-//			else if (expr.getParameterExpression() instanceof IASTExpression)
-//			{
-//				Expression exarg = eval1Expr(expr.getParameterExpression(), EnumSet.of(Flag.IN_METHOD_ARGS));
-//				exarg = callCopyIfNeeded(exarg, expr.getParameterExpression(), flags);
-//				method.with(exarg);
-//			}
-//			funcCallExpr = (method.toAST());
-//
-//			if ((getTypeEnum(expr.getExpressionType()) == TypeEnum.OBJECT) &&
-//				!(flags.contains(Flag.IS_RET_VAL)) &&
-//				!(flags.contains(Flag.IN_METHOD_ARGS)))
-//			{
-//				MethodInvocation method2 = createAddItemCall(funcCallExpr); 
-//				ret.add(method2);
-//			}
-//			else
-//				ret.add(funcCallExpr);
-//		}
+		if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
+			((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
+		{
+			func = new MClassInstanceCreation();
+		}
+		else
+		{
+			func = new MFunctionCallExpression();
+		}
 
-		
+		func.name = eval1Expr(expr.getFunctionNameExpression());
+
+		if (expr.getParameterExpression() instanceof IASTExpressionList)
+		{
+			IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
+			for (IASTExpression arg : list.getExpressions())
+			{
+				MExpression exarg = eval1Expr(arg, EnumSet.of(Flag.IN_METHOD_ARGS));
+				exarg = callCopyIfNeeded(exarg, arg, flags);
+				func.args.add(exarg);
+			}
+		}
+		else if (expr.getParameterExpression() instanceof IASTExpression)
+		{
+			MExpression exarg = eval1Expr(expr.getParameterExpression(), EnumSet.of(Flag.IN_METHOD_ARGS));
+			exarg = callCopyIfNeeded(exarg, expr.getParameterExpression(), flags);
+			func.args.add(exarg);
+		}
+
+		ret.add(func);
 	}
 
 

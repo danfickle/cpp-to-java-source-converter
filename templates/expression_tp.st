@@ -149,7 +149,13 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
    <expression_tp(expr_obj.operand, false, false)>.add(<expr_obj.subscript:{s | <expression_tp(s, false, false)>}; separator=", ">).get()
 
   <elseif(expr_obj.isFunctionCall)>
-    <expression_tp(expr_obj.name, false, false)>(<expr_obj.args:{a | expression_tp(a, false, false) }; separator=", ">)
+    <expression_tp(expr_obj.name, false, false)>(<expr_obj.args:{a | <expression_tp(a, false, false)>}; separator=", ">)
+
+  <elseif(expr_obj.isClassInstanceCreation)>
+    new <expression_tp(expr_obj.name, false, false)>(<expr_obj.args:{a | <expression_tp(a, false, false)>}; separator=", ">)
+
+  <elseif(expr_obj.isAddItemCall)>
+    StackHelper.addItem(<expression_tp(expr_obj.operand, false, false)>, <expr_obj.nextFreeStackId>, __stack)
 
   <elseif(expr_obj.isCast)>
     (<expr_obj.type>) <expression_tp(expr_obj.operand, false, false)>

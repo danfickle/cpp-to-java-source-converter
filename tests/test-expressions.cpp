@@ -1,13 +1,19 @@
 enum bb { aa, ii };
 
+int global_func(int a, int b) {}
+int global_func(int a) {}
+
 class cls
 {
   int _a;
   int _b : 8;
   int * _c;
   //bb _d;
-cls() { }
- cls(int a, int b) {}
+
+  cls() { }
+  cls(int a, int b) {}
+
+  int mymethod(int a, cls b) {}
 
 int func(int a)
 {
@@ -102,8 +108,13 @@ int func(int a)
   ptr_cls = new cls;        // -> New expression single object
   ptr_cls = new cls(1, 2);  // -> New expression single object with args
 
+  global_func(100);                // -> Function call expression
+  global_func(101, 102);           // -> Function call expression with multiple args
+  mymethod(103, myclass);          // -> Id method call
+  this->mymethod(105, cls(100));   // -> Field reference pointer function call
+  myclass.mymethod(107, cls(200)); // -> Field reference object function call
 
-
+  // TODO: Cast expressions, overloaded operators, comma expression, bracketed expressions.
   //int zz = (int) _b;
 
 

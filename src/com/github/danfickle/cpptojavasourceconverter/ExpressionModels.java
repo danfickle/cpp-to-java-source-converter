@@ -56,6 +56,12 @@ class ExpressionModels
 		public MExpression operand;
 	}
 	
+	abstract static class MFunctionCallExpressionParent extends MExpression
+	{
+		public MExpression name;
+		public List<MExpression> args = new ArrayList<MExpression>();
+	}
+	
 	// 1
 	static class MArrayExpressionPlain extends MArrayExpression
 	{
@@ -169,14 +175,16 @@ class ExpressionModels
 	{
 		public boolean isFieldReferenceEnumerator = true;
 	}
-	
+
 	// 16
-	static class MFunctionCallExpression extends MExpression
+	static class MFunctionCallExpression extends MFunctionCallExpressionParent
 	{
 		public boolean isFunctionCall = true;
-		
-		public MExpression name;
-		public List<MExpression> args;
+	}
+	
+	static class MClassInstanceCreation extends MFunctionCallExpressionParent
+	{
+		public boolean isClassInstanceCreation = true;
 	}
 	
 	// 17
@@ -331,5 +339,11 @@ class ExpressionModels
 		public List<MExpression> arguments = new ArrayList<MExpression>();
 	}
 	
-	
+	static class MAddItemCall extends MExpression
+	{
+		public boolean isAddItemCall = true;
+		
+		public MExpression operand;
+		public int nextFreeStackId;
+	}
 }
