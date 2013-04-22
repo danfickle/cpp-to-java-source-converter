@@ -8,7 +8,7 @@ public class CPP
 	{
 		for (int i = 0; i < left.length; i++)
 		{
-			left[i].op_assign(right[i]);
+			left[i].opAssign(right[i]);
 		}
 	}
 	
@@ -18,7 +18,7 @@ public class CPP
 		{
 			for (int j = 0; j < left[i].length; j++)
 			{
-				left[i][j].op_assign(right[i][j]);
+				left[i][j].opAssign(right[i][j]);
 			}
 		}
 	}

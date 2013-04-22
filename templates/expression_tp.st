@@ -106,8 +106,8 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <elseif(expr_obj.isPrefixBitfield)>
     <expr_obj.operator><expression_tp(expr_obj.operand, false, false)>
 
-  <elseif(expr_obj.isPostfix)>
-    <expression_tp(expr_obj.operand, true, false)><expr_obj.operator>
+ <! <elseif(expr_obj.isPostfix)>
+    <expression_tp(expr_obj.operand, true, false)><expr_obj.operator> !>
 
   <elseif(expr_obj.isPostfixPointerInc)>
     <expression_tp(expr_obj.operand, false, false)>.postinc()

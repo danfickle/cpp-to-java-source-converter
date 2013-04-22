@@ -4,5 +4,5 @@ public interface CppType<T>
 {
 	void destruct();
 	T copy();
-	T op_assign(T right);
+	T opAssign(T right);
 }

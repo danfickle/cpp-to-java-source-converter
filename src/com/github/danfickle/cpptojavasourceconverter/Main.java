@@ -29,8 +29,8 @@ public class Main
 	    		IASTTranslationUnit tu = getTranslationUnit(HOME_PATH + "tests/" + line + ".cpp");
 	    		SourceConverterStage2 parser = new SourceConverterStage2();
 	    		String outputCode = parser.traverse(tu);
-
-	    		FileOutputStream fos = new FileOutputStream(HOME_PATH + line + ".java");
+	    		
+	    		FileOutputStream fos = new FileOutputStream(HOME_PATH + "crap/" + line + ".java");
 	    		OutputStreamWriter out = new OutputStreamWriter(fos, "UTF-8"); 
 	    		out.write(outputCode);
 	    		out.close();

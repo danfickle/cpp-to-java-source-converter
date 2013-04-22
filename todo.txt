@@ -1,72 +1,37 @@
-/*
- * FAILING TESTS:
- * test-class
- * test-bitfields
- * test-pointers
- * test-templates
- * 
- * TODO
- * pointers. TICK.
- * references. TICK.
- * destructors. TICK.
- * enums. TICK.
- * variable declarations inside while, if. TICK.
- * != null, != 0, etc... for return, variable assignment, etc. TICK.
- * default arguments. TICK.
- * bit fields. TICK, need mask and shift calculation.
- * array initializers. TICK.
- * What information do we need from first pass:
- * bit-fields so instance access can be converted to function call.
- * When should copy constructor be called? TICK.
- * Raw types in Ref<> and Ptr<>. TICK.
- * multiple inheritance.
- * Put enums in correct place. TICK.
- * Working with enum values. TICK.
- * Replace Ptr<Integer> with PtrInteger. TICK.
- * Default arguments for function declarations. TICK.
- * If isEventualPtrOrRef then add .val to expression. TICK.
- * TypeDeclarations losing type param info. TICK.
- * Address of operator. TICK.
- * Anonymous stuff. TICK.
- * - Anonymous enums. TICK.
- * Switch not working. TICK.
- * Fix wrong type for anon classes (nested).
- * Fix empty stuff in for statement. TICK.
- * Fix new[] and delete[]. TICK.
- * Call destructors on return or end brace. TICK.
- * Copy constructor not always being called. TICK.
- * Inject stack creation at top of method. TICK.
- * Add arguments to stack. TICK.
- * Add return values to stack. TICK.
- * Call destruct directly on delete variables. TICK.
- * Cleanup cleanup mechanism for classes. TICK.
- * static function with default arguments.
- * Call cleanup after function call.
- * Don't cleanup return value. TICK.
- * Cleanup before break statement in switch. TICK.
- * Top level stuff should be static.
- * Generate constructor. TICK.
- * Generate destructor. TICK.
- * Generate default constructors/destructors. TICK.
- * Generate default assignment method. TICK.
- * Cast allocateArray. TICK.
- * Add static modifier to nested classes and global variables. TICK.
- * Generate default copy constructor. TICK.
- * Check if has copy ctor. TICK.
- * Qualify fields with this. TICK.
- * When to call super on generated methods. TICK.
- * Compund assignment operators on pointers. TICK.
- * 
- * Comma operator.
- * Deal with typedef.
- * - Anonymous classes, unions, structs. REGRESSION
- * templates.
- * order of evaluation.
- * operator overloading. 
- * re-parenting.
- * Overuse of op_assign.
- * Copy/delete constructor being called on references.
- * Static fields initializers.
- * Rename String to something.
- * Use names that are unlikely to clash for copy, CPP, right, etc.
- */
+test-enums
+ -> names for anonymous enums.
+ -> public keyword used with variables.
+
+test-bitfield
+ -> exact bit position for bitfield.
+ -> recognising bit fields when used.
+ -> StackHelper.cleanup being called when there is nothing to cleanup.
+
+test-basic-types
+ -> arrays not being recognised as such.
+
+test-branch
+ -> Declaration in if condition not outputting.
+
+test-class
+ -> copy not being marked with @Override
+ -> top level class being marked as nested and nested inside Global.
+ -> static member variable not being marked as static.
+ -> super.destruct() being called twice.
+ -> super constructor not being called as specified by ctor chain initializer.
+
+test-loops
+ -> condition in for loop not being booleanized.
+ -> missing declaration in while condition space.
+
+test-operator-overloading
+ -> test function not being output.
+
+technical challenges
+ -> references.
+ -> pointers.
+ -> templates.
+
+general
+ -> too much white space.
+
