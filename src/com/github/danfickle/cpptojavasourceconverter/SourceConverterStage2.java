@@ -96,6 +96,7 @@ import org.eclipse.cdt.core.dom.ast.c.ICASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.c.ICASTTypeIdInitializerExpression;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConstructorChainInitializer;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConstructorInitializer;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDeleteExpression;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTElaboratedTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExplicitTemplateInstantiation;
@@ -223,17 +224,13 @@ public class SourceConverterStage2
 	{
 		boolean nested = true;
 
-
 		if (currentInfo == null)
 		{
-			System.err.println("ADD NULL");
 			decls2.add(decl);
 			nested = false;
 		}
 		else
 		{
-			System.err.println("ADD EXISTING");
-			System.err.println(currentInfo.tyd.toString());
 			currentInfo.tyd.declarations.add(decl);
 		}
 		currentInfo = new CompositeInfo(decl);
@@ -248,12 +245,9 @@ public class SourceConverterStage2
 	
 	private void popDeclaration()
 	{
-		System.err.println("POP");
 		currentInfoStack.pop();
 		currentInfo = currentInfoStack.peekFirst();
-		System.err.println(currentInfo != null);
 	}
-	
 	
 	private void evalDeclBitfield(IField field, IASTDeclarator declarator) throws DOMException
 	{
@@ -704,8 +698,10 @@ public class SourceConverterStage2
 		{
 			if (decl.getInitializer() == null)
 				exprs.add(null);
-			else
+			else if (decl.getInitializer() instanceof IASTEqualsInitializer)
 				exprs.add(eval1Expr((IASTExpression) ((IASTEqualsInitializer) decl.getInitializer()).getInitializerClause()));
+			else if (decl.getInitializer() instanceof ICPPASTConstructorInitializer)
+				exprs.add(eval1Expr((IASTExpression) ((ICPPASTConstructorInitializer) decl.getInitializer()).getExpression()));
 		}
 
 		return exprs;
@@ -2189,11 +2185,43 @@ public class SourceConverterStage2
 				pre.operator = evalUnaryPrefixOperator(expr.getOperator());
 				ret.add(pre);
 			}
+			else if (expr.getOperator() == IASTUnaryExpression.op_amper)
+			{
+				// TODO
+				MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
+				pre.operand = eval1Expr(expr.getOperand());
+				pre.operator = "&";
+				ret.add(pre);
+			}
+			else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
+			{
+				// TODO
+				MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
+				pre.operand = eval1Expr(expr.getOperand());
+				pre.operator = "(";
+				ret.add(pre);
+			}
 		}
 		else if (expr.getOperator() == IASTUnaryExpression.op_star)
 		{
 			MPrefixExpressionPointerStar pre = new MPrefixExpressionPointerStar();
 			pre.operand = eval1Expr(expr.getOperand());
+			ret.add(pre);
+		}
+		else if (expr.getOperator() == IASTUnaryExpression.op_amper)
+		{
+			// TODO
+			MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
+			pre.operand = eval1Expr(expr.getOperand());
+			pre.operator = "&";
+			ret.add(pre);
+		}
+		else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
+		{
+			// TODO
+			MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
+			pre.operand = eval1Expr(expr.getOperand());
+			pre.operator = "(";
 			ret.add(pre);
 		}
 		else if (isBitfield(expr.getOperand()))
@@ -4048,7 +4076,7 @@ public class SourceConverterStage2
 		if (m_localVariableStack.peek() != null)
 			m_localVariableStack.peek().cnt++;
 		
-		if (m_nextVariableId > m_localVariableMaxId)
+		if (m_localVariableMaxId == null || m_nextVariableId > m_localVariableMaxId)
 			m_localVariableMaxId = m_nextVariableId;
 	}
 

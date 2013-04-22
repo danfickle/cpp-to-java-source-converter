@@ -112,7 +112,7 @@ public class ModelCreation
 	{
 		MFunctionCallExpression expr = new MFunctionCallExpression();
 		expr.name = createLiteral(method);
-		expr.args = Arrays.asList(args);
+		expr.args.addAll(Arrays.asList(args));
 		return expr;
 	}
 }

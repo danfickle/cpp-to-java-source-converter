@@ -25,7 +25,10 @@ test-loops
  -> missing declaration in while condition space.
 
 test-operator-overloading
- -> test function not being output.
+ -> operator overloads being generated but not being used.
+
+test-pointers
+ -> address of operator.
 
 technical challenges
  -> references.
