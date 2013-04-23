@@ -138,6 +138,7 @@ import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppEnum;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppEnumerator;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppFunction;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MAddItemCall;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MAddressOfExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MArrayExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MArrayExpressionPtr;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MCastExpression;
@@ -1690,7 +1691,7 @@ public class SourceConverterStage2
 			else if (isLongLong)
 				return "Long";
 			else
-				return  "Integer";
+				return  "MInteger";
 		case IASTSimpleDeclSpecifier.t_float:
 			print("float");
 			return "Float";
@@ -1784,33 +1785,24 @@ public class SourceConverterStage2
 	{
 		TypeEnum te = getTypeEnum(cppExpr.getExpressionType());
 
-		if (flags.contains(Flag.IS_RET_VAL) && expr instanceof MClassInstanceCreation)
-		{
+		if (expr instanceof MClassInstanceCreation)
 			return expr;
-		}
-		else if (flags.contains(Flag.IS_RET_VAL) && te == TypeEnum.OBJECT)
+		
+		if (te != TypeEnum.POINTER &&
+			te != TypeEnum.REFERENCE)
 		{
 			MFunctionCallExpression copy = new MFunctionCallExpression();
-			MFieldReferenceExpressionPlain field = new MFieldReferenceExpressionPlain();
-			field.field = "copy";
-			field.object = expr;
+			MFieldReferenceExpression field = ModelCreation.createFieldReference(expr, "copy");
 			copy.name = field;
 			return copy;
 		}
-		else if (te == TypeEnum.OBJECT && !(expr instanceof MClassInstanceCreation))
+		else
 		{
 			MFunctionCallExpression copy = new MFunctionCallExpression();
-			MFieldReferenceExpressionPlain field = new MFieldReferenceExpressionPlain();
-			field.field = "copy";
-			field.object = expr;
+			MFieldReferenceExpression field = ModelCreation.createFieldReference(expr, "ptrCopy");
 			copy.name = field;
-			return createAddItemCall(copy);	
+			return copy;
 		}
-		else if (te == TypeEnum.OBJECT)
-		{
-			return createAddItemCall(expr);
-		}
-		return expr;
 	}
 
 	/**
@@ -2121,7 +2113,7 @@ public class SourceConverterStage2
 		}
 	}
 
-	private void evalExprLiteral(IASTLiteralExpression lit, List<MExpression> ret) 
+	private void evalExprLiteral(IASTLiteralExpression lit, List<MExpression> ret) throws DOMException 
 	{
 		MLiteralExpression out = new MLiteralExpression();
 		
@@ -2137,7 +2129,8 @@ public class SourceConverterStage2
 		case IASTLiteralExpression.lk_float_constant:
 		case IASTLiteralExpression.lk_string_literal:
 		case IASTLiteralExpression.lk_integer_constant:
-			out.literal = String.valueOf(lit.getValue());
+			// TODO: what if 0 is being used as null.
+			out.literal = "MInteger.valueOf(" + String.valueOf(lit.getValue()) + ")";
 			break;
 		case IASTLiteralExpression.lk_this:
 			out.literal = "this";
@@ -2187,11 +2180,9 @@ public class SourceConverterStage2
 			}
 			else if (expr.getOperator() == IASTUnaryExpression.op_amper)
 			{
-				// TODO
-				MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
-				pre.operand = eval1Expr(expr.getOperand());
-				pre.operator = "&";
-				ret.add(pre);
+				MAddressOfExpression add = new MAddressOfExpression();
+				add.operand = eval1Expr(expr.getOperand());
+				ret.add(add);
 			}
 			else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
 			{
@@ -2210,11 +2201,9 @@ public class SourceConverterStage2
 		}
 		else if (expr.getOperator() == IASTUnaryExpression.op_amper)
 		{
-			// TODO
-			MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
-			pre.operand = eval1Expr(expr.getOperand());
-			pre.operator = "&";
-			ret.add(pre);
+			MAddressOfExpression add = new MAddressOfExpression();
+			add.operand = eval1Expr(expr.getOperand());
+			ret.add(add);
 		}
 		else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
 		{
@@ -3392,6 +3381,7 @@ public class SourceConverterStage2
 			stmts.add(retu);
 			
 			retu.expr = eval1Expr(returnStatement.getReturnValue());
+			retu.expr = callCopyIfNeeded(retu.expr, returnStatement.getReturnValue(), EnumSet.noneOf(Flag.class));
 			retu.cleanup = createCleanupCall(0);
 			//
 //			JASTHelper.Method method = jast.newMethod()
@@ -3859,9 +3849,9 @@ public class SourceConverterStage2
 			// Primitive type - int, bool, char, etc...
 			IBasicType basic = (IBasicType) type;
 			
-			if (needBoxed)
+			//if (needBoxed)
 				return evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
-			return evaluateSimpleType(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
+			//return evaluateSimpleType(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 		}
 		else if (type instanceof IArrayType)
 		{
@@ -3910,7 +3900,7 @@ public class SourceConverterStage2
 				else
 					basic = (IBasicType) pointer.getType();
 
-				String basicStr = evaluateSimpleType(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
+				String basicStr = evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 				String simpleType = basicStr;
 				return simpleType;
 			}

@@ -199,6 +199,8 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <elseif(expr_obj.isNewObject)>
     new <expr_obj.type>(<expr_obj.arguments:{a | <expression_tp(a, false, false)>}; separator=", ">)
 
+  <elseif(expr_obj.isAddressOf)>
+    <expression_tp(expr_obj.operand, false, false)>.addressOf()
 
   <endif>
 

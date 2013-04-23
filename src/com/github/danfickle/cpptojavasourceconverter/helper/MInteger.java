@@ -115,4 +115,10 @@ public class MInteger implements PtrLike<MInteger, Integer>
 	
 		return this;
 	}
+
+	@Override
+	public MInteger ptrCopy()
+	{
+		return this;
+	}
 }

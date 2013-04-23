@@ -18,4 +18,5 @@ public interface PtrLike<T, K>
 	public T ptrOffset(int cnt);
 	public K postInc();
 	public K postDec();
+	public T ptrCopy();
 }

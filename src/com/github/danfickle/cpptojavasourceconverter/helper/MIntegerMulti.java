@@ -79,4 +79,11 @@ public class MIntegerMulti implements PtrLike<MIntegerMulti, Integer>
 	{
 		return val[currentOffset]--;
 	}
+
+	@Override
+	public MIntegerMulti ptrCopy()
+	{
+		// must make a copy of currentOffset like real pointers
+		return new MIntegerMulti(val, currentOffset);
+	}
 }

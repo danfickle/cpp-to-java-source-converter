@@ -201,6 +201,13 @@ class ExpressionModels
 		public boolean isPrefixPointer = true;
 	}
 	
+	static class MAddressOfExpression extends MExpression
+	{
+		public boolean isAddressOf = true;
+		
+		public MExpression operand;
+	}
+	
 	// 21
 	static class MPostfixExpressionPlain extends MPostfixExpression
 	{

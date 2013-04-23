@@ -30,6 +30,10 @@ test-operator-overloading
 test-pointers
  -> address of operator.
 
+test-copying
+ -> MInteger being copied when used in expressions other than direct return
+    value, function argument or assign.
+
 technical challenges
  -> references.
  -> pointers.
