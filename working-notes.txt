@@ -1,0 +1,48 @@
+Examples of dealing with numbers and pointers:
+
+i++ + 1
+i.postInc().get() + 1;
+
+int j = i-- + 2;
+MInteger j = MInteger.valueOf(i.postDec().get() + 2);
+
+int k = 5;
+MInteger k = MInteger.valueOf(5);
+
+*(ptr++) = 3
+ptr.ptrPostInc().set(3);
+
+---> Note: Expression return type should be context sensitive.
+---> MInteger when a MInteger is required and a raw number when it is not.
+---> This includes number literals.
+
+*(ptr++)
+ptr.ptrPostInc().get();
+
+int k = *(--ptr)
+MInteger k = ptr.ptrAdjust(-1).copy();
+
+---> Note: Return a raw number with get() except when a MInteger is required, in which
+---> case copy should be called.
+
+return i++ + 1 - 10;
+return MInteger.valueOf(i.postInc().get() + 1 - 10);
+
+return i;
+return i.copy();
+
+---> Note: Only call copy() when we need to. No need if we just created it.
+
+(*(ptr++)) += 3
+ptr.ptrPostInc().set(ptr.ptrOffset(1).get() + 3);
+
+---> Note: This is tricky. ptr++ has side effects so we can't call it three times.
+
+---> Info required: 
+---> For infix: The type of the other side.
+---> This lets us know whether to wrap the expression in MInteger.valueOf.
+---> For prefix/postfix: Whether a l-value is needed. Whether side effects are banned.
+
+
+
+
