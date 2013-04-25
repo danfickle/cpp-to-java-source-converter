@@ -172,6 +172,15 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <elseif(expr_obj.isCompoundWithBitfieldOnLeft)>
     <expression_tp(expr_obj.left, true, false)>set__<expression_tp(expr_obj.left, false, true)>(<expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>)
 
+  <elseif(expr_obj.isInfixWithNumberOnLeft)>
+    <expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>
+
+  <elseif(expr_obj.isAssignmentWithNumberOnLeft)>
+    <expression_tp(expr_obj.left, true, false)><expression_tp(expr_obj.left, false, true)>.set(<expression_tp(expr_obj.right, false, false)>)
+
+  <elseif(expr_obj.isCompoundWithNumberOnLeft)>
+    <expression_tp(expr_obj.left, true, false)><expression_tp(expr_obj.left, false, true)>.set(<expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>)
+
   <elseif(expr_obj.isInfixWithDerefOnLeft)>
     <expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>
 

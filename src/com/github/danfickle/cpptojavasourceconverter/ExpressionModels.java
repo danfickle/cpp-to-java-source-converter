@@ -74,6 +74,21 @@ class ExpressionModels
 		public boolean isInfixWithBitfieldOnLeft = true;
 	}
 
+	static class MInfixAssignmentWithNumberOnLeft extends MInfixExpression
+	{
+		public boolean isAssignmentWithNumberOnLeft = true;
+	}
+	
+	static class MInfixWithNumberOnLeft extends MInfixExpression
+	{
+		public boolean isInfixWithNumberOnLeft = true;
+	}
+
+	static class MCompoundWithNumberOnLeft extends MInfixExpression
+	{
+		public boolean isCompoundWithNumberOnLeft = true;
+	}
+	
 	// 4
 	static class MInfixExpressionWithDerefOnLeft extends MInfixExpression
 	{

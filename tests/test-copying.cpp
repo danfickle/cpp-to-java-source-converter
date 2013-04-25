@@ -17,9 +17,12 @@ void func3(int * c)
 
 void func4(int d)
 {
-	int i = 0;
+	int i = 0, j;
 	func4(i);
 	func3(&i);
+
+	j = 5;
+	j = i;
 
 	func4(i + 5);
 	func4(i++);

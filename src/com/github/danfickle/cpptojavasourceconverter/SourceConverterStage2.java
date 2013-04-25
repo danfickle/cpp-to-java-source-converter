@@ -102,6 +102,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTElaboratedTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTExplicitTemplateInstantiation;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTForStatement;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTFunctionDefinition;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTIfStatement;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLinkageSpecification;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNamedTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNamespaceAlias;
@@ -109,12 +110,14 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNamespaceDefinition;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNewExpression;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTSimpleDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTSimpleTypeConstructorExpression;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTSwitchStatement;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateDeclaration;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateSpecialization;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTryBlockStatement;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTUsingDeclaration;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTUsingDirective;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTVisibilityLabel;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTWhileStatement;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPBasicType;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPBinding;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPClassType;
@@ -124,6 +127,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPParameter;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPReferenceType;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPTemplateTypeParameter;
 import org.eclipse.cdt.core.dom.ast.gnu.IGNUASTCompoundStatementExpression;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupDir;
@@ -145,6 +149,7 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MCastExpre
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MClassInstanceCreation;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MCompoundWithBitfieldOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MCompoundWithDerefOnLeft;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MCompoundWithNumberOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MDeleteObjectMultiple;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MDeleteObjectSingle;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MEmptyExpression;
@@ -162,9 +167,12 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityE
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionPtr;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithBitfieldOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithDerefOnLeft;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithNumberOnLeft;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionWithBitfieldOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionWithDerefOnLeft;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixWithNumberOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MLiteralExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MNewArrayExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MNewArrayExpressionObject;
@@ -402,6 +410,11 @@ public class SourceConverterStage2
 			method.statements.add(stmt);
 		}
 	}
+
+	// The return type of the function currently being evaluated.
+	// We need this so we know if the return expression needs to be made
+	// java boolean.
+	String currentReturnType = null;
 	
 	/**
 	 * Evaluates a function definition and converts it to Java.
@@ -437,9 +450,16 @@ public class SourceConverterStage2
 		m_localVariableMaxId = null;
 		m_nextVariableId = 0;
 
+		// We need this so we know if the return expression needs to be made
+		// java boolean.
+		currentReturnType = method.retType;
+		
 		// eval1Stmt work recursively to generate the function body.
 		method.body = (MCompoundStmt) eval1Stmt(func.getBody());
 
+		// For debugging purposes, we put return type back to null.
+		currentReturnType = null;
+		
 		// If we have any local variables that are objects, or arrays of objects,
 		// we must create an explicit stack so they can be added to it and explicity
 		// cleaned up at termination points (return, break, continue, end block).
@@ -2080,6 +2100,7 @@ public class SourceConverterStage2
 		MTernaryExpression ternary = new MTernaryExpression();
 		
 		ternary.condition = eval1Expr(expr.getLogicalConditionExpression());
+		ternary.condition = makeExpressionBoolean(ternary.condition, expr.getLogicalConditionExpression());
 		ternary.positive = eval1Expr(expr.getPositiveResultExpression());
 		ternary.negative = eval1Expr(expr.getNegativeResultExpression());
 		
@@ -2337,7 +2358,6 @@ public class SourceConverterStage2
 				MInfixAssignmentWithDerefOnLeft infix = new MInfixAssignmentWithDerefOnLeft();
 				infix.left = eval1Expr(expr.getOperand1());
 				infix.right = eval1Expr(expr.getOperand2());
-				infix.operator = evaluateBinaryOperator(expr.getOperator());
 				ret.add(infix);
 			}
 			else if (isAssignmentExpression(expr.getOperator()))
@@ -2357,12 +2377,52 @@ public class SourceConverterStage2
 				ret.add(infix);
 			}
 		}
+		else if (isNumberExpression(expr.getOperand1()))
+		{
+			MInfixExpression infix = null;
+			
+			if (expr.getOperator() == IASTBinaryExpression.op_assign)
+			{
+				infix = new MInfixAssignmentWithNumberOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				ret.add(infix);
+			}
+			else if (isAssignmentExpression(expr.getOperator()))
+			{
+				infix = new MCompoundWithNumberOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = compoundAssignmentToInfixOperator(expr.getOperator());
+				ret.add(infix);
+			}
+			else
+			{
+				infix = new MInfixWithNumberOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = evaluateBinaryOperator(expr.getOperator());
+				ret.add(infix);
+			}
+			
+			if (needBooleanExpressions(expr.getOperator()))
+			{
+				infix.left = makeExpressionBoolean(infix.left, expr.getOperand1());
+				infix.right = makeExpressionBoolean(infix.right, expr.getOperand2());
+			}
+			else if (isBooleanExpression(expr.getOperand1()) && expr.getOperator() == IASTBinaryExpression.op_assign)
+			{
+				infix.right = makeExpressionBoolean(infix.right, expr.getOperand2());
+			}
+		}
 		else
 		{
 			MInfixExpressionPlain infix = new MInfixExpressionPlain();
 			infix.left = eval1Expr(expr.getOperand1());
 			infix.right = eval1Expr(expr.getOperand2());
 			infix.operator = evaluateBinaryOperator(expr.getOperator());
+
+
 			
 			ret.add(infix);
 		}
@@ -3266,7 +3326,6 @@ public class SourceConverterStage2
 			IASTDeclarationStatement declarationStatement = (IASTDeclarationStatement)statement;
 			print("Declaration");
 
-			//List<VariableDeclarationFragment> frags = getDeclarationFragments(declarationStatement.getDeclaration());
 			List<String> types = evaluateDeclarationReturnTypes(declarationStatement.getDeclaration());
 			List<String> names = evaluateDeclarationReturnNames(declarationStatement.getDeclaration());
 			List<MExpression> exprs = evaluateDeclarationReturnInitializers((IASTSimpleDeclaration) declarationStatement.getDeclaration());
@@ -3294,7 +3353,8 @@ public class SourceConverterStage2
 			stmts.add(dos);
 			
 			dos.body = surround(evalStmt(doStatement.getBody()));
-			dos.expr = eval1Expr(doStatement.getCondition(), EnumSet.of(Flag.NEED_BOOLEAN));
+			dos.expr = eval1Expr(doStatement.getCondition());
+			dos.expr = makeExpressionBoolean(dos.expr, doStatement.getCondition());
 		}
 		else if (statement instanceof IASTExpressionStatement)
 		{
@@ -3320,7 +3380,10 @@ public class SourceConverterStage2
 				fs.initializer = eval1Stmt(forStatement.getInitializerStatement());
 			
 			if (forStatement.getConditionExpression() != null)
+			{
 				fs.condition = eval1Expr(forStatement.getConditionExpression());
+				fs.condition = makeExpressionBoolean(fs.condition, forStatement.getConditionExpression());
+			}
 
 			if (forStatement.getIterationExpression() != null)
 				fs.updater = eval1Expr(forStatement.getIterationExpression());
@@ -3329,7 +3392,25 @@ public class SourceConverterStage2
 			
 			if (forStatement instanceof ICPPASTForStatement &&
 				((ICPPASTForStatement) forStatement).getConditionDeclaration() != null)
+			{
+				// I really doubt any C++ programmer puts a declaration in the condition space
+				// of a for loop but the language seems to allow it.
+				// eg. for (int a = 1; int b = 3; a++)
 				fs.decl = eval1Decl( ((ICPPASTForStatement) forStatement).getConditionDeclaration() );
+
+				// We need to make an expression var_name = init_expression
+				// TODO: Wrap in brackets.
+				MInfixExpression infix = new MInfixExpressionPlain();
+				infix.left = ModelCreation.createLiteral(fs.decl.name);
+				infix.right = fs.decl.initExpr;
+				infix.operator = "=";
+				
+				IType tp = evaluateDeclarationReturnCppTypes(((ICPPASTForStatement) forStatement).getConditionDeclaration()).get(0);
+				TypeEnum te = getTypeEnum(tp);
+				fs.condition = makeExpressionBoolean(infix, te);
+				
+				fs.decl.initExpr = null;
+			}
 		}
 		else if (statement instanceof IASTIfStatement)
 		{
@@ -3341,23 +3422,17 @@ public class SourceConverterStage2
 			stmts.add(ifs);
 			
 			ifs.condition = eval1Expr(ifStatement.getConditionExpression());
+			ifs.condition = makeExpressionBoolean(ifs.condition, ifStatement.getConditionExpression());
 			ifs.body = surround(evalStmt(ifStatement.getThenClause()));
 
 			if (ifStatement.getElseClause() != null)
 				ifs.elseBody = eval1Stmt(ifStatement.getElseClause());
 
-
-			
-			
-//			if (ifStatement instanceof ICPPASTIfStatement &&
-//				((ICPPASTIfStatement) ifStatement).getConditionDeclaration() != null)
-//			{
-//				ifs.setExpression(generateDeclarationForWhileIf(((ICPPASTIfStatement) ifStatement).getConditionDeclaration(), ret));
-//			}
-//			else
-//			{
-//				//ifs.setExpression(eval1Expr(ifStatement.getConditionExpression(), EnumSet.of(Flag.NEED_BOOLEAN)));
-//			}
+			if (ifStatement instanceof ICPPASTIfStatement &&
+				((ICPPASTIfStatement) ifStatement).getConditionDeclaration() != null)
+			{
+				ifs.decl = eval1Decl(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
+			}
 		}
 		else if (statement instanceof IASTLabelStatement)
 		{
@@ -3382,65 +3457,13 @@ public class SourceConverterStage2
 			
 			retu.expr = eval1Expr(returnStatement.getReturnValue());
 			retu.expr = callCopyIfNeeded(retu.expr, returnStatement.getReturnValue(), EnumSet.noneOf(Flag.class));
-			retu.cleanup = createCleanupCall(0);
-			//
-//			JASTHelper.Method method = jast.newMethod()
-//						.on("StackHelper")
-//						.call("cleanup");
-//			ReturnStatement ret2 = ast.newReturnStatement();
-//			
-//			if (returnStatement.getReturnValue() != null)
-//			{
-//				if (((returnStatement.getReturnValue().getExpressionType() instanceof ICompositeType ||
-//					(returnStatement.getReturnValue().getExpressionType() instanceof IQualifierType &&
-//					((IQualifierType)returnStatement.getReturnValue().getExpressionType()).getType() instanceof ICompositeType)))) 
-//					/* !(eval1Expr(returnStatement.getReturnValue()) instanceof ClassInstanceCreation))) */
-//				{
-//					// Call copy method on returned value...
-//					Expression create = eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flag.IS_RET_VAL));
-//					
-//					if (!(create instanceof ClassInstanceCreation))
-//					{
-//						create = jast.newMethod()
-//							.on(eval1Expr(returnStatement.getReturnValue()))
-//							.call("copy").toAST();
-//					}
-//
-//					if (m_nextVariableId != 0)
-//						method.with(create);
-//					else
-//						ret2.setExpression(create);
-//				}
-//				else
-//				{
-//					if (m_nextVariableId != 0)
-//						method.with(eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flag.IS_RET_VAL)));
-//					else
-//						ret2.setExpression(eval1Expr(returnStatement.getReturnValue(), EnumSet.of(Flag.IS_RET_VAL)));
-//				}	
-//
-//				if (m_nextVariableId != 0)
-//				{
-//					method.with("__stack").with(0);
-//					ret2.setExpression(method.toAST());
-//				}
-//				ret.add(ret2);
-//			}
-//			else
-//			{
-//				if (m_nextVariableId != 0)
-//				{
-//					Block blk = ast.newBlock();
-//					method.with(ast.newNullLiteral())
-//						.with("__stack")
-//						.with(0);
-//					blk.statements().add(ast.newExpressionStatement(method.toAST()));
-//					blk.statements().add(ret2);
-//					ret.add(blk);
-//				}
-//				else
-//					ret.add(ret2);
-//			}
+
+			if (currentReturnType.equals("Boolean"))
+				retu.expr = makeExpressionBoolean(retu.expr, returnStatement.getReturnValue());
+			
+			// Only call cleanup if we have something on the stack.
+			if (m_nextVariableId != 0)
+				retu.cleanup = createCleanupCall(0);
 		}
 		else if (statement instanceof IASTSwitchStatement)
 		{
@@ -3451,57 +3474,12 @@ public class SourceConverterStage2
 			MSwitchStmt swi = new MSwitchStmt();
 			stmts.add(swi);
 			
-			swi.body = eval1Stmt(switchStatement.getBody());
+			swi.body = surround(evalStmt(switchStatement.getBody()));
 			swi.expr = eval1Expr(switchStatement.getControllerExpression());
-			
-			
 
-//			SwitchStatement swt = ast.newSwitchStatement();
-//			
-//			if (switchStatement instanceof ICPPASTSwitchStatement &&
-//				((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration() != null)
-//			{
-//				ICPPASTSwitchStatement cppSwitch = (ICPPASTSwitchStatement) switchStatement;
-//
-//				List<VariableDeclarationFragment> frags = getDeclarationFragments(cppSwitch.getControllerDeclaration());
-//				frags.get(0).setInitializer(null);
-//				VariableDeclarationStatement decl = ast.newVariableDeclarationStatement(frags.get(0));
-//
-//				Type jType = evaluateDeclarationReturnTypes(cppSwitch.getControllerDeclaration()).get(0);
-//				decl.setType(jType);
-//				ret.add(decl);
-//
-//				List<Expression> exprs = evaluateDeclarationReturnInitializers(cppSwitch.getControllerDeclaration(), true);
-//				
-//				Assignment assign = jast.newAssign()
-//						.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
-//						.right(exprs.get(0))
-//						.op(Assignment.Operator.ASSIGN).toAST();
-//
-//				swt.setExpression(assign);
-//			}
-//			else
-//			{
-//				//swt.setExpression(evalExpr(switchStatement.getControllerExpression()).get(0));
-//			}
-//
-//			if (switchStatement.getBody() instanceof IASTCompoundStatement)
-//			{
-//				IASTCompoundStatement compound = (IASTCompoundStatement) switchStatement.getBody();
-//
-//				startNewCompoundStmt(EnumSet.of(Flag.IS_SWITCH));
-//				
-//				for (IASTStatement stmt : compound.getStatements())
-//					swt.statements().addAll(evalStmt(stmt));
-//				
-//				endCompoundStmt();
-//			}
-//			else
-//			{
-//				swt.statements().addAll(evalStmt(switchStatement.getBody(), EnumSet.of(Flag.IS_SWITCH)));
-//			}
-//			
-//			ret.add(swt);
+			if (switchStatement instanceof ICPPASTSwitchStatement &&
+			    ((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration() != null)
+				swi.decl = ((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration();
 		}
 		else if (statement instanceof IASTWhileStatement)
 		{
@@ -3514,13 +3492,11 @@ public class SourceConverterStage2
 			
 			whi.body = surround(evalStmt(whileStatement.getBody()));
 			whi.expr = eval1Expr(whileStatement.getCondition());
+			whi.expr = makeExpressionBoolean(whi.expr, whileStatement.getCondition());
 			
-			
-//			WhileStatement whs = ast.newWhileStatement();
-//
-//			if (whileStatement instanceof ICPPASTWhileStatement &&
-//				((ICPPASTWhileStatement) whileStatement).getConditionDeclaration() != null)
-//				whs.setExpression(generateDeclarationForWhileIf(((ICPPASTWhileStatement)whileStatement).getConditionDeclaration(), ret));
+			if (whileStatement instanceof ICPPASTWhileStatement &&
+				((ICPPASTWhileStatement) whileStatement).getConditionDeclaration() != null)
+				whi.decl = eval1Decl(((ICPPASTWhileStatement)whileStatement).getConditionDeclaration());
 		}
 
 		else if (statement instanceof ICPPASTTryBlockStatement)
@@ -3547,18 +3523,19 @@ public class SourceConverterStage2
 		return stmts;
 	}
 
+	private MExpression makeExpressionBoolean(MExpression exp, IASTExpression expcpp) throws DOMException
+	{
+		return makeExpressionBoolean(exp, expressionGetType(expcpp));
+	}
+	
 	
 	/**
 	 * Attempts to make a Java boolean expression. Eg. Adds != null, != 0, etc.
 	 */
-	private MExpression makeExpressionBoolean(MExpression exp, IASTExpression expcpp) throws DOMException
+	private MExpression makeExpressionBoolean(MExpression exp, TypeEnum expType) throws DOMException
 	{
-		TypeEnum expType = expressionGetType(expcpp);
-
 		if (expType != TypeEnum.BOOLEAN)
 		{
-			// We enclose the non-boolean expression in brackets to be safe...
-
 			MExpression r = null;
 			
 			if (expType == TypeEnum.OBJECT ||
@@ -3624,7 +3601,9 @@ public class SourceConverterStage2
 		ARRAY,
 		ANY,
 		REFERENCE,
-		OTHER
+		OTHER,
+		ENUMERATION,
+		UNKNOWN;
 	};
 
 	/**
@@ -3652,6 +3631,11 @@ public class SourceConverterStage2
 	 */
 	private TypeEnum getTypeEnum(IType type) throws DOMException
 	{
+		if (type instanceof IQualifierType)
+		{
+			type = ((IQualifierType) type).getType();
+		}
+		
 		if (type instanceof IBasicType &&
 				type instanceof ICPPBasicType &&
 				((ICPPBasicType) type).getType() == ICPPBasicType.t_bool)
@@ -3684,8 +3668,14 @@ public class SourceConverterStage2
 		
 		if (type instanceof ICPPTemplateTypeParameter)
 			return TypeEnum.OTHER;
+		
+		if (type instanceof IEnumeration)
+			return TypeEnum.ENUMERATION;
+		
+		if (type instanceof ICPPUnknownType)
+			return TypeEnum.UNKNOWN;
 			
-		printerr("Unknown type: " + type.toString());
+		printerr("Unknown type: " + type.getClass().getInterfaces()[0].toString());
 		exitOnError();
 		return null;
 	}
@@ -3771,6 +3761,29 @@ public class SourceConverterStage2
 		
 		return false;
 	}
+	
+	private boolean isNumberExpression(IASTExpression expr) throws DOMException
+	{
+		TypeEnum te = getTypeEnum(expr.getExpressionType());
+		
+		if (te == TypeEnum.BOOLEAN ||
+			te == TypeEnum.CHAR ||
+			te == TypeEnum.NUMBER)
+			return true;
+		
+		return false;
+	}
+	
+	private boolean isBooleanExpression(IASTExpression expr) throws DOMException
+	{
+		TypeEnum te = getTypeEnum(expr.getExpressionType());
+		
+		if (te == TypeEnum.BOOLEAN)
+			return true;
+		
+		return false;
+	}
+	
 	
 	private boolean isObjectPtr(IType type) throws DOMException
 	{

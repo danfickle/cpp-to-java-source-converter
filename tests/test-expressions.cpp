@@ -33,8 +33,8 @@ int func(int a)
 
   _a ? _b : 10; // 11 -> Ternary
 
-  this._a;  // 12 -> Field reference
-  this._b;  // 13 -> Field reference bitfield
+  this->_a;  // 12 -> Field reference
+  this->_b;  // 13 -> Field reference bitfield
   this->_c; // 14 -> Field reference dereference pointer
   //this._d;  // 15 -> Field reference enum
 
@@ -52,12 +52,12 @@ int func(int a)
   ++_b;   // 33 -> Bitfield prefix increment
   --_b;   // 34 -> Bitfield prefix decrement
 
-  this._b++; // -> Bitfield field reference postfix increment
-  this._b--; // -> Bitfield field reference postfix decrement
+  this->_b++; // -> Bitfield field reference postfix increment
+  this->_b--; // -> Bitfield field reference postfix decrement
 
-  ++this._b; // -> Bitfield field reference prefix increment
-  --this._b; // -> Bitfield field reference prefix decrement
-  ~this._b;  // -> Bitfield field reference prefix
+  ++this->_b; // -> Bitfield field reference prefix increment
+  --this->_b; // -> Bitfield field reference prefix decrement
+  ~this->_b;  // -> Bitfield field reference prefix
 
   myint = 18;  // -> Plain assignment
   myint | 13;  // -> Plain infix
@@ -71,13 +71,13 @@ int func(int a)
   _b | 11;    // -> Bitfield infix
   _b += 12;   // -> Bitfield compound assignment
 
-  this._a = 19;  // -> Field reference assignment
-  this._a ^ 20;  // -> Field reference infix
-  this._a *= 21; // -> Field reference compound
+  this->_a = 19;  // -> Field reference assignment
+  this->_a ^ 20;  // -> Field reference infix
+  this->_a *= 21; // -> Field reference compound
 
-  this._b = 12;  // -> Bitfield field reference assignment
-  this._b ^ 23;  // -> Bitfield field reference infix
-  this._b *= 24; // -> Bitfield field reference compound
+  this->_b = 12;  // -> Bitfield field reference assignment
+  this->_b ^ 23;  // -> Bitfield field reference infix
+  this->_b *= 24; // -> Bitfield field reference compound
 
   myclass._b = 25; // -> Field reference bitfield
 

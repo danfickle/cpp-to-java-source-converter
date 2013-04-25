@@ -1,7 +1,10 @@
 statement_tp(stmt_obj) ::= <<
 
  <if(stmt_obj.isFor)>
-  for (<statement_tp(stmt_obj.initializer)> <expression_tp(stmt_obj.condition, false, false)>; <expression_tp(stmt_obj.updater, false, false)>)<\n>
+  <if(stmt_obj.decl)>
+   <declaration_tp(stmt_obj.decl)>;
+  <endif>
+   for (<statement_tp(stmt_obj.initializer)> <expression_tp(stmt_obj.condition, false, false)>; <expression_tp(stmt_obj.updater, false, false)>)<\n>
     <statement_tp(stmt_obj.body)>
 
  <elseif(stmt_obj.isBreak)>

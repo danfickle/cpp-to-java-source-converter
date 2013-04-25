@@ -3,6 +3,8 @@ package com.github.danfickle.cpptojavasourceconverter;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
+
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 
@@ -90,6 +92,7 @@ public class StmtModels
 		public MStmt body;
 		public MExpression condition;
 		public MStmt elseBody;
+		public MSimpleDecl decl;
 	}
 
 	static class MReturnStmt extends MStmt
@@ -106,6 +109,7 @@ public class StmtModels
 		
 		public MStmt body;
 		public MExpression expr;
+		public MSimpleDecl decl;
 	}
 	
 	static class MSwitchStmt extends MStmt
@@ -114,6 +118,7 @@ public class StmtModels
 		
 		public MStmt body;
 		public MExpression expr;
+		public IASTDeclaration decl;
 	}
 	
 	static class MGotoStmt extends MStmt
