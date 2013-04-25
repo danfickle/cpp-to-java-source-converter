@@ -56,6 +56,12 @@ class ExpressionModels
 		public List<MExpression> args = new ArrayList<MExpression>();
 	}
 	
+	static class MBracketExpression extends MExpression
+	{
+		public boolean isBrackets = true;
+		public MExpression operand;
+	}
+	
 	// 1
 	static class MArrayExpressionPlain extends MArrayExpression
 	{

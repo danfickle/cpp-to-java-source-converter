@@ -73,6 +73,9 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <if(expr_obj.isIdentity)>
    <expr_obj.ident>
 
+  <elseif(expr_obj.isBrackets)>
+   (<expression_tp(expr_obj.operand, false, false)>)
+
   <elseif(expr_obj.isIdentityBitfield)>
     get__<expr_obj.ident>()
 

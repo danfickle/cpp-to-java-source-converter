@@ -118,7 +118,7 @@ public class StmtModels
 		
 		public MStmt body;
 		public MExpression expr;
-		public IASTDeclaration decl;
+		public MSimpleDecl decl;
 	}
 	
 	static class MGotoStmt extends MStmt

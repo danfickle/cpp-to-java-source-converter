@@ -1,7 +1,14 @@
 bool func()
 {
-	// Test declaration in for...
+	// Test declaration in for, while, if and switch...
 	for (int a5 = 1; int b7 = 5; a5 = 2) { }
+	while (int zz1 = 10) { }
+	if (int zz2 = 5) { }
+	switch(int zz3 = 25) { default: break; }
+
+	for (bool zz4 = true; ; ) { }
+	while(bool zz5 = false) { }
+	if (bool zz6 = true) { }
 
 	// Test standard looking for...
 	for (int i = 0; i < 10; i++) 

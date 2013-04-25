@@ -145,6 +145,7 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MAddItemCa
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MAddressOfExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MArrayExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MArrayExpressionPtr;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MBracketExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MCastExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MClassInstanceCreation;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MCompoundWithBitfieldOnLeft;
@@ -1098,6 +1099,11 @@ public class SourceConverterStage2
 		return ret;
 	}
 
+	private IType eval1DeclReturnCppType(IASTDeclaration decl) throws DOMException
+	{
+		return evaluateDeclarationReturnCppTypes(decl).get(0);
+	}
+	
 	private String evaluateDeclSpecifierReturnType(IASTDeclSpecifier declSpecifier) throws DOMException
 	{
 //		evaluateStorageClass(declSpecifier.getStorageClass());
@@ -1572,27 +1578,6 @@ public class SourceConverterStage2
 		return null;
 	}
 
-//	/**
-//	 * Returns the initializer expression for a declaration such as contained 
-//	 * in while (int a = b) {...  
-//	 */
-//	private IASTExpression evalDeclarationReturnFirstInitializerExpression(IASTDeclaration declaration) throws DOMException
-//	{
-//		if (declaration instanceof IASTSimpleDeclaration &&
-//			((IASTSimpleDeclaration) declaration).getDeclarators().length == 1 &&
-//			((IASTSimpleDeclaration) declaration).getDeclarators()[0].getInitializer() instanceof IASTEqualsInitializer &&
-//			((IASTEqualsInitializer)((IASTSimpleDeclaration) declaration).getDeclarators()[0].getInitializer()).getInitializerClause() instanceof IASTExpression)
-//		{
-//			return (IASTExpression) ((IASTEqualsInitializer)((IASTSimpleDeclaration) declaration).getDeclarators()[0].getInitializer()).getInitializerClause();
-//		}
-//		else
-//		{
-//			printerr("Unexpected declaration: " + declaration.getClass().getCanonicalName());
-//			exitOnError();
-//			return null;
-//		}
-//	}
-	
 //	private MExpression generateArrayCreationExpression(IType tp, List<MExpression> sizeExprs) throws DOMException
 //	{
 //		Type jtp = null;
@@ -1911,9 +1896,6 @@ public class SourceConverterStage2
 
 		if (ret.isEmpty())
 			printerr(expression.getClass().getCanonicalName());
-		
-//		if (flags.contains(Flag.NEED_BOOLEAN))
-//			ret.set(0, makeExpressionBoolean(ret.get(0), expression));
 
 		if (expression != null)
 			print(expression.getClass().getCanonicalName());
@@ -2150,8 +2132,7 @@ public class SourceConverterStage2
 		case IASTLiteralExpression.lk_float_constant:
 		case IASTLiteralExpression.lk_string_literal:
 		case IASTLiteralExpression.lk_integer_constant:
-			// TODO: what if 0 is being used as null.
-			out.literal = "MInteger.valueOf(" + String.valueOf(lit.getValue()) + ")";
+			out.literal = String.valueOf(lit.getValue());
 			break;
 		case IASTLiteralExpression.lk_this:
 			out.literal = "this";
@@ -2162,11 +2143,23 @@ public class SourceConverterStage2
 	}
 
 	List<MExpression> expressions = new ArrayList<MExpression>();
-	
+
+	private MExpression bracket(MExpression expr)
+	{
+		MBracketExpression bra = new MBracketExpression();
+		bra.operand = expr;
+		return bra;
+	}
 	
 	private void evalExprUnary(IASTUnaryExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
 	{
-		if (isEventualPtr(expr.getExpressionType()))
+		if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
+		{
+			MBracketExpression bra = new MBracketExpression();
+			bra.operand = eval1Expr(expr.getOperand());
+			ret.add(bra);
+		}
+		else if (isEventualPtr(expr.getExpressionType()))
 		{
 			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
 			{
@@ -2205,14 +2198,6 @@ public class SourceConverterStage2
 				add.operand = eval1Expr(expr.getOperand());
 				ret.add(add);
 			}
-			else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
-			{
-				// TODO
-				MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
-				pre.operand = eval1Expr(expr.getOperand());
-				pre.operator = "(";
-				ret.add(pre);
-			}
 		}
 		else if (expr.getOperator() == IASTUnaryExpression.op_star)
 		{
@@ -2225,14 +2210,6 @@ public class SourceConverterStage2
 			MAddressOfExpression add = new MAddressOfExpression();
 			add.operand = eval1Expr(expr.getOperand());
 			ret.add(add);
-		}
-		else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
-		{
-			// TODO
-			MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
-			pre.operand = eval1Expr(expr.getOperand());
-			pre.operator = "(";
-			ret.add(pre);
 		}
 		else if (isBitfield(expr.getOperand()))
 		{
@@ -2307,14 +2284,14 @@ public class SourceConverterStage2
 			IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
 			for (IASTExpression arg : list.getExpressions())
 			{
-				MExpression exarg = eval1Expr(arg, EnumSet.of(Flag.IN_METHOD_ARGS));
+				MExpression exarg = eval1Expr(arg);
 				exarg = callCopyIfNeeded(exarg, arg, flags);
 				func.args.add(exarg);
 			}
 		}
 		else if (expr.getParameterExpression() instanceof IASTExpression)
 		{
-			MExpression exarg = eval1Expr(expr.getParameterExpression(), EnumSet.of(Flag.IN_METHOD_ARGS));
+			MExpression exarg = eval1Expr(expr.getParameterExpression());
 			exarg = callCopyIfNeeded(exarg, expr.getParameterExpression(), flags);
 			func.args.add(exarg);
 		}
@@ -3036,82 +3013,6 @@ public class SourceConverterStage2
 		return "";
 	}
 
-	/**
-	 * Given a for-statement initializer statement, returns a
-	 * Java list of expressions. 
-	 */
-	private List<MExpression> evaluateForInitializer(IASTStatement stmt) throws DOMException
-	{
-//		if (stmt instanceof IASTExpressionStatement)
-//		{
-//			IASTExpressionStatement expressionStatement = (IASTExpressionStatement) stmt;
-//			print("Expression");
-//
-//			return evalExpr(expressionStatement.getExpression());
-//		}
-//		else if (stmt instanceof IASTDeclarationStatement)
-//		{
-//			IASTDeclarationStatement decl = (IASTDeclarationStatement) stmt;
-//			print("declaration");
-//
-//			List<SimpleName> list = evaluateDeclarationReturnNames(decl.getDeclaration());
-//			List<Expression> inits = evaluateDeclarationReturnInitializers(decl.getDeclaration(), true);
-//			List<Type> types = evaluateDeclarationReturnTypes(decl.getDeclaration());
-//
-//			List<Expression> ret = new ArrayList<Expression>();
-//
-//			for (int i = 0; i < list.size(); i++)
-//			{
-//				VariableDeclarationFragment fr = ast.newVariableDeclarationFragment();
-//				fr.setName(list.get(i));
-//				fr.setInitializer(inits.get(i));
-//				VariableDeclarationExpression expr = ast.newVariableDeclarationExpression(fr);
-//				expr.setType(types.get(i));
-//				ret.add(expr);
-//			}
-//
-//			return ret;
-//		}
-//		else if (stmt instanceof IASTNullStatement)
-//		{
-//			return null;
-//			//
-////			List<Expression> ret = new ArrayList<Expression>();			
-////				ret.add(ast.newBooleanLiteral(true)); // FIXME.
-////				return ret;
-//		}
-//		else if (stmt != null)
-//		{
-//			printerr("Another kind of intializer:" + stmt.getClass().getCanonicalName());
-//			exitOnError();
-//		}
-		return null;
-	}
-	
-//	/**
-//	 * Creates a list of VariableDeclarationFragments. Each fragment includes
-//	 * a name and optionally an initializer (but not a type).
-//	 */
-//	private List<VariableDeclarationFragment> getDeclarationFragments(IASTDeclaration decl) throws DOMException
-//	{
-//		List<SimpleName> names = evaluateDeclarationReturnNames(decl);
-//		List<VariableDeclarationFragment> frags = new ArrayList<VariableDeclarationFragment>();
-//		List<Expression> exprs = evaluateDeclarationReturnInitializers(decl, true);
-//
-//		int j = 0;
-//		for (SimpleName nm : names)
-//		{
-//			VariableDeclarationFragment fr = ast.newVariableDeclarationFragment();
-//			print(nm.toString());
-//			fr.setName(nm);
-//			fr.setInitializer(exprs.get(j));
-//			frags.add(fr);
-//			j++;
-//		}
-//
-//		return frags;
-//	}
-
 	private MStmt createCleanupCall(int until)
 	{
 		MStmt fcall = ModelCreation.createMethodCall("StackHelper", "cleanup", 
@@ -3135,29 +3036,6 @@ public class SourceConverterStage2
 		assert(ret.size() == 1);
 		return ret.get(0);
 	}
-	
-	
-//	private Expression generateDeclarationForWhileIf(IASTDeclaration declaration, List<Statement> ret) throws DOMException
-//	{
-//		List<VariableDeclarationFragment> frags = getDeclarationFragments(declaration);
-//		frags.get(0).setInitializer(null);
-//		VariableDeclarationStatement decl = ast.newVariableDeclarationStatement(frags.get(0));
-//
-//		Type jType = evaluateDeclarationReturnTypes(declaration).get(0);
-//		decl.setType(jType);
-//		ret.add(decl);
-//
-//		List<Expression> exprs = evaluateDeclarationReturnInitializers(declaration, true);
-//
-//		Assignment assign = jast.newAssign()
-//				.left(ast.newSimpleName(frags.get(0).getName().getIdentifier()))
-//				.right(exprs.get(0))
-//				.op(Assignment.Operator.ASSIGN).toAST();
-//
-//		IASTExpression expr = evalDeclarationReturnFirstInitializerExpression(declaration);
-//		Expression finalExpr = makeExpressionBoolean(assign, expr);
-//		return finalExpr;
-//	}
 	
 	private boolean isTerminatingStatement(MStmt mStmt)
 	{
@@ -3191,27 +3069,6 @@ public class SourceConverterStage2
 		compound.statements.addAll(stmts);
 		return compound;
 	}
-	
-//	private MCompoundStmt surround(IASTStatement stmt) throws DOMException
-//	{
-//		MCompoundStmt compound = new MCompoundStmt();
-//		
-//		if (!(stmt instanceof IASTCompoundStatement))
-//		{
-//			compound.statements.add(eval1Stmt(stmt));
-//		}
-//		else
-//		{
-//			IASTCompoundStatement scomp = (IASTCompoundStatement) stmt;
-//		
-//			for (IASTStatement s : scomp.getStatements())
-//			{
-//					compound.statements.add(eval1Stmt(s));
-//			}
-//		}
-//		
-//		return compound;
-//	}
 
 	private List<MStmt> evalStmt(IASTStatement statement) throws DOMException
 	{
@@ -3405,7 +3262,7 @@ public class SourceConverterStage2
 				infix.right = fs.decl.initExpr;
 				infix.operator = "=";
 				
-				IType tp = evaluateDeclarationReturnCppTypes(((ICPPASTForStatement) forStatement).getConditionDeclaration()).get(0);
+				IType tp = eval1DeclReturnCppType(((ICPPASTForStatement) forStatement).getConditionDeclaration());
 				TypeEnum te = getTypeEnum(tp);
 				fs.condition = makeExpressionBoolean(infix, te);
 				
@@ -3432,6 +3289,19 @@ public class SourceConverterStage2
 				((ICPPASTIfStatement) ifStatement).getConditionDeclaration() != null)
 			{
 				ifs.decl = eval1Decl(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
+
+				// We need to make an expression var_name = init_expression
+				// TODO: Wrap in brackets.
+				MInfixExpression infix = new MInfixExpressionPlain();
+				infix.left = ModelCreation.createLiteral(ifs.decl.name);
+				infix.right = ifs.decl.initExpr;
+				infix.operator = "=";
+				
+				IType tp = eval1DeclReturnCppType(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
+				TypeEnum te = getTypeEnum(tp);
+				ifs.condition = makeExpressionBoolean(infix, te);
+				
+				ifs.decl.initExpr = null;
 			}
 		}
 		else if (statement instanceof IASTLabelStatement)
@@ -3479,7 +3349,22 @@ public class SourceConverterStage2
 
 			if (switchStatement instanceof ICPPASTSwitchStatement &&
 			    ((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration() != null)
-				swi.decl = ((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration();
+			{
+				swi.decl = eval1Decl(((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration());
+
+				// We need to make an expression var_name = init_expression
+				// TODO: Wrap in brackets.
+				MInfixExpression infix = new MInfixExpressionPlain();
+				infix.left = ModelCreation.createLiteral(swi.decl.name);
+				infix.right = swi.decl.initExpr;
+				infix.operator = "=";
+				
+				IType tp = eval1DeclReturnCppType(((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration());
+				TypeEnum te = getTypeEnum(tp);
+				swi.expr = makeExpressionBoolean(infix, te);
+				
+				swi.decl.initExpr = null;
+			}
 		}
 		else if (statement instanceof IASTWhileStatement)
 		{
@@ -3496,7 +3381,22 @@ public class SourceConverterStage2
 			
 			if (whileStatement instanceof ICPPASTWhileStatement &&
 				((ICPPASTWhileStatement) whileStatement).getConditionDeclaration() != null)
+			{
 				whi.decl = eval1Decl(((ICPPASTWhileStatement)whileStatement).getConditionDeclaration());
+
+				// We need to make an expression var_name = init_expression
+				// TODO: Wrap in brackets.
+				MInfixExpression infix = new MInfixExpressionPlain();
+				infix.left = ModelCreation.createLiteral(whi.decl.name);
+				infix.right = whi.decl.initExpr;
+				infix.operator = "=";
+				
+				IType tp = eval1DeclReturnCppType(((ICPPASTWhileStatement) whileStatement).getConditionDeclaration());
+				TypeEnum te = getTypeEnum(tp);
+				whi.expr = makeExpressionBoolean(infix, te);
+				
+				whi.decl.initExpr = null;
+			}
 		}
 
 		else if (statement instanceof ICPPASTTryBlockStatement)
@@ -3553,9 +3453,9 @@ public class SourceConverterStage2
 				r = ModelCreation.createLiteral("0");
 			}
 
-			return ModelCreation.createInfixExpr(exp, r, "!=");
+			return bracket(ModelCreation.createInfixExpr(bracket(exp), r, "!="));
 		}
-		return exp;
+		return bracket(exp);
 	}
 
 	/**
@@ -4085,13 +3985,9 @@ public class SourceConverterStage2
 
 	private enum Flag
 	{
-		NEED_BOOLEAN,
 		IS_LOOP,
 		IS_SWITCH,
-		IS_RET_VAL,
-		IN_METHOD_ARGS,
-		ASSIGN_LEFT_SIDE,
-		IN_ADDRESS_OF;
+		ASSIGN_LEFT_SIDE;
 	}
 	
 	// A set of qualified names containing the bitfields...

@@ -41,7 +41,7 @@ statement_tp(stmt_obj) ::= <<
   TODO: problem <stmt_obj.problem>
 
  <elseif(stmt_obj.isDeclStmt)>
-  <declaration_tp(stmt_obj.simple)>
+  <declaration_tp(stmt_obj.simple)>;
 
  <elseif(stmt_obj.isDo)>
   do <\n>
@@ -52,6 +52,9 @@ statement_tp(stmt_obj) ::= <<
   <expression_tp(stmt_obj.expr, false, false)>;
 
  <elseif(stmt_obj.isIf)>
+  <if(stmt_obj.decl)>
+   <declaration_tp(stmt_obj.decl)>;
+  <endif>
   if (<expression_tp(stmt_obj.condition, false, false)>)<\n>
    <statement_tp(stmt_obj.body)>
   <if(stmt_obj.elseBody)>
@@ -63,10 +66,16 @@ statement_tp(stmt_obj) ::= <<
   return (<expression_tp(stmt_obj.expr, false, false)>);
 
  <elseif(stmt_obj.isWhile)>
+  <if(stmt_obj.decl)>
+   <declaration_tp(stmt_obj.decl)>;
+  <endif>
   while (<expression_tp(stmt_obj.expr, false, false)>)<\n>
    <statement_tp(stmt_obj.body)>
 
  <elseif(stmt_obj.isSwitch)>
+  <if(stmt_obj.decl)>
+   <declaration_tp(stmt_obj.decl)>;
+  <endif>
   switch (<expression_tp(stmt_obj.expr, false, false)>)<\n>
    <statement_tp(stmt_obj.body)>
 

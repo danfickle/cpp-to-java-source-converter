@@ -32,7 +32,7 @@ declaration_tp(decl) ::= <<
   }
 
  <elseif(decl.isSimpleDecl)>
-  public<if(decl.isNested)> static<endif> <decl.type> <decl.name><if(decl.initExpr)> = <expression_tp(decl.initExpr, false, false)><endif>;
+  public<if(decl.isNested)> static<endif> <decl.type> <decl.name><if(decl.initExpr)> = <expression_tp(decl.initExpr, false, false)><endif>
 
  <else>
   // ERROR.

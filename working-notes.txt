@@ -34,7 +34,10 @@ return i.copy();
 ---> Note: Only call copy() when we need to. No need if we just created it.
 
 (*(ptr++)) += 3
-ptr.ptrPostInc().set(ptr.ptrOffset(1).get() + 3);
+ptr.ptrPostInc().set(ptr.get() + 3);
+
+(*(--ptr)) += 3
+ptr.set(ptr.adjust(-1).get() + 3);
 
 ---> Note: This is tricky. ptr++ has side effects so we can't call it three times.
 
