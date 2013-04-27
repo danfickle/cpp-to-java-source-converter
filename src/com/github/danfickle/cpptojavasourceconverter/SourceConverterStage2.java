@@ -122,6 +122,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPBasicType;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPBinding;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPClassType;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPConstructor;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPFunctionType;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPMethod;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPParameter;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPReferenceType;
@@ -164,6 +165,7 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MFunctionC
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MFunctionCallExpressionParent;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionBitfield;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionEnumerator;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionNumber;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionPtr;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithBitfieldOnLeft;
@@ -523,7 +525,7 @@ public class SourceConverterStage2
 						for (FieldInfo fieldInfo : fields)
 						{
 							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
-								fieldInfo.init = eval1Expr(chain.getInitializerValue());
+								; // TODOfieldInfo.init = eval1Expr(chain.getInitializerValue());
 						}
 						
 						if (info.hasSuper && chain.getMemberInitializerId().resolveBinding().getName().equals(info.superClass))
@@ -594,6 +596,8 @@ public class SourceConverterStage2
 		else
 			frag.type = cppToJavaType(ifield.getType());
 
+		frag.isPublic = true;
+		
 		addDeclaration(frag);
 		popDeclaration();
 	}
@@ -615,6 +619,8 @@ public class SourceConverterStage2
 		else
 			frag.type = cppToJavaType(ifield.getType());
 
+		frag.isPublic = true;
+		
 		addDeclaration(frag);
 		popDeclaration();
 	}
@@ -1696,7 +1702,7 @@ public class SourceConverterStage2
 			else if (isLongLong)
 				return "Long";
 			else
-				return  "MInteger";
+				return  "Integer";
 		case IASTSimpleDeclSpecifier.t_float:
 			print("float");
 			return "Float";
@@ -1891,7 +1897,7 @@ public class SourceConverterStage2
 		}
 		else if (expression == null)
 		{
-			ret.add(null);
+			ret.add(new MEmptyExpression());
 		}
 
 		if (ret.isEmpty())
@@ -2033,6 +2039,12 @@ public class SourceConverterStage2
 		else if (isEventualPtr(expr.getExpressionType()))
 		{
 			MIdentityExpressionPtr ident = new MIdentityExpressionPtr();
+			ident.ident = getSimpleName(expr.getName());
+			ret.add(ident);
+		}
+		else if (isNumberExpression(expr))
+		{
+			MIdentityExpressionNumber ident = new MIdentityExpressionNumber();
 			ident.ident = getSimpleName(expr.getName());
 			ret.add(ident);
 		}
@@ -2244,6 +2256,12 @@ public class SourceConverterStage2
 				pre.operator = evalUnaryPrefixOperator(expr.getOperator());
 				ret.add(pre);
 			}
+		}
+		else if (isNumberExpression(expr.getOperand()))
+		{
+			// TODO
+			MEmptyExpression empty = new MEmptyExpression();
+			ret.add(empty);
 		}
 		// TODO else if (isEnumerator())
 		else if (isPostfixExpression(expr.getOperator()))
@@ -3253,20 +3271,11 @@ public class SourceConverterStage2
 				// I really doubt any C++ programmer puts a declaration in the condition space
 				// of a for loop but the language seems to allow it.
 				// eg. for (int a = 1; int b = 3; a++)
-				fs.decl = eval1Decl( ((ICPPASTForStatement) forStatement).getConditionDeclaration() );
-
-				// We need to make an expression var_name = init_expression
-				// TODO: Wrap in brackets.
-				MInfixExpression infix = new MInfixExpressionPlain();
-				infix.left = ModelCreation.createLiteral(fs.decl.name);
-				infix.right = fs.decl.initExpr;
-				infix.operator = "=";
-				
 				IType tp = eval1DeclReturnCppType(((ICPPASTForStatement) forStatement).getConditionDeclaration());
-				TypeEnum te = getTypeEnum(tp);
-				fs.condition = makeExpressionBoolean(infix, te);
 				
-				fs.decl.initExpr = null;
+				fs.decl = eval1Decl( ((ICPPASTForStatement) forStatement).getConditionDeclaration() );
+				fs.condition = makeInfixFromDecl(fs.decl.name, fs.decl.initExpr, tp, true);
+				fs.decl.initExpr = makeSimpleCreationExpression(tp);
 			}
 		}
 		else if (statement instanceof IASTIfStatement)
@@ -3288,20 +3297,11 @@ public class SourceConverterStage2
 			if (ifStatement instanceof ICPPASTIfStatement &&
 				((ICPPASTIfStatement) ifStatement).getConditionDeclaration() != null)
 			{
-				ifs.decl = eval1Decl(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
-
-				// We need to make an expression var_name = init_expression
-				// TODO: Wrap in brackets.
-				MInfixExpression infix = new MInfixExpressionPlain();
-				infix.left = ModelCreation.createLiteral(ifs.decl.name);
-				infix.right = ifs.decl.initExpr;
-				infix.operator = "=";
-				
 				IType tp = eval1DeclReturnCppType(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
-				TypeEnum te = getTypeEnum(tp);
-				ifs.condition = makeExpressionBoolean(infix, te);
-				
-				ifs.decl.initExpr = null;
+							
+				ifs.decl = eval1Decl(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
+				ifs.condition = makeInfixFromDecl(ifs.decl.name, ifs.decl.initExpr, tp, true);
+				ifs.decl.initExpr = makeSimpleCreationExpression(tp);
 			}
 		}
 		else if (statement instanceof IASTLabelStatement)
@@ -3350,20 +3350,11 @@ public class SourceConverterStage2
 			if (switchStatement instanceof ICPPASTSwitchStatement &&
 			    ((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration() != null)
 			{
-				swi.decl = eval1Decl(((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration());
-
-				// We need to make an expression var_name = init_expression
-				// TODO: Wrap in brackets.
-				MInfixExpression infix = new MInfixExpressionPlain();
-				infix.left = ModelCreation.createLiteral(swi.decl.name);
-				infix.right = swi.decl.initExpr;
-				infix.operator = "=";
-				
 				IType tp = eval1DeclReturnCppType(((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration());
-				TypeEnum te = getTypeEnum(tp);
-				swi.expr = makeExpressionBoolean(infix, te);
-				
-				swi.decl.initExpr = null;
+
+				swi.decl = eval1Decl(((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration());
+				swi.expr = makeInfixFromDecl(swi.decl.name, swi.decl.initExpr, tp, false);
+				swi.decl.initExpr = makeSimpleCreationExpression(tp);
 			}
 		}
 		else if (statement instanceof IASTWhileStatement)
@@ -3382,23 +3373,13 @@ public class SourceConverterStage2
 			if (whileStatement instanceof ICPPASTWhileStatement &&
 				((ICPPASTWhileStatement) whileStatement).getConditionDeclaration() != null)
 			{
-				whi.decl = eval1Decl(((ICPPASTWhileStatement)whileStatement).getConditionDeclaration());
-
-				// We need to make an expression var_name = init_expression
-				// TODO: Wrap in brackets.
-				MInfixExpression infix = new MInfixExpressionPlain();
-				infix.left = ModelCreation.createLiteral(whi.decl.name);
-				infix.right = whi.decl.initExpr;
-				infix.operator = "=";
-				
 				IType tp = eval1DeclReturnCppType(((ICPPASTWhileStatement) whileStatement).getConditionDeclaration());
-				TypeEnum te = getTypeEnum(tp);
-				whi.expr = makeExpressionBoolean(infix, te);
 				
-				whi.decl.initExpr = null;
+				whi.decl = eval1Decl(((ICPPASTWhileStatement)whileStatement).getConditionDeclaration());
+				whi.expr = makeInfixFromDecl(whi.decl.name, whi.decl.initExpr, tp, true);
+				whi.decl.initExpr = makeSimpleCreationExpression(tp);
 			}
 		}
-
 		else if (statement instanceof ICPPASTTryBlockStatement)
 		{
 //			ICPPASTTryBlockStatement tryBlockStatement = (ICPPASTTryBlockStatement)statement;
@@ -3421,6 +3402,53 @@ public class SourceConverterStage2
 		if (stmts.isEmpty())
 			stmts.add(new MEmptyStmt()); // TODO
 		return stmts;
+	}
+	
+	
+	/**
+	 * Given a type, creates a new expression.
+	 * eg. 'int' becomes 'new MInteger()'
+	 */
+	private MExpression makeSimpleCreationExpression(IType tp) throws DOMException
+	{
+		MClassInstanceCreation create = new MClassInstanceCreation();
+		create.name = ModelCreation.createLiteral(cppToJavaType(tp));
+		return create;
+	}
+
+	/**
+	 * Given a declaration like: int a = 5;
+	 * Returns an infix expression: a.set(5);
+	 * Optionally the return expression is made into a boolean expression.
+	 * Used to split up the declaration into two parts for if, while,
+	 * switch and for condition declarations.
+	 * Example:
+	 *   while (int a = 10) {}
+	 * becomes:
+	 *   MInteger a = new MInteger();
+	 *   while ((a.set(10)) != 0) {}
+	 */
+	private MExpression makeInfixFromDecl(String varName, MExpression initExpr, IType tp, boolean makeBoolean) throws DOMException
+	{
+		TypeEnum te = getTypeEnum(tp);
+		MInfixExpression infix = null;
+		
+		if (te == TypeEnum.CHAR || te == TypeEnum.BOOLEAN || te == TypeEnum.NUMBER)
+		{
+			infix = new MInfixAssignmentWithNumberOnLeft();
+			infix.left = ModelCreation.createNumberId(varName);
+		}
+		else
+		{
+			infix = new MInfixExpressionPlain();
+			infix.left = ModelCreation.createLiteral(varName);
+		}
+		// TODO pointers.
+		
+		infix.right = initExpr;
+		infix.operator = "=";
+
+		return makeBoolean ? makeExpressionBoolean(infix, te) : bracket(infix);
 	}
 
 	private MExpression makeExpressionBoolean(MExpression exp, IASTExpression expcpp) throws DOMException
@@ -3503,7 +3531,8 @@ public class SourceConverterStage2
 		REFERENCE,
 		OTHER,
 		ENUMERATION,
-		UNKNOWN;
+		UNKNOWN,
+		FUNCTION;
 	};
 
 	/**
@@ -3574,6 +3603,15 @@ public class SourceConverterStage2
 		
 		if (type instanceof ICPPUnknownType)
 			return TypeEnum.UNKNOWN;
+		
+		if (type instanceof ICPPFunctionType)
+			return TypeEnum.FUNCTION;
+		
+		if (type instanceof IProblemType)
+		{
+			printerr(((IProblemType) type).getMessage());
+			return TypeEnum.UNKNOWN;
+		}
 			
 		printerr("Unknown type: " + type.getClass().getInterfaces()[0].toString());
 		exitOnError();
@@ -3763,7 +3801,7 @@ public class SourceConverterStage2
 			IBasicType basic = (IBasicType) type;
 			
 			//if (needBoxed)
-				return evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
+				return "M" + evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 			//return evaluateSimpleType(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 		}
 		else if (type instanceof IArrayType)

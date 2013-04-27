@@ -143,6 +143,11 @@ class ExpressionModels
 		public boolean isIdentityBitfield = true;
 	}
 
+	static class MIdentityExpressionNumber extends MIdentityExpression
+	{
+		public boolean isIdentityNumber = true;
+	}
+	
 	// 9
 	static class MIdentityExpressionPtr extends MIdentityExpression
 	{
@@ -177,6 +182,11 @@ class ExpressionModels
 	static class MFieldReferenceExpressionBitfield extends MFieldReferenceExpression
 	{
 		public boolean isFieldReferenceBitfield = true;
+	}
+	
+	static class MFieldReferenceExpressionNumber extends MFieldReferenceExpression
+	{
+		public boolean isFieldReferenceNumber = true;
 	}
 	
 	// 14

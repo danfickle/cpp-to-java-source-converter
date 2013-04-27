@@ -5,6 +5,9 @@ import java.util.Arrays;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MFieldReferenceExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MFunctionCallExpression;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpression;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionNumber;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MLiteralExpression;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MExprStmt;
@@ -38,6 +41,21 @@ public class ModelCreation
 		lit1.literal = literal;
 		return lit1;
 	}
+	
+	static MIdentityExpression createId(String name)
+	{
+		MIdentityExpressionPlain ident = new MIdentityExpressionPlain();
+		ident.ident = name;
+		return ident;
+	}
+
+	static MIdentityExpression createNumberId(String name)
+	{
+		MIdentityExpressionNumber ident = new MIdentityExpressionNumber();
+		ident.ident = name;
+		return ident;
+	}
+
 	
 	/**
 	 * Results in obj.field as expression.

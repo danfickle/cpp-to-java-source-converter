@@ -2,7 +2,7 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
 
 <if(want_lvalue_obj && want_lvalue_field)>
 
-  <! Return the plain object name. !>
+  <! Return the plain object name without trailing dot. !>
 
   <if(expr_obj.isLiteral)>
     <expr_obj.literal>
@@ -12,6 +12,9 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
 
   <elseif(expr_obj.isIdentityPtr)>
     <expr_obj.ident>
+
+  <else>
+    /* 1 */
 
   <endif>
 
@@ -35,7 +38,7 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
     <expression_tp(expr_obj.object, false, false)>.<expr_obj.field>.
 
   <else>
-    <! nothing !>
+    /* 2 */
 
   <endif>
 
@@ -52,6 +55,9 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <elseif(expr_obj.isFieldReferencePtr)>
     <expr_obj.field>
 
+  <elseif(expr_obj.isFieldReferenceNumber)>
+    <expr_obj.field>
+
   <elseif(expr_obj.isIdentity)>
     <expr_obj.ident>
 
@@ -61,8 +67,11 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <elseif(expr_obj.isIdentityPtr)>
     <expr_obj.ident>
 
+  <elseif(expr_obj.isIdentityNumber)>
+    <expr_obj.ident>
+
   <else>
-    PROBLEM
+    /* 3 */
 
   <endif>
 
@@ -73,9 +82,6 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <if(expr_obj.isIdentity)>
    <expr_obj.ident>
 
-  <elseif(expr_obj.isBrackets)>
-   (<expression_tp(expr_obj.operand, false, false)>)
-
   <elseif(expr_obj.isIdentityBitfield)>
     get__<expr_obj.ident>()
 
@@ -84,6 +90,12 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
 
   <elseif(expr_obj.isIdentityPtr)>
     <expr_obj.ident>
+
+  <elseif(expr_obj.isIdentityNumber)>
+    <expr_obj.ident>.get()
+
+  <elseif(expr_obj.isBrackets)>
+   (<expression_tp(expr_obj.operand, false, false)>)
 
   <elseif(expr_obj.isLiteral)>
     <expr_obj.literal>
@@ -213,6 +225,15 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
 
   <elseif(expr_obj.isAddressOf)>
     <expression_tp(expr_obj.operand, false, false)>.addressOf()
+
+  <elseif(expr_obj.isEmpty)>
+    /* Empty expression */
+
+  <elseif(!expr_obj)>
+    /* Null expression */
+
+  <else>
+    /* 4 */
 
   <endif>
 

@@ -3,8 +3,6 @@ package com.github.danfickle.cpptojavasourceconverter;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
-
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 
