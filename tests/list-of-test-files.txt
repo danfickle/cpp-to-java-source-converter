@@ -13,3 +13,4 @@ test-operator-overloading
 test-templates
 test-expressions
 test-copying
+test-numbers

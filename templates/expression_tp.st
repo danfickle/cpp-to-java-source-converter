@@ -1,81 +1,4 @@
-expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <% 
-
-<if(want_lvalue_obj && want_lvalue_field)>
-
-  <! Return the plain object name without trailing dot. !>
-
-  <if(expr_obj.isLiteral)>
-    <expr_obj.literal>
-
-  <elseif(expr_obj.isIdentity)>
-    <expr_obj.ident>
-
-  <elseif(expr_obj.isIdentityPtr)>
-    <expr_obj.ident>
-
-  <else>
-    /* 1 */
-
-  <endif>
-
-<elseif(want_lvalue_obj)>
-
-  <! Return the plain object name. !>
-
-  <if(expr_obj.isFieldReference)>
-    <expression_tp(expr_obj.object, true, true)>.
-
-  <elseif(expr_obj.isFieldReferenceBitfield)>
-    <expression_tp(expr_obj.object, true, true)>.
-
-  <elseif(expr_obj.isPtrArray)>
-   <expression_tp(expr_obj.operand, false, false)>.add(<expr_obj.subscript:{s | <expression_tp(s, false, false)>}; separator=", ">).
-
-  <elseif(expr_obj.isPrefixPointerStar)>
-    <expression_tp(expr_obj.operand, false, false)>.
-
-  <elseif(expr_obj.isFieldReferencePtr)>
-    <expression_tp(expr_obj.object, false, false)>.<expr_obj.field>.
-
-  <else>
-    /* 2 */
-
-  <endif>
-
-<elseif(want_lvalue_field)>
-
-  <! Return the plain identity. !>
-
-  <if(expr_obj.isFieldReference)>
-    <expr_obj.field>
-
-  <elseif(expr_obj.isFieldReferenceBitfield)>
-    <expr_obj.field>
-
-  <elseif(expr_obj.isFieldReferencePtr)>
-    <expr_obj.field>
-
-  <elseif(expr_obj.isFieldReferenceNumber)>
-    <expr_obj.field>
-
-  <elseif(expr_obj.isIdentity)>
-    <expr_obj.ident>
-
-  <elseif(expr_obj.isIdentityBitfield)>
-    <expr_obj.ident>
-
-  <elseif(expr_obj.isIdentityPtr)>
-    <expr_obj.ident>
-
-  <elseif(expr_obj.isIdentityNumber)>
-    <expr_obj.ident>
-
-  <else>
-    /* 3 */
-
-  <endif>
-
-<else>
+expression_tp(expr_obj) ::= <% 
 
   <! Return a complete expression. !>
 
@@ -94,137 +17,146 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
   <elseif(expr_obj.isIdentityNumber)>
     <expr_obj.ident>.get()
 
+  <elseif(expr_obj.isPostfixNumberInc)>
+    <plain_variable_tp(expr_obj.operand)>.postInc().get()
+
+  <elseif(expr_obj.isPostfixNumberDec)>
+    <plain_variable_tp(expr_obj.operand)>.postDec().get()
+
+  <elseif(expr_obj.isPrefixNumberInc)>
+    <plain_variable_tp(expr_obj.operand)>.set(<expression_tp(expr_obj.operand)> + 1)
+
+  <elseif(expr_obj.isPrefixNumberDec)>
+    <plain_variable_tp(expr_obj.operand)>.set(<expression_tp(expr_obj.operand)> - 1)
+
+  <elseif(expr_obj.isAssignmentWithNumberOnLeft)>
+    <plain_variable_tp(expr_obj.left)>.set(<expression_tp(expr_obj.right)>)
+
+  <elseif(expr_obj.isCompoundWithNumberOnLeft)>
+    <plain_variable_tp(expr_obj.left)>.set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
+
+  <elseif(expr_obj.isValueOfNumber)>
+    <expr_obj.type>.valueOf(<expression_tp(expr_obj.operand)>)
+
   <elseif(expr_obj.isBrackets)>
-   (<expression_tp(expr_obj.operand, false, false)>)
+   (<expression_tp(expr_obj.operand)>)
 
   <elseif(expr_obj.isLiteral)>
     <expr_obj.literal>
 
   <elseif(expr_obj.isPrefix)>
-    <expr_obj.operator><expression_tp(expr_obj.operand, false, false)>
+    <expr_obj.operator><expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isPrefixPointerInc)>
-    <expression_tp(expr_obj.operand, false, false)>.adjust(1)
+    <expression_tp(expr_obj.operand)>.adjust(1)
 
   <elseif(expr_obj.isPrefixPointerDec)>
-    <expression_tp(expr_obj.operand, false, false)>.adjust(-1)
+    <expression_tp(expr_obj.operand)>.adjust(-1)
 
   <elseif(expr_obj.isPrefixPointerStar)>
-    <expression_tp(expr_obj.operand, false, false)>.get()
+    <expression_tp(expr_obj.operand)>.get()
 
   <elseif(expr_obj.isPrefixBitfieldInc)>
-    <expression_tp(expr_obj.operand, true, false)>set__<expression_tp(expr_obj.operand, false, true)>(<expression_tp(expr_obj.operand, false, false)> + 1)
+    <plain_object_tp(expr_obj.operand)>set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> + 1)
 
   <elseif(expr_obj.isPrefixBitfieldDec)>
-    <expression_tp(expr_obj.operand, true, false)>set__<expression_tp(expr_obj.operand, false, true)>(<expression_tp(expr_obj.operand, false, false)> - 1)
+    <plain_object_tp(expr_obj.operand)>set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> - 1)
 
   <elseif(expr_obj.isPrefixBitfield)>
-    <expr_obj.operator><expression_tp(expr_obj.operand, false, false)>
-
- <! <elseif(expr_obj.isPostfix)>
-    <expression_tp(expr_obj.operand, true, false)><expr_obj.operator> !>
+    <expr_obj.operator><expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isPostfixPointerInc)>
-    <expression_tp(expr_obj.operand, false, false)>.postinc()
+    <expression_tp(expr_obj.operand)>.postinc()
 
   <elseif(expr_obj.isPostfixPointerDec)>
-    <expression_tp(expr_obj.operand, false, false)>.postdec()
+    <expression_tp(expr_obj.operand)>.postdec()
 
   <elseif(expr_obj.isPostfixBitfieldInc)>
-    <expression_tp(expr_obj.operand, true, false)>postInc__<expression_tp(expr_obj.operand, false, true)>()
+    <plain_object_tp(expr_obj.operand)>postInc__<plain_name_tp(expr_obj.operand)>()
 
   <elseif(expr_obj.isPostfixBitfieldDec)>
-    <expression_tp(expr_obj.operand, true, false)>postDec__<expression_tp(expr_obj.operand, false, true)>()
+    <plain_object_tp(expr_obj.operand)>postDec__<plain_name_tp(expr_obj.operand)>()
 
   <elseif(expr_obj.isFieldReference)>
-    <expression_tp(expr_obj.object, false, false)>.<expr_obj.field>
+    <expression_tp(expr_obj.object)>.<expr_obj.field>
 
   <elseif(expr_obj.isFieldReferenceBitfield)>
-    <expression_tp(expr_obj.object, false, false)>.get__<expr_obj.field>()
+    <expression_tp(expr_obj.object)>.get__<expr_obj.field>()
 
   <elseif(expr_obj.isFieldReferencePtr)>
-    <expression_tp(expr_obj.object, false, false)>.<expr_obj.field>.get()
+    <expression_tp(expr_obj.object)>.<expr_obj.field>.get()
 
   <elseif(expr_obj.isFieldReferenceEnumerator)>
-    <expression_tp(expr_obj.object, false, false)>.<expr_obj.field>.val
+    <expression_tp(expr_obj.object)>.<expr_obj.field>.val
 
   <elseif(expr_obj.isPrefix)>
-    <expr_obj.operator><expression_tp(expr_obj.operand, false, false)>
+    <expr_obj.operator><expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isPostfix)>
-    <expression_tp(expr_obj.operand, false, false)><expr_obj.operator>
+    <expression_tp(expr_obj.operand)><expr_obj.operator>
 
   <elseif(expr_obj.isTernary)>
-    <expression_tp(expr_obj.condition, false, false)> ? <expression_tp(expr_obj.positive, false, false)> : <expression_tp(expr_obj.negative, false, false)>
+    <expression_tp(expr_obj.condition)> ? <expression_tp(expr_obj.positive)> : <expression_tp(expr_obj.negative)>
 
   <elseif(expr_obj.isArray)>
-    <expression_tp(expr_obj.operand, false, false)><expr_obj.subscript:{s | [<expression_tp(s, false, false)>]}>
+    <expression_tp(expr_obj.operand)><expr_obj.subscript:{s | [<expression_tp(s)>]}>
 
   <elseif(expr_obj.isPtrArray)>
-   <expression_tp(expr_obj.operand, false, false)>.add(<expr_obj.subscript:{s | <expression_tp(s, false, false)>}; separator=", ">).get()
+   <expression_tp(expr_obj.operand)>.add(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).get()
 
   <elseif(expr_obj.isFunctionCall)>
-    <expression_tp(expr_obj.name, false, false)>(<expr_obj.args:{a | <expression_tp(a, false, false)>}; separator=", ">)
+    <expression_tp(expr_obj.name)>(<expr_obj.args:{a | <expression_tp(a)>}; separator=", ">)
 
   <elseif(expr_obj.isClassInstanceCreation)>
-    new <expression_tp(expr_obj.name, false, false)>(<expr_obj.args:{a | <expression_tp(a, false, false)>}; separator=", ">)
+    new <expression_tp(expr_obj.name)>(<expr_obj.args:{a | <expression_tp(a)>}; separator=", ">)
 
   <elseif(expr_obj.isAddItemCall)>
-    StackHelper.addItem(<expression_tp(expr_obj.operand, false, false)>, <expr_obj.nextFreeStackId>, __stack)
+    StackHelper.addItem(<expression_tp(expr_obj.operand)>, <expr_obj.nextFreeStackId>, __stack)
 
   <elseif(expr_obj.isCast)>
-    (<expr_obj.type>) <expression_tp(expr_obj.operand, false, false)>
+    (<expr_obj.type>) <expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isInfix)>
-    <expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>
+    <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
 
   <elseif(expr_obj.isInfixWithBitfieldOnLeft)>
-    <expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>
+    <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
 
   <elseif(expr_obj.isAssignmentWithBitfieldOnLeft)>
-    <expression_tp(expr_obj.left, true, false)>set__<expression_tp(expr_obj.left, false, true)>(<expression_tp(expr_obj.right, false, false)>)
+    <plain_object_tp(expr_obj.left)>set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isCompoundWithBitfieldOnLeft)>
-    <expression_tp(expr_obj.left, true, false)>set__<expression_tp(expr_obj.left, false, true)>(<expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>)
-
-  <elseif(expr_obj.isInfixWithNumberOnLeft)>
-    <expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>
-
-  <elseif(expr_obj.isAssignmentWithNumberOnLeft)>
-    <expression_tp(expr_obj.left, true, false)><expression_tp(expr_obj.left, false, true)>.set(<expression_tp(expr_obj.right, false, false)>)
-
-  <elseif(expr_obj.isCompoundWithNumberOnLeft)>
-    <expression_tp(expr_obj.left, true, false)><expression_tp(expr_obj.left, false, true)>.set(<expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>)
+    <plain_object_tp(expr_obj.left)>set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isInfixWithDerefOnLeft)>
-    <expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>
+    <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
 
   <elseif(expr_obj.isAssignmentWithDerefOnLeft)>
-    <expression_tp(expr_obj.left, true, false)>set(<expression_tp(expr_obj.right, false, false)>)
+    <plain_object_tp(expr_obj.left)>set(<expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isCompoundWithDerefOnLeft)>
-    <expression_tp(expr_obj.left, true, false)>set(<expression_tp(expr_obj.left, false, false)> <expr_obj.operator> <expression_tp(expr_obj.right, false, false)>)
+    <plain_object_tp(expr_obj.left)>set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isDeleteObjectSingle)>
-    <expression_tp(expr_obj.operand, false, false)>.destruct()
+    <expression_tp(expr_obj.operand)>.destruct()
 
   <elseif(expr_obj.isDeleteObjectMultiple)>
-    DestructHelper.destructArray(<expression_tp(expr_obj.operand, false, false)>)
+    DestructHelper.destructArray(<expression_tp(expr_obj.operand)>)
 
   <elseif(expr_obj.isBasicNewArray)>
-    PTR.new<expr_obj.type>Ptr(new <expr_obj.type><expr_obj.sizes:{s | [<expression_tp(s, false, false)>]}; separator=", ">)
+    PTR.new<expr_obj.type>Ptr(new <expr_obj.type><expr_obj.sizes:{s | [<expression_tp(s)>]}; separator=", ">)
 
   <elseif(expr_obj.isObjectNewArray)>
-    PTR.newObjPtr(CreateHelper.allocateArray(<expr_obj.type>.class, <expr_obj.sizes:{s | <expression_tp(s, false, false)>}; separator=", ">)
+    PTR.newObjPtr(CreateHelper.allocateArray(<expr_obj.type>.class, <expr_obj.sizes:{s | <expression_tp(s)>}; separator=", ">)
 
   <elseif(expr_obj.isNewSingle)>
-    PTR.new<expr_obj.type>Ptr(<expression_tp(expr_obj.argument, false, false)>)
+    PTR.new<expr_obj.type>Ptr(<expression_tp(expr_obj.argument)>)
 
   <elseif(expr_obj.isNewObject)>
-    new <expr_obj.type>(<expr_obj.arguments:{a | <expression_tp(a, false, false)>}; separator=", ">)
+    new <expr_obj.type>(<expr_obj.arguments:{a | <expression_tp(a)>}; separator=", ">)
 
   <elseif(expr_obj.isAddressOf)>
-    <expression_tp(expr_obj.operand, false, false)>.addressOf()
+    <plain_variable_tp(expr_obj.operand)>.addressOf()
 
   <elseif(expr_obj.isEmpty)>
     /* Empty expression */
@@ -236,8 +168,6 @@ expression_tp(expr_obj, want_lvalue_obj, want_lvalue_field) ::= <%
     /* 4 */
 
   <endif>
-
-<endif>
 
 %>
 

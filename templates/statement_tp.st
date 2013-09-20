@@ -4,7 +4,7 @@ statement_tp(stmt_obj) ::= <<
   <if(stmt_obj.decl)>
    <declaration_tp(stmt_obj.decl)>;
   <endif>
-   for (<statement_tp(stmt_obj.initializer)> <expression_tp(stmt_obj.condition, false, false)>; <expression_tp(stmt_obj.updater, false, false)>)<\n>
+   for (<statement_tp(stmt_obj.initializer)> <expression_tp(stmt_obj.condition)>; <expression_tp(stmt_obj.updater)>)<\n>
     <statement_tp(stmt_obj.body)>
 
  <elseif(stmt_obj.isBreak)>
@@ -16,7 +16,7 @@ statement_tp(stmt_obj) ::= <<
    continue;
 
  <elseif(stmt_obj.isCase)>
-  case (<expression_tp(stmt_obj.expr, false, false)>):
+  case (<expression_tp(stmt_obj.expr)>):
 
  <elseif(stmt_obj.isDefault)>
   default:
@@ -46,16 +46,16 @@ statement_tp(stmt_obj) ::= <<
  <elseif(stmt_obj.isDo)>
   do <\n>
    <statement_tp(stmt_obj.body)>
-  while (<expression_tp(stmt_obj.expr, false, false)>);
+  while (<expression_tp(stmt_obj.expr)>);
 
  <elseif(stmt_obj.isExprStmt)>
-  <expression_tp(stmt_obj.expr, false, false)>;
+  <expression_tp(stmt_obj.expr)>;
 
  <elseif(stmt_obj.isIf)>
   <if(stmt_obj.decl)>
    <declaration_tp(stmt_obj.decl)>;
   <endif>
-  if (<expression_tp(stmt_obj.condition, false, false)>)<\n>
+  if (<expression_tp(stmt_obj.condition)>)<\n>
    <statement_tp(stmt_obj.body)>
   <if(stmt_obj.elseBody)>
    else <statement_tp(stmt_obj.elseBody)>
@@ -63,20 +63,20 @@ statement_tp(stmt_obj) ::= <<
 
  <elseif(stmt_obj.isReturn)>
   <statement_tp(stmt_obj.cleanup)><\n>
-  return (<expression_tp(stmt_obj.expr, false, false)>);
+  return (<expression_tp(stmt_obj.expr)>);
 
  <elseif(stmt_obj.isWhile)>
   <if(stmt_obj.decl)>
    <declaration_tp(stmt_obj.decl)>;
   <endif>
-  while (<expression_tp(stmt_obj.expr, false, false)>)<\n>
+  while (<expression_tp(stmt_obj.expr)>)<\n>
    <statement_tp(stmt_obj.body)>
 
  <elseif(stmt_obj.isSwitch)>
   <if(stmt_obj.decl)>
    <declaration_tp(stmt_obj.decl)>;
   <endif>
-  switch (<expression_tp(stmt_obj.expr, false, false)>)<\n>
+  switch (<expression_tp(stmt_obj.expr)>)<\n>
    <statement_tp(stmt_obj.body)>
 
  <elseif(stmt_obj.isSuperStmt)>

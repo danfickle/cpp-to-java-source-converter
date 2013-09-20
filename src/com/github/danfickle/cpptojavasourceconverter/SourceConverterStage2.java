@@ -14,7 +14,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -183,18 +182,23 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MNewExpres
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MNewExpressionObject;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPostfixExpressionBitfieldDec;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPostfixExpressionBitfieldInc;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPostfixExpressionNumberDec;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPostfixExpressionNumberInc;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPostfixExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPostfixExpressionPointerDec;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPostfixExpressionPointerInc;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionBitfield;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionBitfieldDec;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionBitfieldInc;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionNumberDec;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionNumberInc;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionPointer;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionPointerDec;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionPointerInc;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MPrefixExpressionPointerStar;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MTernaryExpression;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MValueOfExpressionNumber;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MBreakStmt;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MCaseStmt;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MCompoundStmt;
@@ -1780,46 +1784,35 @@ public class SourceConverterStage2
 		return exprs.get(0);
 	}
 	
-	private MExpression eval1Expr(IASTExpression expr, EnumSet<Flag> flags) throws DOMException
+	private MExpression callCopyIfNeeded(MExpression expr, IASTExpression cppExpr) throws DOMException
 	{
-		List<MExpression> exprs = evalExpr(expr, flags);
-		assert(exprs.size() == 1);
-		return exprs.get(0);
-	}
-	
-	private List<MExpression> evalExpr(IASTExpression expression) throws DOMException
-	{
-		return evalExpr(expression, EnumSet.noneOf(Flag.class));
-	}
-	
-	private MExpression callCopyIfNeeded(MExpression expr, IASTExpression cppExpr, EnumSet<Flag> flags) throws DOMException
-	{
-		TypeEnum te = getTypeEnum(cppExpr.getExpressionType());
+//		TypeEnum te = getTypeEnum(cppExpr.getExpressionType());
 
 		if (expr instanceof MClassInstanceCreation)
 			return expr;
 		
-		if (te != TypeEnum.POINTER &&
-			te != TypeEnum.REFERENCE)
-		{
-			MFunctionCallExpression copy = new MFunctionCallExpression();
-			MFieldReferenceExpression field = ModelCreation.createFieldReference(expr, "copy");
-			copy.name = field;
-			return copy;
-		}
-		else
-		{
-			MFunctionCallExpression copy = new MFunctionCallExpression();
-			MFieldReferenceExpression field = ModelCreation.createFieldReference(expr, "ptrCopy");
-			copy.name = field;
-			return copy;
-		}
+		return expr;
+//		if (te != TypeEnum.POINTER &&
+//			te != TypeEnum.REFERENCE)
+//		{
+//			MFunctionCallExpression copy = new MFunctionCallExpression();
+//			MFieldReferenceExpression field = ModelCreation.createFieldReference(expr, "copy");
+//			copy.name = field;
+//			return copy;
+//		}
+//		else
+//		{
+//			MFunctionCallExpression copy = new MFunctionCallExpression();
+//			MFieldReferenceExpression field = ModelCreation.createFieldReference(expr, "ptrCopy");
+//			copy.name = field;
+//			return copy;
+//		}
 	}
 
 	/**
 	 * Given a C++ expression, attempts to convert it into one or more Java expressions.
 	 */
-	private List<MExpression> evalExpr(IASTExpression expression, EnumSet<Flag> flags) throws DOMException
+	private List<MExpression> evalExpr(IASTExpression expression) throws DOMException
 	{
 		List<MExpression> ret = new ArrayList<MExpression>();
 		
@@ -1829,43 +1822,43 @@ public class SourceConverterStage2
 		}
 		else if (expression instanceof IASTIdExpression)
 		{
-			evalExprId((IASTIdExpression) expression, ret, flags);
+			evalExprId((IASTIdExpression) expression, ret);
 		}
 		else if (expression instanceof IASTFieldReference)
 		{
-			evalExprFieldReference((IASTFieldReference) expression, ret, flags);
+			evalExprFieldReference((IASTFieldReference) expression, ret);
 		}
 		else if (expression instanceof IASTUnaryExpression)
 		{
-			evalExprUnary((IASTUnaryExpression) expression, ret, flags);
+			evalExprUnary((IASTUnaryExpression) expression, ret);
 		}
 		else if (expression instanceof IASTConditionalExpression)
 		{
-			evalExprConditional((IASTConditionalExpression) expression, ret, flags);
+			evalExprConditional((IASTConditionalExpression) expression, ret);
 		}
 		else if (expression instanceof IASTArraySubscriptExpression)
 		{
-			evalExprArraySubscript((IASTArraySubscriptExpression) expression, ret, flags);
+			evalExprArraySubscript((IASTArraySubscriptExpression) expression, ret);
 		}
 		else if (expression instanceof IASTBinaryExpression)
 		{
-			evalExprBinary((IASTBinaryExpression) expression, ret, flags);
+			evalExprBinary((IASTBinaryExpression) expression, ret);
 		}
 		else if (expression instanceof ICPPASTDeleteExpression)
 		{
-			evalExprDelete((ICPPASTDeleteExpression) expression, ret, flags);
+			evalExprDelete((ICPPASTDeleteExpression) expression, ret);
 		}
 		else if (expression instanceof ICPPASTNewExpression)
 		{
-			evalExprNew((ICPPASTNewExpression) expression, ret, flags);
+			evalExprNew((ICPPASTNewExpression) expression, ret);
 		}
 		else if (expression instanceof IASTFunctionCallExpression)
 		{
-			evalExprFuncCall((IASTFunctionCallExpression) expression, ret, flags);
+			evalExprFuncCall((IASTFunctionCallExpression) expression, ret);
 		}
 		else if (expression instanceof IASTCastExpression)
 		{
-			evalCastExpression((IASTCastExpression) expression, ret, flags);
+			evalCastExpression((IASTCastExpression) expression, ret);
 		}
 		else if (expression instanceof IASTTypeIdExpression)
 		{
@@ -1920,7 +1913,7 @@ public class SourceConverterStage2
 		return eval1Expr(expr);
 	}
 
-	private void evalExprNew(ICPPASTNewExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalExprNew(ICPPASTNewExpression expr, List<MExpression> ret) throws DOMException
 	{
 		if (expr.isArrayAllocation() && !isObjectPtr(expr.getExpressionType()))
 		{
@@ -1928,7 +1921,7 @@ public class SourceConverterStage2
 			
 			for (IASTExpression arraySize : expr.getNewTypeIdArrayExpressions())
 				ptr.sizes.add(eval1Expr(arraySize));
-
+			
 			ptr.type = cppToJavaType(expr.getExpressionType());
 			ret.add(ptr);
 		}
@@ -1938,7 +1931,7 @@ public class SourceConverterStage2
 			
 			for (IASTExpression arraySize : expr.getNewTypeIdArrayExpressions())
 				ptr.sizes.add(eval1Expr(arraySize));
-
+			
 			ptr.type = cppToJavaType(expr.getExpressionType());
 			ret.add(ptr);
 		}
@@ -1976,7 +1969,7 @@ public class SourceConverterStage2
 		}
 	}
 
-	private void evalExprDelete(ICPPASTDeleteExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalExprDelete(ICPPASTDeleteExpression expr, List<MExpression> ret) throws DOMException
 	{
 		if (isObjectPtr(expr.getOperand().getExpressionType()))
 		{
@@ -2021,7 +2014,7 @@ public class SourceConverterStage2
 	
 	
 
-	private void evalExprId(IASTIdExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalExprId(IASTIdExpression expr, List<MExpression> ret) throws DOMException
 	{
 		if (isBitfield(expr.getName()))
 		{
@@ -2056,7 +2049,7 @@ public class SourceConverterStage2
 		}
 	}
 
-	private void evalExprFieldReference(IASTFieldReference expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalExprFieldReference(IASTFieldReference expr, List<MExpression> ret) throws DOMException
 	{
 		if (isBitfield(expr.getFieldName()))
 		{
@@ -2089,7 +2082,7 @@ public class SourceConverterStage2
 	}
 
 
-	private void evalExprConditional(IASTConditionalExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException 
+	private void evalExprConditional(IASTConditionalExpression expr, List<MExpression> ret) throws DOMException 
 	{
 		MTernaryExpression ternary = new MTernaryExpression();
 		
@@ -2101,21 +2094,20 @@ public class SourceConverterStage2
 		ret.add(ternary);
 	}
 
-	private void evalCastExpression(IASTCastExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalCastExpression(IASTCastExpression expr, List<MExpression> ret) throws DOMException
 	{
 		MCastExpression cast = new MCastExpression();
 		cast.operand = eval1Expr(expr.getOperand());
 		// TODO cast.setType(evalTypeId(castExpression.getTypeId()));
 	}
 
-	private void evalExprArraySubscript(IASTArraySubscriptExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalExprArraySubscript(IASTArraySubscriptExpression expr, List<MExpression> ret) throws DOMException
 	{
 		if (isEventualPtr(expr.getArrayExpression().getExpressionType()))
 		{
 			MArrayExpressionPtr ptr = new MArrayExpressionPtr();
 			ptr.operand = eval1Expr(expr.getArrayExpression());
 			ptr.subscript.addAll(evalExpr(expr.getSubscriptExpression()));
-			ptr.leftSide = flags.contains(Flag.ASSIGN_LEFT_SIDE);
 			ret.add(ptr);
 		}
 		else
@@ -2123,7 +2115,6 @@ public class SourceConverterStage2
 			MArrayExpressionPlain array = new MArrayExpressionPlain();
 			array.operand = eval1Expr(expr.getArrayExpression());
 			array.subscript.addAll(evalExpr(expr.getSubscriptExpression()));
-			array.leftSide = flags.contains(Flag.ASSIGN_LEFT_SIDE);
 			ret.add(array);
 		}
 	}
@@ -2163,7 +2154,7 @@ public class SourceConverterStage2
 		return bra;
 	}
 	
-	private void evalExprUnary(IASTUnaryExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalExprUnary(IASTUnaryExpression expr, List<MExpression> ret) throws DOMException
 	{
 		if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
 		{
@@ -2259,9 +2250,37 @@ public class SourceConverterStage2
 		}
 		else if (isNumberExpression(expr.getOperand()))
 		{
-			// TODO
-			MEmptyExpression empty = new MEmptyExpression();
-			ret.add(empty);
+			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
+			{
+				MPostfixExpressionNumberInc post = new MPostfixExpressionNumberInc();
+				post.operand = eval1Expr(expr.getOperand());
+				ret.add(post);
+			}
+			else if (expr.getOperator() == IASTUnaryExpression.op_postFixDecr)
+			{
+				MPostfixExpressionNumberDec post = new MPostfixExpressionNumberDec();
+				post.operand = eval1Expr(expr.getOperand());
+				ret.add(post);
+			}
+			if (expr.getOperator() == IASTUnaryExpression.op_prefixIncr)
+			{
+				MPrefixExpressionNumberInc post = new MPrefixExpressionNumberInc();
+				post.operand = eval1Expr(expr.getOperand());
+				ret.add(post);
+			}
+			else if (expr.getOperator() == IASTUnaryExpression.op_prefixDecr)
+			{
+				MPrefixExpressionNumberDec post = new MPrefixExpressionNumberDec();
+				post.operand = eval1Expr(expr.getOperand());
+				ret.add(post);
+			}
+			else if (isPrefixExpression(expr.getOperator()))
+			{
+				MPrefixExpressionPlain pre = new MPrefixExpressionPlain();
+				pre.operand = eval1Expr(expr.getOperand());
+				pre.operator = evalUnaryPrefixOperator(expr.getOperator());
+				ret.add(pre);
+			}
 		}
 		// TODO else if (isEnumerator())
 		else if (isPostfixExpression(expr.getOperator()))
@@ -2281,7 +2300,7 @@ public class SourceConverterStage2
 	}
 
 
-	private void evalExprFuncCall(IASTFunctionCallExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException
+	private void evalExprFuncCall(IASTFunctionCallExpression expr, List<MExpression> ret) throws DOMException
 	{
 		MFunctionCallExpressionParent func;
 		
@@ -2302,23 +2321,47 @@ public class SourceConverterStage2
 			IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
 			for (IASTExpression arg : list.getExpressions())
 			{
-				MExpression exarg = eval1Expr(arg);
-				exarg = callCopyIfNeeded(exarg, arg, flags);
-				func.args.add(exarg);
+				if (isNumberExpression(arg))
+				{
+					MExpression exarg = eval1Expr(arg);
+					MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
+					valOfExpr.operand = exarg;
+					valOfExpr.type = "MInteger"; // TODO
+					func.args.add(valOfExpr);
+				}
+				else
+				{
+					MExpression exarg = eval1Expr(arg);
+					exarg = callCopyIfNeeded(exarg, arg);
+					func.args.add(exarg);
+				}
 			}
 		}
 		else if (expr.getParameterExpression() instanceof IASTExpression)
 		{
-			MExpression exarg = eval1Expr(expr.getParameterExpression());
-			exarg = callCopyIfNeeded(exarg, expr.getParameterExpression(), flags);
-			func.args.add(exarg);
+			IASTExpression arg = expr.getParameterExpression();
+			
+			if (isNumberExpression(arg))
+			{
+				MExpression exarg = eval1Expr(arg);
+				MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
+				valOfExpr.operand = exarg;
+				valOfExpr.type = "MInteger"; // TODO
+				func.args.add(valOfExpr);
+			}
+			else
+			{
+				MExpression exarg = eval1Expr(expr.getParameterExpression());
+				exarg = callCopyIfNeeded(exarg, expr.getParameterExpression());
+				func.args.add(exarg);
+			}
 		}
 
 		ret.add(func);
 	}
 
 
-	private void evalExprBinary(IASTBinaryExpression expr, List<MExpression> ret, EnumSet<Flag> flags) throws DOMException 
+	private void evalExprBinary(IASTBinaryExpression expr, List<MExpression> ret) throws DOMException 
 	{
 		if (isBitfield(expr.getOperand1()))
 		{
@@ -3043,14 +3086,7 @@ public class SourceConverterStage2
 	
 	private MStmt eval1Stmt(IASTStatement stmt) throws DOMException
 	{
-		List<MStmt> ret = evalStmt(stmt, EnumSet.noneOf(Flag.class));
-		assert(ret.size() == 1);
-		return ret.get(0);
-	}
-
-	private MStmt eval1Stmt(IASTStatement stmt, EnumSet<Flag> flags) throws DOMException
-	{
-		List<MStmt> ret = evalStmt(stmt, flags);
+		List<MStmt> ret = evalStmt(stmt);
 		assert(ret.size() == 1);
 		return ret.get(0);
 	}
@@ -3065,12 +3101,12 @@ public class SourceConverterStage2
 		return false;
 	}
 	
-	private void startNewCompoundStmt(EnumSet<Flag> flags)
+	private void startNewCompoundStmt(boolean isLoop, boolean isSwitch)
 	{
 		m_localVariableStack.push(
 				new ScopeVar(m_nextVariableId,
-						flags.contains(Flag.IS_LOOP),
-						flags.contains(Flag.IS_SWITCH)));
+						isLoop,
+						isSwitch));
 	}
 	
 	private void endCompoundStmt()
@@ -3088,16 +3124,12 @@ public class SourceConverterStage2
 		return compound;
 	}
 
-	private List<MStmt> evalStmt(IASTStatement statement) throws DOMException
-	{
-		return evalStmt(statement, EnumSet.noneOf(Flag.class));
-	}
-
 	List<MStmt> globalStmts = new ArrayList<MStmt>();
+
 	/**
 	 * Attempts to convert the given C++ statement to one or more Java statements.
 	 */
-	private List<MStmt> evalStmt(IASTStatement statement, EnumSet<Flag> flags) throws DOMException
+	private List<MStmt> evalStmt(IASTStatement statement) throws DOMException
 	{
 		List<MStmt> stmts = new ArrayList<MStmt>();
 		
@@ -3176,9 +3208,12 @@ public class SourceConverterStage2
 		{
 			IASTCompoundStatement compoundStatement = (IASTCompoundStatement)statement;
 			print("Compound");
-
-			startNewCompoundStmt(flags);
-			
+			startNewCompoundStmt(false, false);
+//			startNewCompoundStmt(
+//					isLocationDirectly(Location.DoBody, Location.ForBody, Location.WhileBody),  
+//					isLocationDirectly(Location.SwitchBody)
+//				);
+// TODO
 			MCompoundStmt compound = new MCompoundStmt();
 			stmts.add(compound);
 
@@ -3204,7 +3239,7 @@ public class SourceConverterStage2
 			List<String> types = evaluateDeclarationReturnTypes(declarationStatement.getDeclaration());
 			List<String> names = evaluateDeclarationReturnNames(declarationStatement.getDeclaration());
 			List<MExpression> exprs = evaluateDeclarationReturnInitializers((IASTSimpleDeclaration) declarationStatement.getDeclaration());
-
+			
 			for (int i = 0; i < types.size(); i++)
 			{
 				MSimpleDecl simple = new MSimpleDecl();
@@ -3226,7 +3261,7 @@ public class SourceConverterStage2
 
 			MDoStmt dos = new MDoStmt();
 			stmts.add(dos);
-			
+
 			dos.body = surround(evalStmt(doStatement.getBody()));
 			dos.expr = eval1Expr(doStatement.getCondition());
 			dos.expr = makeExpressionBoolean(dos.expr, doStatement.getCondition());
@@ -3239,7 +3274,6 @@ public class SourceConverterStage2
 
 			MExprStmt exprStmt = new MExprStmt();
 			stmts.add(exprStmt);
-			
 			exprStmt.expr = eval1Expr(expressionStatement.getExpression());
 		}
 		else if (statement instanceof IASTForStatement)
@@ -3286,19 +3320,19 @@ public class SourceConverterStage2
 
 			MIfStmt ifs = new MIfStmt();
 			stmts.add(ifs);
-			
+
 			ifs.condition = eval1Expr(ifStatement.getConditionExpression());
 			ifs.condition = makeExpressionBoolean(ifs.condition, ifStatement.getConditionExpression());
 			ifs.body = surround(evalStmt(ifStatement.getThenClause()));
-
+			
 			if (ifStatement.getElseClause() != null)
 				ifs.elseBody = eval1Stmt(ifStatement.getElseClause());
-
+			
 			if (ifStatement instanceof ICPPASTIfStatement &&
 				((ICPPASTIfStatement) ifStatement).getConditionDeclaration() != null)
 			{
 				IType tp = eval1DeclReturnCppType(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
-							
+
 				ifs.decl = eval1Decl(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
 				ifs.condition = makeInfixFromDecl(ifs.decl.name, ifs.decl.initExpr, tp, true);
 				ifs.decl.initExpr = makeSimpleCreationExpression(tp);
@@ -3325,12 +3359,24 @@ public class SourceConverterStage2
 			MReturnStmt retu = new MReturnStmt();
 			stmts.add(retu);
 			
-			retu.expr = eval1Expr(returnStatement.getReturnValue());
-			retu.expr = callCopyIfNeeded(retu.expr, returnStatement.getReturnValue(), EnumSet.noneOf(Flag.class));
 
+			if (isNumberExpression(returnStatement.getReturnValue()))
+			{
+				 MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
+				 valOfExpr.type = "MInteger"; // TODO
+				 valOfExpr.operand = eval1Expr(returnStatement.getReturnValue());
+				 
+				retu.expr = valOfExpr;
+			}
+			else
+			{
+				retu.expr = eval1Expr(returnStatement.getReturnValue());
+				retu.expr = callCopyIfNeeded(retu.expr, returnStatement.getReturnValue());
+			}
+			
 			if (currentReturnType.equals("Boolean"))
 				retu.expr = makeExpressionBoolean(retu.expr, returnStatement.getReturnValue());
-			
+
 			// Only call cleanup if we have something on the stack.
 			if (m_nextVariableId != 0)
 				retu.cleanup = createCleanupCall(0);
@@ -3346,7 +3392,7 @@ public class SourceConverterStage2
 			
 			swi.body = surround(evalStmt(switchStatement.getBody()));
 			swi.expr = eval1Expr(switchStatement.getControllerExpression());
-
+			
 			if (switchStatement instanceof ICPPASTSwitchStatement &&
 			    ((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration() != null)
 			{
@@ -3807,7 +3853,7 @@ public class SourceConverterStage2
 		else if (type instanceof IArrayType)
 		{
 			IArrayType array = (IArrayType) type;
-			return cppToJavaType(array.getType());
+			return cppToJavaType(array.getType()) + " []";
 		}
 		else if (type instanceof ICompositeType)
 		{
@@ -4021,13 +4067,6 @@ public class SourceConverterStage2
 			m_localVariableMaxId = m_nextVariableId;
 	}
 
-	private enum Flag
-	{
-		IS_LOOP,
-		IS_SWITCH,
-		ASSIGN_LEFT_SIDE;
-	}
-	
 	// A set of qualified names containing the bitfields...
 	private Set<String> bitfields = new HashSet<String>();
 	
@@ -4130,8 +4169,6 @@ bitfields.add("_b");
 		{
 			ST test2 = group.getInstanceOf("expression_tp");
 			test2.add("expr_obj", expr);
-			test2.add("want_lvalue_obj", false);
-			test2.add("want_lvalue_field", false);
 			//System.err.println("####" + test2.render());
 		}
 		

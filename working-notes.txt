@@ -61,10 +61,10 @@ All operations return a pointer other than star.
 -> p predec    p.ptrAdjust(-1)
 => MODEL: MPrefixExpressionPointerDec
 
--> p infix     p.ptrCopy().ptrAdjust(3) (p + 3)
+-> p infix     p.add(3) (p + 3)
 => MODEL: MInfixExpressionWithPtrOnLeft
 
--> p infix     p.ptrCopy().ptrAdjust(5) (5 + p)
+-> p infix     p.add(5) (5 + p)
 => MODEL: MInfixExpressionWithPtrOnRight
 
 -> p assign    p = j

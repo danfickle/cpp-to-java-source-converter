@@ -12,7 +12,6 @@ class ExpressionModels
 	{
 		public MExpression operand;
 		public List<MExpression> subscript = new ArrayList<MExpression>(1);
-		public boolean leftSide; //TODO
 	}
 	
 	abstract static class MFieldReferenceExpression extends MExpression
@@ -56,25 +55,85 @@ class ExpressionModels
 		public List<MExpression> args = new ArrayList<MExpression>();
 	}
 	
+	static class MPostfixExpressionNumberInc extends MPostfixExpression
+	{
+		public boolean isPostfixNumberInc = true;
+	}
+
+	static class MPostfixExpressionNumberDec extends MPostfixExpression
+	{
+		public boolean isPostfixNumberDec = true;
+	}
+
+	static class MPrefixExpressionNumberInc extends MPrefixExpression
+	{
+		public boolean isPrefixNumberInc = true;
+	}
+
+	static class MPrefixExpressionNumberDec extends MPrefixExpression
+	{
+		public boolean isPrefixNumberDec = true;
+	}
+
+	static class MValueOfExpressionNumber extends MExpression
+	{
+		public boolean isValueOfNumber = true;
+		public MExpression operand;
+		public String type;
+	}
+	
+	static class MInfixExpressionWithPtrOnLeft extends MInfixExpression
+	{
+		public boolean isInfixWithPtrOnLeft = true;
+	}
+
+	static class MInfixExpressionWithPtrOnRight extends MInfixExpression
+	{
+		public boolean isInfixWithPtrOnRight = true;
+	}
+	
+	static class MCompoundWithPtrOnLeft extends MInfixExpression
+	{
+		public boolean isCompoundWithPtrOnLeft = true;
+	}
+	
+	static class MPtrCreateNull
+	{
+		public boolean isNullPtrCreate = true;
+	}
+	
+	static class MPostfixWithDeref extends MPostfixExpression
+	{
+		public boolean isPostfixDeref = true;
+	}
+
+	static class MPrefixWithDeref extends MPrefixExpression
+	{
+		public boolean isPrefixDeref = true;
+	}
+	
+	static class MPtrCopy extends MExpression
+	{
+		public boolean isPtrCopy = true;
+		public MExpression operand;
+	}
+	
 	static class MBracketExpression extends MExpression
 	{
 		public boolean isBrackets = true;
 		public MExpression operand;
 	}
 	
-	// 1
 	static class MArrayExpressionPlain extends MArrayExpression
 	{
 		public boolean isArray = true;
 	}
 
-	// 2
 	static class MArrayExpressionPtr extends MArrayExpression
 	{
 		public boolean isPtrArray = true;
 	}
 	
-	// 3
 	static class MInfixExpressionWithBitfieldOnLeft extends MInfixExpression
 	{
 		public boolean isInfixWithBitfieldOnLeft = true;
@@ -87,7 +146,7 @@ class ExpressionModels
 	
 	static class MInfixWithNumberOnLeft extends MInfixExpression
 	{
-		public boolean isInfixWithNumberOnLeft = true;
+		public boolean isInfix = true;
 	}
 
 	static class MCompoundWithNumberOnLeft extends MInfixExpression
@@ -95,49 +154,41 @@ class ExpressionModels
 		public boolean isCompoundWithNumberOnLeft = true;
 	}
 	
-	// 4
 	static class MInfixExpressionWithDerefOnLeft extends MInfixExpression
 	{
 		public boolean isInfixWithDerefOnLeft = true;
 	}
 
-	// 35
 	static class MInfixAssignmentWithBitfieldOnLeft extends MInfixExpression
 	{
 		public boolean isAssignmentWithBitfieldOnLeft = true;
 	}
 
-	// 36
 	static class MInfixAssignmentWithDerefOnLeft extends MInfixExpression
 	{
 		public boolean isAssignmentWithDerefOnLeft = true;
 	}
 
-	// 37
 	static class MCompoundWithBitfieldOnLeft extends MInfixExpression
 	{
 		public boolean isCompoundWithBitfieldOnLeft = true;
 	}
 
-	// 38
 	static class MCompoundWithDerefOnLeft extends MInfixExpression
 	{
 		public boolean isCompoundWithDerefOnLeft = true;
 	}
 	
-	// 5
 	static class MInfixExpressionPlain extends MInfixExpression
 	{
 		public boolean isInfix = true;
 	}
 
-	// 7
 	static class MIdentityExpressionPlain extends MIdentityExpression
 	{
 		public boolean isIdentity = true;
 	}
 	
-	// 8
 	static class MIdentityExpressionBitfield extends MIdentityExpression
 	{
 		public boolean isIdentityBitfield = true;
@@ -148,13 +199,11 @@ class ExpressionModels
 		public boolean isIdentityNumber = true;
 	}
 	
-	// 9
 	static class MIdentityExpressionPtr extends MIdentityExpression
 	{
 		public boolean isIdentityPtr = true;
 	}
 	
-	// 10
 	static class MIdentityExpressionEnumerator extends MIdentityExpression
 	{
 		public boolean isIdentityEnumerator = true;
@@ -162,7 +211,6 @@ class ExpressionModels
 		public String enumName;
 	}
 	
-	// 11
 	static class MTernaryExpression extends MExpression
 	{
 		public boolean isTernary = true;
@@ -172,13 +220,11 @@ class ExpressionModels
 		public MExpression positive;
 	}
 
-	// 12
 	static class MFieldReferenceExpressionPlain extends MFieldReferenceExpression
 	{
 		public boolean isFieldReference = true;
 	}
 
-	// 13
 	static class MFieldReferenceExpressionBitfield extends MFieldReferenceExpression
 	{
 		public boolean isFieldReferenceBitfield = true;
@@ -189,19 +235,16 @@ class ExpressionModels
 		public boolean isFieldReferenceNumber = true;
 	}
 	
-	// 14
 	static class MFieldReferenceExpressionPtr extends MFieldReferenceExpression
 	{
 		public boolean isFieldReferencePtr = true;
 	}
 	
-	// 15
 	static class MFieldReferenceExpressionEnumerator extends MFieldReferenceExpression
 	{
 		public boolean isFieldReferenceEnumerator = true;
 	}
 
-	// 16
 	static class MFunctionCallExpression extends MFunctionCallExpressionParent
 	{
 		public boolean isFunctionCall = true;
@@ -212,7 +255,6 @@ class ExpressionModels
 		public boolean isClassInstanceCreation = true;
 	}
 	
-	// 17
 	static class MLiteralExpression extends MExpression
 	{
 		public boolean isLiteral = true;
@@ -220,13 +262,11 @@ class ExpressionModels
 		public String literal;
 	}
 	
-	// 18
 	static class MPrefixExpressionPlain extends MPrefixExpression
 	{
 		public boolean isPrefix = true;
 	}
 
-	// 19
 	static class MPrefixExpressionPointer extends MPrefixExpression
 	{
 		public boolean isPrefixPointer = true;
@@ -239,76 +279,64 @@ class ExpressionModels
 		public MExpression operand;
 	}
 	
-	// 21
 	static class MPostfixExpressionPlain extends MPostfixExpression
 	{
 		public boolean isPostfix = true;
 	}
 
-	// 23
 	static class MPostfixExpressionPointerInc extends MPostfixExpression
 	{
 		public boolean isPostfixPointerInc = true;
 	}
 
-	// 24
 	static class MPostfixExpressionPointerDec extends MPostfixExpression
 	{
 		public boolean isPostfixPointerDec = true;
 	}
 
-	// 25
 	static class MPrefixExpressionPointerInc extends MPrefixExpression
 	{
 		public boolean isPrefixPointerInc = true;
 	}
 
-	// 26
 	static class MPrefixExpressionPointerDec extends MPrefixExpression
 	{
 		public boolean isPrefixPointerDec = true;
 	}
 	
-	// 27
 	static class MPrefixExpressionPointerStar extends MPrefixExpression
 	{
 		public boolean isPrefixPointerStar = true;
 	}
 	
-	// 28
 	static class MPostfixExpressionBitfieldInc extends MPostfixExpression
 	{
 		public boolean isPostfixBitfieldInc = true;
 	}
-	
-	// 29
+
 	static class MPostfixExpressionBitfieldDec extends MPostfixExpression
 	{
 		public boolean isPostfixBitfieldDec = true;
 	}
 
-	// 33
 	static class MPrefixExpressionBitfieldInc extends MPrefixExpression
 	{
 		public MExpression set;
 		public boolean isPrefixBitfieldInc = true;
 	}
 	
-	// 34
 	static class MPrefixExpressionBitfieldDec extends MPrefixExpression
 	{
 		public MExpression set;
 		public boolean isPrefixBitfieldDec = true;
 	}	
 	
-	// 31
 	static class MPrefixExpressionBitfield extends MPrefixExpression
 	{
 		public MExpression set;
 		public boolean isPrefixBitfield = true;
 	}
 	
-	// 32
 	static class MCastExpression extends MExpression
 	{
 		public boolean isCast = true;
@@ -317,25 +345,21 @@ class ExpressionModels
 		public String type = "int"; // TODO
 	}
 	
-	// 40
 	static class MDeleteObjectSingle extends MDeleteExpression
 	{
 		public boolean isDeleteObjectSingle = true;
 	}
 	
-	// 41
 	static class MDeleteObjectMultiple extends MDeleteExpression
 	{
 		public boolean isDeleteObjectMultiple = true;
 	}
 	
-	// 42
 	static class MEmptyExpression extends MExpression
 	{
 		public boolean isEmpty = true;
 	}
 	
-	// 43
 	static class MNewArrayExpression extends MExpression
 	{
 		public boolean isBasicNewArray = true;
@@ -344,7 +368,6 @@ class ExpressionModels
 		public String type;
 	}
 	
-	// 44
 	static class MNewArrayExpressionObject extends MExpression
 	{
 		public boolean isObjectNewArray = true;
@@ -353,7 +376,6 @@ class ExpressionModels
 		public String type;
 	}
 	
-	// 45
 	static class MNewExpression extends MExpression
 	{
 		public boolean isNewSingle = true;
@@ -362,7 +384,6 @@ class ExpressionModels
 		public MExpression argument;
 	}
 	
-	// 46
 	static class MNewExpressionObject extends MExpression
 	{
 		public boolean isNewObject = true;
