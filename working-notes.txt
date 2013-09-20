@@ -1,51 +1,131 @@
-Examples of dealing with numbers and pointers:
+#### Number operations ####
+All operations return a raw number other than addressof,
+create, func arg and return.
 
-i++ + 1
-i.postInc().get() + 1;
+-> n id        i.get()
+=> MODEL: MIdentityExpressionNumber
 
-int j = i-- + 2;
-MInteger j = MInteger.valueOf(i.postDec().get() + 2);
+-> n postinc   i.postInc().get()
+=> MODEL: MPostfixExpressionNumberInc
 
-int k = 5;
-MInteger k = MInteger.valueOf(5);
+-> n postdec   i.postDec().get()
+=> MODEL: MPostfixExpressionNumberDec
 
-*(ptr++) = 3
-ptr.ptrPostInc().set(3);
+-> n preinc    i.set(i.get() + 1)
+=> MODEL: MPrefixExpressionNumberInc
 
----> Note: Expression return type should be context sensitive.
----> MInteger when a MInteger is required and a raw number when it is not.
----> This includes number literals.
+-> n predec    i.set(i.get() - 1)
+=> MODEL: MPrefixExpressionNumberDec
 
-*(ptr++)
-ptr.ptrPostInc().get();
+-> n infix     i.get() + i.get()
+=> MODEL: MInfixExpressionPlain
 
-int k = *(--ptr)
-MInteger k = ptr.ptrAdjust(-1).copy();
+-> n assign    i.set(j.get())
+=> MODEL: MInfixAssignmentWithNumberOnLeft
 
----> Note: Return a raw number with get() except when a MInteger is required, in which
----> case copy should be called.
+-> n compound  i.set(i.get() + 2)
+=> MODEL: MCompoundWithNumberOnLeft
 
-return i++ + 1 - 10;
-return MInteger.valueOf(i.postInc().get() + 1 - 10);
+-> n addressof i.addressof()
+=> MODEL: MAddressOfExpression
 
-return i;
-return i.copy();
+-> n unary     -i.get()
+=> MODEL: MPrefixExpressionPlain
 
----> Note: Only call copy() when we need to. No need if we just created it.
+-> n create    MInteger i = MInteger.valueOf(2)
+=> MODEL: MValueOfExpressionNumber
 
-(*(ptr++)) += 3
-ptr.ptrPostInc().set(ptr.get() + 3);
+-> n func arg  func(MInteger.valueOf(i.get()))
+=> MODEL: MValueOfExpressionNumber
 
-(*(--ptr)) += 3
-ptr.set(ptr.adjust(-1).get() + 3);
-
----> Note: This is tricky. ptr++ has side effects so we can't call it three times.
-
----> Info required: 
----> For infix: The type of the other side.
----> This lets us know whether to wrap the expression in MInteger.valueOf.
----> For prefix/postfix: Whether a l-value is needed. Whether side effects are banned.
+-> n return    return MInteger.valueOf(i.get())
+=> MODEL: MValueOfExpressionNumber
 
 
 
+#### Pointer operations ####
+All operations return a pointer other than star.
+
+-> p id        p
+=> MODEL: MIdentityExpressionPtr
+
+-> p postinc   p.ptrPostInc()
+=> MODEL: MPostfixExpressionPointerInc
+
+-> p postdec   p.ptrPostDec()
+=> MODEL: MPostfixExpressionPointerDec
+
+-> p preinc    p.ptrAdjust(1)
+=> MODEL: MPrefixExpressionPointerInc
+
+-> p predec    p.ptrAdjust(-1)
+=> MODEL: MPrefixExpressionPointerDec
+
+-> p infix     p.ptrCopy().ptrAdjust(3) (p + 3)
+=> MODEL: MInfixExpressionWithPtrOnLeft
+
+-> p infix     p.ptrCopy().ptrAdjust(5) (5 + p)
+=> MODEL: MInfixExpressionWithPtrOnRight
+
+-> p assign    p = j
+=> MODEL: MInfixExpressionPlain
+
+-> p compound  ptr.ptrAdjust(-4) (p -= 4)
+=> MODEL: MCompoundWithPtrOnLeft
+
+-> p deref left assign  p.set(7)
+=> MODEL: MInfixAssignmentWithDerefOnLeft
+
+-> p deref left compound p.set(p.get() + 2)
+=> MODEL: MCompoundWithDerefOnLeft
+
+-> p deref postfix p.ptrPostInc().postInc() ((*(p++))++)
+=> MODEL: MPostfixWithDeref
+
+-> p deref prefix p.ptrAdjust(-1).postInc() ((*(--p))++)
+=> MODEL: MPrefixWithDeref
+
+-> p addressof ptr.addressof()
+=> MODEL: MAddressOfExpression
+
+-> p star      ptr.get()
+=> MODEL: MPrefixExpressionPointerStar
+
+-> p create null MInteger p = PTR.newNull()
+=> MODEL: MPtrCreateNull
+
+-> p func arg func(p.ptrCopy())
+=> MODEL: MPtrCopy
+
+-> p return   return p.ptrCopy()
+=> MODEL: MPtrCopy
+
+
+
+#### Bitfield operations ####
+All operations return a raw number.
+
+-> b id        obj.get__b()
+=> MODEL: MIdentityExpressionBitfield
+
+-> b postinc   obj.postInc__b()
+=> MODEL: MPostfixExpressionBitfieldInc
+
+-> b postdec   obj.postDec__b()
+=> MODEL: MPostfixExpressionBitfieldDec
+
+-> b preinc    obj.set__b(obj.get__b() + 1)
+=> MODEL: MPrefixExpressionBitfieldInc
+
+-> b predec    obj.set__b(obj.get__b() - 1)
+=> MODEL: MPrefixExpressionBitfieldDec
+
+-> b infix     obj.get__b() + obj.get__c()
+=> MODEL: MPrefixExpressionPlain
+
+-> b assign    obj.set__b(4)
+=> MODEL: MInfixAssignmentWithBitfieldOnLeft
+
+-> b compound  obj.set__b(obj.get__b() + 2)
+=> MODEL: MCompoundWithBitfieldOnLeft
 
