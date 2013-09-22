@@ -1,0 +1,112 @@
+package com.github.danfickle.cpptojavasourceconverter;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+import com.github.danfickle.cpptojavasourceconverter.SourceConverterStage2.GlobalContext;
+import com.github.danfickle.cpptojavasourceconverter.StmtModels.MStmt;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+
+/**
+ * The stack manager is in charge of keeping track of the stack of 
+ * objects in C++ so we can implement it in in Java. This will include
+ * adding items to the stack and destructing items at the appropriate
+ * time.
+ */
+class StackManager
+{
+	private Deque<ScopeVar> localVariableStack = new ArrayDeque<ScopeVar>();
+	private Integer localVariableMaxId;
+	private int nextVariableId;
+	
+	private static class ScopeVar
+	{
+		ScopeVar(int idi, boolean isloop, boolean isswitch)
+		{
+			id = idi;
+			isLoop = isloop;
+			isSwitch = isswitch;
+		}
+
+		final boolean isLoop;
+		final boolean isSwitch;
+		final int id;
+		int cnt;
+	}
+	
+	private GlobalContext ctx;
+	
+	StackManager(GlobalContext con) {
+		ctx = con;
+	}
+
+	/**
+	 * This creates a Java expression that adds an object to the
+	 * local (to the function) stack.
+	 */
+	MExpression createAddItemCall(MExpression item)
+	{
+		MAddItemCall add = new MAddItemCall();
+		add.operand = item;
+		add.nextFreeStackId = nextVariableId;
+		incrementLocalVariableId();
+		return add;
+	}
+
+	/**
+	 * This is used to find where to cleanup to when continue
+	 * statement is used.
+	 */
+	Integer findLastLoopId()
+	{
+		int cnt = 0;
+		for (ScopeVar sv : localVariableStack)
+		{
+			cnt += sv.cnt;
+			if (sv.isLoop)
+				return cnt == 0 ? null : sv.id;
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * This is used to find where we should cleanup to when
+	 * break statement is used.
+	 */
+	Integer findLastSwitchOrLoopId()
+	{
+		int cnt = 0;
+		for (ScopeVar sv : localVariableStack)
+		{
+			cnt += sv.cnt;
+			if (sv.isSwitch || sv.isLoop)
+				return cnt == 0 ? null : sv.id;
+		}
+		return null;
+	}
+	
+	/**
+	 * This method keeps track of the variable numbers.
+	 */
+	void incrementLocalVariableId()
+	{
+		nextVariableId++;
+
+		if (localVariableStack.peek() != null)
+			localVariableStack.peek().cnt++;
+		
+		if (localVariableMaxId == null || nextVariableId > localVariableMaxId)
+			localVariableMaxId = nextVariableId;
+	}
+	
+	MStmt createCleanupCall(int until)
+	{
+		MStmt fcall = ModelCreation.createMethodCall("StackHelper", "cleanup", 
+				ModelCreation.createLiteral("null"),
+				ModelCreation.createLiteral("__stack"),
+				ModelCreation.createLiteral(String.valueOf(until)));
+		
+		return fcall;
+	}
+}
