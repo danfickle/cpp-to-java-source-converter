@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
@@ -48,6 +49,8 @@ public class SourceConverterStage2
 		StmtEvaluator stmtEvaluator;
 		BitfieldHelpers bitfieldHelpers;
 	}
+	
+	private GlobalContext ctx;
 	
 	/**
 	 * This class keeps track of all the info on a C++ class
@@ -136,7 +139,7 @@ public class SourceConverterStage2
 			// Create the method declaration.
 			// This will handle void return types.
 			CppFunction methodDef = new CppFunction();
-			methodDef.name = getSimpleName(func.getName());
+			methodDef.name = TypeHelpers.getSimpleName(func.getName());
 			methodDef.retType = evalReturnType(funcBinding);
 			
 			// This gets a parameter variable declaration for each param.
@@ -149,7 +152,7 @@ public class SourceConverterStage2
 
 			// This code block simple calls the original method with
 			// passed in arguments plus default arguments.
-			MFunctionCallExpression method = ModelCreation.createFuncCall(getSimpleName(func.getName()));
+			MFunctionCallExpression method = ModelCreation.createFuncCall(TypeHelpers.getSimpleName(func.getName()));
 
 			// Add the passed in params by name.
 			List<String> names = getArgumentNames(funcBinding);
@@ -225,14 +228,14 @@ public class SourceConverterStage2
 
 			if (fields.get(i).isStatic)
 				/* Do nothing. */ ;
-			else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OBJECT)
+			else if (TypeHelpers.getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OBJECT)
 			{
 				// Call this.field.destruct()
 				MStmt stmt = ModelCreation.createMethodCall("this", fields.get(i).field.getName(), "destruct");
 				method.statements.add(stmt);
 			}
-			else if (getTypeEnum(fields.get(i).field.getType()) == TypeEnum.ARRAY &&
-					getTypeEnum(getArrayBaseType(fields.get(i).field.getType())) == TypeEnum.OBJECT)
+			else if (TypeHelpers.getTypeEnum(fields.get(i).field.getType()) == TypeEnum.ARRAY &&
+					TypeHelpers.getTypeEnum(TypeHelpers.getArrayBaseType(fields.get(i).field.getType())) == TypeEnum.OBJECT)
 			{
 				// Call DestructHelper.destruct(this.field)
 				MStmt stmt = ModelCreation.createMethodCall(
@@ -267,7 +270,7 @@ public class SourceConverterStage2
 		IBinding funcBinding = func.getDeclarator().getName().resolveBinding();
 		
 		CppFunction method = new CppFunction();
-		method.name = getSimpleName(func.getDeclarator().getName());
+		method.name = TypeHelpers.getSimpleName(func.getDeclarator().getName());
 		method.isStatic = ((IFunction) funcBinding).isStatic();
 		method.retType = evalReturnType(funcBinding);
 
@@ -287,17 +290,14 @@ public class SourceConverterStage2
 
 		method.args.addAll(evalParameters(funcBinding));
 		
-		// These class vars track the number of local variables in this function
-		// during the recursive evaluation.
-		m_localVariableMaxId = null;
-		m_nextVariableId = 0;
+		ctx.stackMngr.reset();
 
 		// We need this so we know if the return expression needs to be made
 		// java boolean.
 		currentReturnType = method.retType;
 		
 		// eval1Stmt work recursively to generate the function body.
-		method.body = (MCompoundStmt) eval1Stmt(func.getBody());
+		method.body = (MCompoundStmt) ctx.stmtEvaluator.eval1Stmt(func.getBody());
 
 		// For debugging purposes, we put return type back to null.
 		currentReturnType = null;
@@ -305,10 +305,10 @@ public class SourceConverterStage2
 		// If we have any local variables that are objects, or arrays of objects,
 		// we must create an explicit stack so they can be added to it and explicity
 		// cleaned up at termination points (return, break, continue, end block).
-		if (m_localVariableMaxId != null)
+		if (ctx.stackMngr.getMaxLocalVariableId() != null)
 		{
 			MLiteralExpression expr = new MLiteralExpression();
-			expr.literal = String.valueOf(m_localVariableMaxId);
+			expr.literal = String.valueOf(ctx.stackMngr.getMaxLocalVariableId());
 
 			MNewArrayExpressionObject array = new MNewArrayExpressionObject();
 			array.type = "Object";
@@ -345,11 +345,11 @@ public class SourceConverterStage2
 						//!(eval1Expr(chain.getInitializerValue()) instanceof ClassInstanceCreation))
 					{
 						MLiteralExpression lit = 
-								ModelCreation.createLiteral(cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()));
+								ModelCreation.createLiteral(TypeHelpers.cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()));
 						
 						MClassInstanceCreation create = new MClassInstanceCreation();
 						create.name = lit;
-						create.args.addAll(evalExpr(chain.getInitializerValue()));
+						create.args.addAll(ctx.exprEvaluator.evalExpr(chain.getInitializerValue()));
 						
 						// Match this initializer with the correct field.
 						for (FieldInfo fieldInfo : fields)
@@ -369,7 +369,7 @@ public class SourceConverterStage2
 						
 						if (info.hasSuper && chain.getMemberInitializerId().resolveBinding().getName().equals(info.superClass))
 						{
-							superInit = evalExpr(chain.getInitializerValue());
+							superInit = ctx.exprEvaluator.evalExpr(chain.getInitializerValue());
 						}
 					}
 					else
@@ -423,23 +423,28 @@ public class SourceConverterStage2
 		{
 			frag.isStatic = true;
 			
-			if (getTypeEnum(ifield.getType()) == TypeEnum.OBJECT ||
-				getTypeEnum(ifield.getType()) == TypeEnum.ARRAY)
+			if (TypeHelpers.getTypeEnum(ifield.getType()) == TypeEnum.OBJECT ||
+				TypeHelpers.getTypeEnum(ifield.getType()) == TypeEnum.ARRAY)
 			{
 				frag.initExpr = init;
 			}
 		}
 
 		if (ifield.getType().toString().isEmpty())
-			frag.type = "AnonClass" + (m_anonClassCount - 1);
+			frag.type = "AnonClass" + (anonClassCount - 1);
 		else
-			frag.type = cppToJavaType(ifield.getType());
+			frag.type = TypeHelpers.cppToJavaType(ifield.getType());
 
 		frag.isPublic = true;
 		
 		addDeclaration(frag);
 		popDeclaration();
 	}
+	
+
+	private int anonEnumCount = 0;
+	
+	private int anonClassCount = 0;
 	
 	/**
 	 * Generates a Java field, given a C++ top-level (global) variable.
@@ -454,9 +459,9 @@ public class SourceConverterStage2
 		frag.isStatic = true;
 		
 		if (ifield.getType().toString().isEmpty())
-			frag.type = "AnonClass" + (m_anonClassCount - 1);
+			frag.type = "AnonClass" + (anonClassCount - 1);
 		else
-			frag.type = cppToJavaType(ifield.getType());
+			frag.type = TypeHelpers.cppToJavaType(ifield.getType());
 
 		frag.isPublic = true;
 		
@@ -488,8 +493,8 @@ public class SourceConverterStage2
 					ICPPParameter[] params  = ctor.getParameters();
 
 					if (params.length != 0 &&
-						getTypeEnum(params[0].getType()) == TypeEnum.REFERENCE &&
-						cppToJavaType(params[0].getType()).toString().equals(ctor.getName()))
+						TypeHelpers.getTypeEnum(params[0].getType()) == TypeEnum.REFERENCE &&
+						TypeHelpers.cppToJavaType(params[0].getType()).toString().equals(ctor.getName()))
 					{
 						// TODO: We should check there are no params or others have default values...
 						info.hasCopy = true;
@@ -540,7 +545,7 @@ public class SourceConverterStage2
 						if (declarator instanceof IASTFieldDeclarator &&
 							((IASTFieldDeclarator) declarator).getBitFieldSize() != null)
 						{
-							addBitfield(declarator.getName());
+							ctx.bitfieldHelpers.addBitfield(declarator.getName());
 							field.isBitfield = true;
 						}
 						
@@ -566,9 +571,9 @@ public class SourceConverterStage2
 			if (decl.getInitializer() == null)
 				exprs.add(null);
 			else if (decl.getInitializer() instanceof IASTEqualsInitializer)
-				exprs.add(eval1Expr((IASTExpression) ((IASTEqualsInitializer) decl.getInitializer()).getInitializerClause()));
+				exprs.add(ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) decl.getInitializer()).getInitializerClause()));
 			else if (decl.getInitializer() instanceof ICPPASTConstructorInitializer)
-				exprs.add(eval1Expr((IASTExpression) ((ICPPASTConstructorInitializer) decl.getInitializer()).getExpression()));
+				exprs.add(ctx.exprEvaluator.eval1Expr((IASTExpression) ((ICPPASTConstructorInitializer) decl.getInitializer()).getExpression()));
 		}
 
 		return exprs;
@@ -612,7 +617,7 @@ public class SourceConverterStage2
 				{
 					print("bit field");
 					// We replace bit field fields with getter and setter methods...
-					evalDeclBitfield((IField) binding, declarator);
+					ctx.bitfieldHelpers.evalDeclBitfield((IField) binding, declarator);
 				}
 				else if (binding instanceof IField)
 				{
@@ -836,7 +841,7 @@ public class SourceConverterStage2
 			for (IParameter param : params)
 			{	
 				MSimpleDecl var = new MSimpleDecl();
-				var.type = cppToJavaType(param.getType());
+				var.type = TypeHelpers.cppToJavaType(param.getType());
 
 				print("Found param: " + param.getName());
 
@@ -862,7 +867,7 @@ public class SourceConverterStage2
 		{
 			IFunction func = (IFunction) funcBinding;
 			IFunctionType funcType = func.getType();
-			return cppToJavaType(funcType.getReturnType(), true, false);
+			return TypeHelpers.cppToJavaType(funcType.getReturnType(), true, false);
 		}
 
 		printerr("Unexpected binding for return type: " + funcBinding.getClass().getCanonicalName());
@@ -890,7 +895,7 @@ public class SourceConverterStage2
 
 				if (binding instanceof IVariable)
 				{
-					ret.add(cppToJavaType(((IVariable) binding).getType()));
+					ret.add(TypeHelpers.cppToJavaType(((IVariable) binding).getType()));
 				}
 			}
 		}
@@ -949,6 +954,8 @@ public class SourceConverterStage2
 		return evaluateDeclarationReturnCppTypes(decl).get(0);
 	}
 	
+	private HashMap<String, String> anonEnumMap = new HashMap<String, String>();
+	
 	private String evaluateDeclSpecifierReturnType(IASTDeclSpecifier declSpecifier) throws DOMException
 	{
 //		evaluateStorageClass(declSpecifier.getStorageClass());
@@ -1006,7 +1013,7 @@ public class SourceConverterStage2
 			IASTNamedTypeSpecifier namedTypeSpecifier = (IASTNamedTypeSpecifier)declSpecifier;
 			print("named type");
 
-			return getSimpleName(namedTypeSpecifier.getName());
+			return TypeHelpers.getSimpleName(namedTypeSpecifier.getName());
 
 			//			if (declSpecifier instanceof ICPPASTNamedTypeSpecifier)
 			//			{
@@ -1032,7 +1039,7 @@ public class SourceConverterStage2
 //				print("cpp simple");
 //			}
 
-			return evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned());
+			return TypeHelpers.evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned());
 		}
 		else if (declSpecifier instanceof ICASTDeclSpecifier)
 		{
@@ -1051,11 +1058,11 @@ public class SourceConverterStage2
 			return;
 
 		CppEnum enumModel = new CppEnum();
-		enumModel.simpleName = getSimpleName(enumerationSpecifier.getName());
-		enumModel.qualified = getQualifiedPart(enumerationSpecifier.getName()); 
+		enumModel.simpleName = TypeHelpers.getSimpleName(enumerationSpecifier.getName());
+		enumModel.qualified = TypeHelpers.getQualifiedPart(enumerationSpecifier.getName()); 
 
 		String first = enumerators[0].getName().toString();		
-		m_anonEnumMap.put(first, enumModel.simpleName);
+		anonEnumMap.put(first, enumModel.simpleName);
 		
 		int nextValue = 0;
 		int sinceLastValue = 1;
@@ -1065,11 +1072,11 @@ public class SourceConverterStage2
 		for (IASTEnumerator e : enumerators)
 		{
 			CppEnumerator enumerator = new CppEnumerator();
-			enumerator.name = getSimpleName(e.getName());
+			enumerator.name = TypeHelpers.getSimpleName(e.getName());
 
 			if (e.getValue() != null)
 			{
-				enumerator.value = eval1Expr(e.getValue());
+				enumerator.value = ctx.exprEvaluator.eval1Expr(e.getValue());
 				lastValue = enumerator.value;
 				sinceLastValue = 1;
 			}
@@ -1111,10 +1118,10 @@ public class SourceConverterStage2
 			if (compositeTypeSpecifier.getKey() == IASTCompositeTypeSpecifier.k_union)
 				tyd.isUnion = true;
 			
-			if (getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
-				tyd.name = "AnonClass" + m_anonClassCount++;
+			if (TypeHelpers.getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
+				tyd.name = "AnonClass" + anonClassCount++;
 			else
-				tyd.name = getSimpleName(compositeTypeSpecifier.getName());
+				tyd.name = TypeHelpers.getSimpleName(compositeTypeSpecifier.getName());
 
 			info.declSpecifier = declSpecifier;
 			findSpecialMethods(declSpecifier, info);
@@ -1129,12 +1136,12 @@ public class SourceConverterStage2
 				if (cppCompositeTypeSpecifier.getBaseSpecifiers() != null && cppCompositeTypeSpecifier.getBaseSpecifiers().length != 0)
 				{
 					info.hasSuper = true;
-					info.superClass = tyd.superclass = getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName());
+					info.superClass = tyd.superclass = TypeHelpers.getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName());
 				}
 				
 
 				for (int i = 0; i < cppCompositeTypeSpecifier.getBaseSpecifiers().length; i++)
-					tyd.additionalSupers.add(getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[i].getName()));
+					tyd.additionalSupers.add(TypeHelpers.getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[i].getName()));
 			}
 
 			for (IASTDeclaration decl : compositeTypeSpecifier.getMembers())
@@ -1207,25 +1214,25 @@ public class SourceConverterStage2
 					if (fieldInfo.isStatic)
 						/* Do nothing. */ ;
 					else if (fieldInfo.init != null &&
-							getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
+							TypeHelpers.getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
 					{
 						MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 						ifBlock.statements.add(ModelCreation.createMethodCall("this", fieldInfo.field.getName(), "opAssign", right));
 					}
-					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
-							getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OBJECT)
+					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
+							TypeHelpers.getTypeEnum(TypeHelpers.getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OBJECT)
 					{
 						MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 						MFieldReferenceExpression left = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
 						ifBlock.statements.add(ModelCreation.createMethodCall("CPP", "assignArray", left, right));
 					}
-					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
+					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
 					{
 						MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 						MFieldReferenceExpression left = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
 						String methodName = "assignBasicArray";
 
-						if (getArraySizeExpressions(fieldInfo.field.getType()).size() > 1)
+						if (ctx.exprEvaluator.getArraySizeExpressions(fieldInfo.field.getType()).size() > 1)
 							methodName = "assignMultiArray";
 
 						ifBlock.statements.add(ModelCreation.createMethodCall("CPP", methodName, left, right));
@@ -1293,7 +1300,7 @@ public class SourceConverterStage2
 					if (fieldInfo.isStatic)
 						/* Do nothing. */ ;
 					else if (fieldInfo.init != null &&
-						getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
+							TypeHelpers.getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
 					{
 						// this.field = right.field.copy();
 						MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("right", fieldInfo.field.getName());	
@@ -1306,8 +1313,8 @@ public class SourceConverterStage2
 						MExpression infix = ModelCreation.createInfixExpr(fr3, fcall, "=");
 						meth.body.statements.add(ModelCreation.createExprStmt(infix));
 					}
-					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
-							getTypeEnum(getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OBJECT)
+					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
+							TypeHelpers.getTypeEnum(TypeHelpers.getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OBJECT)
 					{
 						// this.field = CPP.copyArray(right.field);
 						MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
@@ -1321,12 +1328,12 @@ public class SourceConverterStage2
 						MExpression infix = ModelCreation.createInfixExpr(fr1, fcall, "=");						
 						meth.body.statements.add(ModelCreation.createExprStmt(infix));
 					}
-					else if (getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
+					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
 					{
 						// this.field = CPP.copy*Array(right.field);
 						MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
 						MFieldReferenceExpression fr2 = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
-						MFieldReferenceExpression fr3 = ModelCreation.createFieldReference("CPP", getArraySizeExpressions(fieldInfo.field.getType()).size() > 1 ? "copyMultiArray" : "copyBasicArray");
+						MFieldReferenceExpression fr3 = ModelCreation.createFieldReference("CPP", ctx.exprEvaluator.getArraySizeExpressions(fieldInfo.field.getType()).size() > 1 ? "copyMultiArray" : "copyBasicArray");
 
 						MFunctionCallExpression fcall = new MFunctionCallExpression();
 						fcall.name = fr3;
@@ -1376,7 +1383,7 @@ public class SourceConverterStage2
 			print("elaborated type specifier" + elaboratedTypeSpecifier.getRawSignature());
 
 			//evaluateElaborated(elaboratedTypeSpecifier.getKind());
-			getSimpleName(elaboratedTypeSpecifier.getName());
+			TypeHelpers.getSimpleName(elaboratedTypeSpecifier.getName());
 
 			if (declSpecifier instanceof ICPPASTElaboratedTypeSpecifier)
 			{
@@ -1393,7 +1400,7 @@ public class SourceConverterStage2
 		{
 			IASTNamedTypeSpecifier namedTypeSpecifier = (IASTNamedTypeSpecifier)declSpecifier;
 			print("named type");
-			getSimpleName(namedTypeSpecifier.getName());
+			TypeHelpers.getSimpleName(namedTypeSpecifier.getName());
 
 			if (declSpecifier instanceof ICPPASTNamedTypeSpecifier)
 			{
@@ -1412,7 +1419,7 @@ public class SourceConverterStage2
 				print("cpp simple");
 			}
 
-			evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned());
+			TypeHelpers.evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned());
 		}
 		else if (declSpecifier instanceof ICASTDeclSpecifier)
 		{
@@ -1423,6 +1430,23 @@ public class SourceConverterStage2
 		return null;
 	}
 
+	String getEnumerationName(IEnumerator enumerator) throws DOMException
+	{
+		String enumeration = TypeHelpers.getSimpleType(((IEnumeration) enumerator.getType()).getName());
+
+		if (enumeration.equals("MISSING"))
+		{
+			String first = ((IEnumeration) enumerator.getOwner()).getEnumerators()[0].getName();
+			String enumName = anonEnumMap.get(first);
+			
+			if (enumName == null)
+				MyLogger.exitOnError();
+			
+			return enumName;
+		}
+		
+		return enumeration;
+	}
 //	private MExpression generateArrayCreationExpression(IType tp, List<MExpression> sizeExprs) throws DOMException
 //	{
 //		Type jtp = null;
@@ -1497,7 +1521,7 @@ public class SourceConverterStage2
 			print("simple declaration");
 
 			for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
-				ret.add(getSimpleName(decl.getName()));
+				ret.add(TypeHelpers.getSimpleName(decl.getName()));
 		}
 		else if (declaration instanceof ICPPASTExplicitTemplateInstantiation)
 		{
@@ -1552,28 +1576,8 @@ public class SourceConverterStage2
 		IASTInitializerClause clause = eq.getInitializerClause();
 		IASTExpression expr = (IASTExpression) clause;
 		
-		return eval1Expr(expr);
+		return ctx.exprEvaluator.eval1Expr(expr);
 	}
-
-
-	
-	
-
-	
-	
-
-
-
-	List<MExpression> expressions = new ArrayList<MExpression>();
-
-
-	
-
-
-
-
-
-
 
 	/**
 	 * Given a C++ initializer, returns a list of Java expressions.
@@ -1595,9 +1599,9 @@ public class SourceConverterStage2
 			
 //		TypeEnum type = getTypeEnum(var.getType());
 
-		dec.name = getSimpleName(decl.getName());
+		dec.name = TypeHelpers.getSimpleName(decl.getName());
 		dec.initExpr = eval1Init(decl.getInitializer());
-		dec.type = cppToJavaType(var.getType());
+		dec.type = TypeHelpers.cppToJavaType(var.getType());
 		
 		return dec;
 
@@ -1667,7 +1671,7 @@ public class SourceConverterStage2
 	/**
 	 * Given a typeId returns a Java type. Used in sizeof, etc. 
 	 */
-	static String evalTypeId(IASTTypeId typeId) throws DOMException
+	String evalTypeId(IASTTypeId typeId) throws DOMException
 	{
 		if (typeId != null)
 		{
@@ -1702,7 +1706,7 @@ public class SourceConverterStage2
 	 */
 	MExpression makeInfixFromDecl(String varName, MExpression initExpr, IType tp, boolean makeBoolean) throws DOMException
 	{
-		TypeEnum te = getTypeEnum(tp);
+		TypeEnum te = TypeHelpers.getTypeEnum(tp);
 		MInfixExpression infix = null;
 		
 		if (te == TypeEnum.CHAR || te == TypeEnum.BOOLEAN || te == TypeEnum.NUMBER)
@@ -1720,7 +1724,7 @@ public class SourceConverterStage2
 		infix.right = initExpr;
 		infix.operator = "=";
 
-		return makeBoolean ? makeExpressionBoolean(infix, te) : bracket(infix);
+		return makeBoolean ? ExpressionHelpers.makeExpressionBoolean(infix, te) : ExpressionHelpers.bracket(infix);
 	}
 
 
@@ -1788,9 +1792,10 @@ public class SourceConverterStage2
 		con.bitfieldHelpers = new BitfieldHelpers(con);
 		con.stackMngr = new StackManager(con);
 		
-		bitfields.add("cls::_b");
-bitfields.add("_b");
-		ExpressionEvaluator expressionEngine = new ExpressionEvaluator(this);
+		ctx = con;
+		ctx.bitfieldHelpers.add("cls::_b");
+		ctx.bitfieldHelpers.add("_b");
+
 		//compositeMap.put("", new CompositeInfo(global));
 		CppClass global = new CppClass();
 		global.name = "Global";
@@ -1818,12 +1823,12 @@ bitfields.add("_b");
 		String output = "";
 		STGroup group = new STGroupDir("/home/daniel/workspace/cpp-to-java-source-converter/templates");
 		//System.err.println("!!!!" + decls2.get(0).declarations.get(0).getClass().toString());
-		for (MExpression expr : expressions)
-		{
-			ST test2 = group.getInstanceOf("expression_tp");
-			test2.add("expr_obj", expr);
-			//System.err.println("####" + test2.render());
-		}
+//		for (MExpression expr : expressions)
+//		{
+//			ST test2 = group.getInstanceOf("expression_tp");
+//			test2.add("expr_obj", expr);
+//			//System.err.println("####" + test2.render());
+//		}
 		
 		for (CppDeclaration decl : decls2)
 		{

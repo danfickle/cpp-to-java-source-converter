@@ -30,7 +30,7 @@ class ExpressionEvaluator
 	/**
 	 * Given a C++ expression, attempts to convert it into one or more Java expressions.
 	 */
-	private List<MExpression> evalExpr(IASTExpression expression) throws DOMException
+	List<MExpression> evalExpr(IASTExpression expression) throws DOMException
 	{
 		List<MExpression> ret = new ArrayList<MExpression>();
 		
@@ -202,7 +202,7 @@ class ExpressionEvaluator
 	
 	private void evalExprId(IASTIdExpression expr, List<MExpression> ret) throws DOMException
 	{
-		if (BitfieldHelpers.isBitfield(expr.getName()))
+		if (ctx.bitfieldHelpers.isBitfield(expr.getName()))
 		{
 			MIdentityExpressionBitfield ident = new MIdentityExpressionBitfield();
 			ident.ident = TypeHelpers.getSimpleName(expr.getName());
@@ -211,7 +211,7 @@ class ExpressionEvaluator
 		else if (expr.getName().resolveBinding() instanceof IEnumerator)
 		{
 			MIdentityExpressionEnumerator ident = new MIdentityExpressionEnumerator();
-			ident.enumName = ctx.bitfieldHelpers.getEnumerationName((IEnumerator) expr.getName().resolveBinding());
+			ident.enumName = ctx.converter.getEnumerationName((IEnumerator) expr.getName().resolveBinding());
 			ident.ident = TypeHelpers.getSimpleName(expr.getName());
 			ret.add(ident);
 		}
@@ -237,7 +237,7 @@ class ExpressionEvaluator
 
 	private void evalExprFieldReference(IASTFieldReference expr, List<MExpression> ret) throws DOMException
 	{
-		if (BitfieldHelpers.isBitfield(expr.getFieldName()))
+		if (ctx.bitfieldHelpers.isBitfield(expr.getFieldName()))
 		{
 			MFieldReferenceExpressionBitfield field = new MFieldReferenceExpressionBitfield();
 			field.object = eval1Expr(expr.getFieldOwner());
@@ -393,7 +393,7 @@ class ExpressionEvaluator
 				ret.add(add);
 			}
 		}
-		else if (BitfieldHelpers.isBitfield(expr.getOperand()))
+		else if (ctx.bitfieldHelpers.isBitfield(expr.getOperand()))
 		{
 			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
 			{
@@ -542,7 +542,7 @@ class ExpressionEvaluator
 
 	private void evalExprBinary(IASTBinaryExpression expr, List<MExpression> ret) throws DOMException 
 	{
-		if (BitfieldHelpers.isBitfield(expr.getOperand1()))
+		if (ctx.bitfieldHelpers.isBitfield(expr.getOperand1()))
 		{
 			if (expr.getOperator() == IASTBinaryExpression.op_assign)
 			{

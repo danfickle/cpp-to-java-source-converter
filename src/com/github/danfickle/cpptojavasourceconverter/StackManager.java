@@ -49,7 +49,7 @@ class StackManager
 		MAddItemCall add = new MAddItemCall();
 		add.operand = item;
 		add.nextFreeStackId = nextVariableId;
-		incrementLocalVariableId();
+		getAndIncrementLocalVariableId();
 		return add;
 	}
 
@@ -86,10 +86,26 @@ class StackManager
 		return null;
 	}
 	
+	void reset()
+	{
+		nextVariableId = 0;
+		localVariableMaxId = null;
+	}
+	
+	int getLocalVariableId()
+	{
+		return nextVariableId;
+	}
+
+	Integer getMaxLocalVariableId()
+	{
+		return localVariableMaxId;
+	}
+	
 	/**
 	 * This method keeps track of the variable numbers.
 	 */
-	void incrementLocalVariableId()
+	int getAndIncrementLocalVariableId()
 	{
 		nextVariableId++;
 
@@ -98,6 +114,8 @@ class StackManager
 		
 		if (localVariableMaxId == null || nextVariableId > localVariableMaxId)
 			localVariableMaxId = nextVariableId;
+		
+		return nextVariableId;
 	}
 	
 	MStmt createCleanupCall(int until)
@@ -108,5 +126,21 @@ class StackManager
 				ModelCreation.createLiteral(String.valueOf(until)));
 		
 		return fcall;
+	}
+	
+	void startNewCompoundStmt(boolean isLoop, boolean isSwitch)
+	{
+		localVariableStack.push(
+				new ScopeVar(nextVariableId,
+						isLoop,
+						isSwitch));
+	}
+	
+	Integer endCompoundStmt()
+	{
+		int cnt = localVariableStack.peek().cnt;
+		nextVariableId = localVariableStack.peek().id;
+		localVariableStack.pop();
+		return cnt == 0 ? null : nextVariableId;
 	}
 }

@@ -24,7 +24,7 @@ class StmtEvaluator
 		ctx = con;
 	}
 
-	private MStmt eval1Stmt(IASTStatement stmt) throws DOMException
+	MStmt eval1Stmt(IASTStatement stmt) throws DOMException
 	{
 		List<MStmt> ret = evalStmt(stmt);
 		assert(ret.size() == 1);
@@ -113,27 +113,26 @@ class StmtEvaluator
 		{
 			IASTCompoundStatement compoundStatement = (IASTCompoundStatement)statement;
 			MyLogger.log("Compound");
-			startNewCompoundStmt(false, false);
-//			startNewCompoundStmt(
-//					isLocationDirectly(Location.DoBody, Location.ForBody, Location.WhileBody),  
-//					isLocationDirectly(Location.SwitchBody)
-//				);
-// TODO
+			ctx.stackMngr.startNewCompoundStmt(false, false);
+//			ctx.stackMngr.startNewCompoundStmt(
+//					currentLocation == BodyLocation.DO ||
+//					currentLocation == BodyLocation.WHILE ||
+//					currentLocation == BodyLocation.FOR,
+//					currentLocation == BodyLocation.SWITCH);
+
 			MCompoundStmt compound = new MCompoundStmt();
 			stmts.add(compound);
 
 			for (IASTStatement s : compoundStatement.getStatements())
 				compound.statements.add(eval1Stmt(s));
 			
-			int cnt = m_localVariableStack.peek().cnt;
-			m_nextVariableId = m_localVariableStack.peek().id;
-			endCompoundStmt();
+			Integer idToCleanTo = ctx.stackMngr.endCompoundStmt();
 			
-			if (cnt != 0 &&
+			if (idToCleanTo != null &&
 			    !compound.statements.isEmpty() &&
 			    !isTerminatingStatement(compound.statements.get(compound.statements.size() - 1)))
 			{
-				compound.cleanup = createCleanupCall(m_nextVariableId);
+				compound.cleanup = ctx.stackMngr.createCleanupCall(idToCleanTo);
 			}
 		}
 		else if (statement instanceof IASTDeclarationStatement)
@@ -279,11 +278,12 @@ class StmtEvaluator
 				retu.expr = ctx.converter.callCopyIfNeeded(retu.expr, returnStatement.getReturnValue());
 			}
 			
-			if (currentReturnType.equals("Boolean"))
-				retu.expr = ExpressionHelpers.makeExpressionBoolean(retu.expr, returnStatement.getReturnValue());
+// TODO
+//			if (currentReturnType.equals("Boolean"))
+//				retu.expr = ExpressionHelpers.makeExpressionBoolean(retu.expr, returnStatement.getReturnValue());
 
 			// Only call cleanup if we have something on the stack.
-			if (m_nextVariableId != 0)
+			if (ctx.stackMngr.getLocalVariableId() != 0)
 				retu.cleanup = ctx.stackMngr.createCleanupCall(0);
 		}
 		else if (statement instanceof IASTSwitchStatement)
@@ -364,20 +364,7 @@ class StmtEvaluator
 		
 		return false;
 	}
-	
-	private void startNewCompoundStmt(boolean isLoop, boolean isSwitch)
-	{
-		m_localVariableStack.push(
-				new ScopeVar(m_nextVariableId,
-						isLoop,
-						isSwitch));
-	}
-	
-	private void endCompoundStmt()
-	{
-		m_localVariableStack.pop();
-	}
-	
+
 	private MCompoundStmt surround(List<MStmt> stmts) throws DOMException
 	{
 		if (stmts.size() == 1 && stmts.get(0) instanceof MCompoundStmt)
