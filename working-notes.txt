@@ -1,3 +1,27 @@
+All variables are to be considered object except bitfields.
+
+Each object to have following methods:
+-> ptrCopy
+-> ptrOffset
+-> ptrAdjust
+-> ptrPostInc
+-> ptrPostDec
+-> ptrAddressOf
+
+Number and boolean objects to have following methods:
+-> get
+-> set
+-> addressOf
+-> postInc
+-> postDec
+-> valueOf [static]
+
+Other objects to have following methods:
+-> default constructor
+-> destruct
+-> copy
+-> opAssign
+
 #### Number operations ####
 All operations return a raw number other than addressof,
 create, func arg and return.
@@ -26,7 +50,7 @@ create, func arg and return.
 -> n compound  i.set(i.get() + 2)
 => MODEL: MCompoundWithNumberOnLeft
 
--> n addressof i.addressof()
+-> n addressof i.addressOf()
 => MODEL: MAddressOfExpression
 
 -> n unary     -i.get()
@@ -46,8 +70,11 @@ create, func arg and return.
 #### Pointer operations ####
 All operations return a pointer other than star.
 
--> p id        p
+-> p id        p.ptrCopy()
 => MODEL: MIdentityExpressionPtr
+
+-> p fieldref  obj.p.ptrCopy()
+=> MODEL: MFieldReferenceExpressionPtr
 
 -> p postinc   p.ptrPostInc()
 => MODEL: MPostfixExpressionPointerInc
@@ -61,14 +88,14 @@ All operations return a pointer other than star.
 -> p predec    p.ptrAdjust(-1)
 => MODEL: MPrefixExpressionPointerDec
 
--> p infix     p.add(3) (p + 3)
+-> p infix     p.ptrOffset(3) (p + 3)
 => MODEL: MInfixExpressionWithPtrOnLeft
 
--> p infix     p.add(5) (5 + p)
+-> p infix     p.ptrOffset(5) (5 + p)
 => MODEL: MInfixExpressionWithPtrOnRight
 
--> p assign    p = j
-=> MODEL: MInfixExpressionPlain
+-> p assign    p = j.ptrCopy()
+=> MODEL: MInfixAssignmentWithPtrOnLeft
 
 -> p compound  ptr.ptrAdjust(-4) (p -= 4)
 => MODEL: MCompoundWithPtrOnLeft
@@ -76,7 +103,7 @@ All operations return a pointer other than star.
 -> p deref left assign  p.set(7)
 => MODEL: MInfixAssignmentWithDerefOnLeft
 
--> p deref left compound p.set(p.get() + 2)
+-> p deref left compound p.set(p.get() + 2) ((*p) += 2)
 => MODEL: MCompoundWithDerefOnLeft
 
 -> p deref postfix p.ptrPostInc().postInc() ((*(p++))++)
@@ -85,8 +112,8 @@ All operations return a pointer other than star.
 -> p deref prefix p.ptrAdjust(-1).postInc() ((*(--p))++)
 => MODEL: MPrefixWithDeref
 
--> p addressof ptr.addressof()
-=> MODEL: MAddressOfExpression
+-> p addressof ptr.ptrAddressOf()
+=> MODEL: MAddressOfExpressionPtr
 
 -> p star      ptr.get()
 => MODEL: MPrefixExpressionPointerStar
@@ -100,6 +127,17 @@ All operations return a pointer other than star.
 -> p return   return p.ptrCopy()
 => MODEL: MPtrCopy
 
+
+
+#### Array operations ####
+-> p array acc p.ptrOffset(2).get()
+=> MODEL: MArrayExpressionPtr
+
+-> p array acc address of p.ptrOffset(2).addressOf()
+=> MODEL: MAddressOfExpressionArrayItem
+
+-> p array create MIntegerMulti.create(2)
+=> MODEL: MNewArrayExpression
 
 
 #### Bitfield operations ####

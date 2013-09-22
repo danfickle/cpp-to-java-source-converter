@@ -55,6 +55,11 @@ class ExpressionModels
 		public List<MExpression> args = new ArrayList<MExpression>();
 	}
 	
+	static class MAddressOfExpressionArrayItem extends MArrayExpression
+	{
+		public boolean isArrayAccessWithAddressOf = true;
+	}
+	
 	static class MPostfixExpressionNumberInc extends MPostfixExpression
 	{
 		public boolean isPostfixNumberInc = true;
@@ -115,6 +120,17 @@ class ExpressionModels
 	static class MPtrCopy extends MExpression
 	{
 		public boolean isPtrCopy = true;
+		public MExpression operand;
+	}
+	
+	static class MInfixAssignmentWithPtrOnLeft extends MInfixExpression
+	{
+		public boolean isAssignmentWithPtrOnLeft = true;
+	}
+	
+	static class MAddressOfExpressionPtr extends MExpression
+	{
+		public boolean isAddressOfPtr = true;
 		public MExpression operand;
 	}
 	

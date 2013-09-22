@@ -12,7 +12,7 @@ expression_tp(expr_obj) ::= <%
     <expr_obj.enumName>.<expr_obj.ident>.val
 
   <elseif(expr_obj.isIdentityPtr)>
-    <expr_obj.ident>
+    <expr_obj.ident>.ptrCopy()
 
   <elseif(expr_obj.isIdentityNumber)>
     <expr_obj.ident>.get()
@@ -48,10 +48,10 @@ expression_tp(expr_obj) ::= <%
     <expr_obj.operator><expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isPrefixPointerInc)>
-    <expression_tp(expr_obj.operand)>.adjust(1)
+    <plain_variable_tp(expr_obj.operand)>.ptrAdjust(1)
 
   <elseif(expr_obj.isPrefixPointerDec)>
-    <expression_tp(expr_obj.operand)>.adjust(-1)
+    <plain_variable_tp(expr_obj.operand)>.ptrAdjust(-1)
 
   <elseif(expr_obj.isPrefixPointerStar)>
     <expression_tp(expr_obj.operand)>.get()
@@ -66,10 +66,10 @@ expression_tp(expr_obj) ::= <%
     <expr_obj.operator><expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isPostfixPointerInc)>
-    <expression_tp(expr_obj.operand)>.postinc()
+    <plain_variable_tp(expr_obj.operand)>.ptrPostInc()
 
   <elseif(expr_obj.isPostfixPointerDec)>
-    <expression_tp(expr_obj.operand)>.postdec()
+    <plain_variable_tp(expr_obj.operand)>.ptrPostDec()
 
   <elseif(expr_obj.isPostfixBitfieldInc)>
     <plain_object_tp(expr_obj.operand)>postInc__<plain_name_tp(expr_obj.operand)>()
@@ -84,7 +84,7 @@ expression_tp(expr_obj) ::= <%
     <expression_tp(expr_obj.object)>.get__<expr_obj.field>()
 
   <elseif(expr_obj.isFieldReferencePtr)>
-    <expression_tp(expr_obj.object)>.<expr_obj.field>.get()
+    <expression_tp(expr_obj.object)>.<expr_obj.field>.ptrCopy()
 
   <elseif(expr_obj.isFieldReferenceEnumerator)>
     <expression_tp(expr_obj.object)>.<expr_obj.field>.val
@@ -102,7 +102,10 @@ expression_tp(expr_obj) ::= <%
     <expression_tp(expr_obj.operand)><expr_obj.subscript:{s | [<expression_tp(s)>]}>
 
   <elseif(expr_obj.isPtrArray)>
-   <expression_tp(expr_obj.operand)>.add(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).get()
+   <expression_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).get()
+
+  <elseif(expr_obj.isArrayAccessWithAddressOf)>
+   <plain_variable_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).addressOf()
 
   <elseif(expr_obj.isFunctionCall)>
     <expression_tp(expr_obj.name)>(<expr_obj.args:{a | <expression_tp(a)>}; separator=", ">)
@@ -115,6 +118,24 @@ expression_tp(expr_obj) ::= <%
 
   <elseif(expr_obj.isCast)>
     (<expr_obj.type>) <expression_tp(expr_obj.operand)>
+
+  <elseif(expr_obj.isInfixWithPtrOnLeft)>
+    <plain_variable_tp(expr_obj.left)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.right)>)
+
+  <elseif(expr_obj.isInfixWithPtrOnRight)>
+    <plain_variable_tp(expr_obj.right)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.left)>)
+
+  <elseif(expr_obj.isAssignmentWithPtrOnLeft)>
+    <plain_variable_tp(expr_obj.left)> = <expression_tp(expr_obj.right)>
+
+  <elseif(expr_obj.isCompoundWithPtrOnLeft)>
+    <plain_variable_tp(expr_obj.left)>.ptrAdjust(<expr_obj.operator><expression_tp(expr_obj.right)>)
+
+  <elseif(expr_obj.isAddressOfPtr)>
+    <plain_variable_tp(expr_obj.operand)>.ptrAddressOf()
+
+  <elseif(expr_obj.isPtrCopy)>
+    <expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isInfix)>
     <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
@@ -132,10 +153,10 @@ expression_tp(expr_obj) ::= <%
     <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
 
   <elseif(expr_obj.isAssignmentWithDerefOnLeft)>
-    <plain_object_tp(expr_obj.left)>set(<expression_tp(expr_obj.right)>)
+    <plain_variable_tp(expr_obj.left)>.set(<expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isCompoundWithDerefOnLeft)>
-    <plain_object_tp(expr_obj.left)>set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
+    <plain_variable_tp(expr_obj.left)>.set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isDeleteObjectSingle)>
     <expression_tp(expr_obj.operand)>.destruct()
@@ -144,7 +165,7 @@ expression_tp(expr_obj) ::= <%
     DestructHelper.destructArray(<expression_tp(expr_obj.operand)>)
 
   <elseif(expr_obj.isBasicNewArray)>
-    PTR.new<expr_obj.type>Ptr(new <expr_obj.type><expr_obj.sizes:{s | [<expression_tp(s)>]}; separator=", ">)
+    <expr_obj.type>Multi.create(<expr_obj.sizes:{s | <expression_tp(s)>}; separator=", ">)
 
   <elseif(expr_obj.isObjectNewArray)>
     PTR.newObjPtr(CreateHelper.allocateArray(<expr_obj.type>.class, <expr_obj.sizes:{s | <expression_tp(s)>}; separator=", ">)
