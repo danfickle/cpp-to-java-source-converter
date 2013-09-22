@@ -48,10 +48,10 @@ expression_tp(expr_obj) ::= <%
     <expr_obj.operator><expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isPrefixPointerInc)>
-    <plain_variable_tp(expr_obj.operand)>.ptrAdjust(1)
+    <lhs_pointer_tp(expr_obj)>
 
   <elseif(expr_obj.isPrefixPointerDec)>
-    <plain_variable_tp(expr_obj.operand)>.ptrAdjust(-1)
+    <lhs_pointer_tp(expr_obj)>
 
   <elseif(expr_obj.isPrefixPointerStar)>
     <plain_variable_tp(expr_obj.operand)>.get()
@@ -66,10 +66,10 @@ expression_tp(expr_obj) ::= <%
     <expr_obj.operator><expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isPostfixPointerInc)>
-    <plain_variable_tp(expr_obj.operand)>.ptrPostInc()
+    <lhs_pointer_tp(expr_obj)>
 
   <elseif(expr_obj.isPostfixPointerDec)>
-    <plain_variable_tp(expr_obj.operand)>.ptrPostDec()
+    <lhs_pointer_tp(expr_obj)>
 
   <elseif(expr_obj.isPostfixBitfieldInc)>
     <plain_object_tp(expr_obj.operand)>postInc__<plain_name_tp(expr_obj.operand)>()
@@ -99,10 +99,10 @@ expression_tp(expr_obj) ::= <%
     <expression_tp(expr_obj.condition)> ? <expression_tp(expr_obj.positive)> : <expression_tp(expr_obj.negative)>
 
   <elseif(expr_obj.isPtrArray)>
-   <expression_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).get()
+   <plain_variable_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).get()
 
   <elseif(expr_obj.isArrayAccessWithAddressOf)>
-   <plain_variable_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).addressOf()
+   <lhs_pointer_tp(expr_obj)>.addressOf()
 
   <elseif(expr_obj.isFunctionCall)>
     <expression_tp(expr_obj.name)>(<expr_obj.args:{a | <expression_tp(a)>}; separator=", ">)
@@ -117,7 +117,7 @@ expression_tp(expr_obj) ::= <%
     (<expr_obj.type>) <expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isInfixWithPtrOnLeft)>
-    <plain_variable_tp(expr_obj.left)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.right)>)
+    <expression_tp(expr_obj.left)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isInfixWithPtrOnRight)>
     <plain_variable_tp(expr_obj.right)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.left)>)
@@ -150,10 +150,10 @@ expression_tp(expr_obj) ::= <%
     <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
 
   <elseif(expr_obj.isAssignmentWithDerefOnLeft)>
-    <plain_variable_tp(expr_obj.left)>.set(<expression_tp(expr_obj.right)>)
+    <lhs_pointer_tp(expr_obj.left)>.set(<expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isCompoundWithDerefOnLeft)>
-    <plain_variable_tp(expr_obj.left)>.set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
+    <lhs_pointer_tp(expr_obj.left)>.set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isDeleteObjectSingle)>
     <expression_tp(expr_obj.operand)>.destruct()

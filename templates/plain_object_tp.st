@@ -7,13 +7,13 @@ plain_object_tp(expr_obj) ::= <%
     <really_plain_object_tp(expr_obj.object)>.
 
   <elseif(expr_obj.isPtrArray)>
-   <expression_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).
+    <really_plain_object_tp(expr_obj.operand)>.
 
   <elseif(expr_obj.isPrefixPointerStar)>
-    <expression_tp(expr_obj.operand)>.
+    <really_plain_object_tp(expr_obj.operand)>.
 
   <elseif(expr_obj.isFieldReferencePtr)>
-    <expression_tp(expr_obj.object)>.<expr_obj.field>.
+    <really_plain_object_tp(expr_obj.object)>.
 
   <else>
     /* 2 */

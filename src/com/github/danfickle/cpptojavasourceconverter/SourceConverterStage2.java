@@ -143,6 +143,7 @@ import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppEnumer
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppFunction;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MAddItemCall;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MAddressOfExpression;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MAddressOfExpressionArrayItem;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MArrayExpressionPtr;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MBracketExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MCastExpression;
@@ -2157,6 +2158,27 @@ public class SourceConverterStage2
 			bra.operand = eval1Expr(expr.getOperand());
 			ret.add(bra);
 		}
+		else if (expr.getOperator() == IASTUnaryExpression.op_amper)
+		{
+			if (isEventualPtrDeref(expr.getOperand()))
+			{
+				MAddressOfExpressionArrayItem add = new MAddressOfExpressionArrayItem();
+				add.operand = eval1Expr(expr.getOperand());
+				ret.add(add);
+			}
+			else
+			{
+				MAddressOfExpression add = new MAddressOfExpression();
+				add.operand = eval1Expr(expr.getOperand());
+				ret.add(add);
+			}
+		}
+		else if (expr.getOperator() == IASTUnaryExpression.op_star)
+		{
+			MPrefixExpressionPointerStar pre = new MPrefixExpressionPointerStar();
+			pre.operand = eval1Expr(expr.getOperand());
+			ret.add(pre);
+		}
 		else if (isEventualPtr(expr.getExpressionType()))
 		{
 			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
@@ -2196,18 +2218,6 @@ public class SourceConverterStage2
 				add.operand = eval1Expr(expr.getOperand());
 				ret.add(add);
 			}
-		}
-		else if (expr.getOperator() == IASTUnaryExpression.op_star)
-		{
-			MPrefixExpressionPointerStar pre = new MPrefixExpressionPointerStar();
-			pre.operand = eval1Expr(expr.getOperand());
-			ret.add(pre);
-		}
-		else if (expr.getOperator() == IASTUnaryExpression.op_amper)
-		{
-			MAddressOfExpression add = new MAddressOfExpression();
-			add.operand = eval1Expr(expr.getOperand());
-			ret.add(add);
 		}
 		else if (isBitfield(expr.getOperand()))
 		{
@@ -3743,7 +3753,19 @@ public class SourceConverterStage2
 	{
 		return cppToJavaType(type, false, false);
 	}
-
+	
+	private IASTExpression removeDref(IASTExpression expr)
+	{
+		if (expr instanceof IASTUnaryExpression &&
+			((IASTUnaryExpression) expr).getOperator() == IASTUnaryExpression.op_star)
+			return ((IASTUnaryExpression) expr).getOperand();
+		else
+		{
+			assert(false);
+			return expr;
+		}
+	}
+	
 	private boolean isEventualPtrDeref(IASTExpression expr)
 	{
 		expr = unwrap(expr);
