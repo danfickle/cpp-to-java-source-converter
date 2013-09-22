@@ -140,11 +140,6 @@ class ExpressionModels
 		public MExpression operand;
 	}
 	
-	static class MArrayExpressionPlain extends MArrayExpression
-	{
-		public boolean isArray = true;
-	}
-
 	static class MArrayExpressionPtr extends MArrayExpression
 	{
 		public boolean isPtrArray = true;

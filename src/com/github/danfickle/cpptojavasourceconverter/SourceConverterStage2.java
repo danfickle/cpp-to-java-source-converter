@@ -143,7 +143,6 @@ import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppEnumer
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppFunction;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MAddItemCall;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MAddressOfExpression;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MArrayExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MArrayExpressionPtr;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MBracketExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MCastExpression;
@@ -170,10 +169,13 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityE
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithBitfieldOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithDerefOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithNumberOnLeft;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithPtrOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionWithBitfieldOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionWithDerefOnLeft;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionWithPtrOnLeft;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionWithPtrOnRight;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixWithNumberOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MLiteralExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MNewArrayExpression;
@@ -1706,7 +1708,7 @@ public class SourceConverterStage2
 			else if (isLongLong)
 				return "Long";
 			else
-				return  "Integer";
+				return "MInteger";
 		case IASTSimpleDeclSpecifier.t_float:
 			print("float");
 			return "Float";
@@ -2103,19 +2105,12 @@ public class SourceConverterStage2
 
 	private void evalExprArraySubscript(IASTArraySubscriptExpression expr, List<MExpression> ret) throws DOMException
 	{
-		if (isEventualPtr(expr.getArrayExpression().getExpressionType()))
+		//if (isEventualPtr(expr.getArrayExpression().getExpressionType()))
 		{
 			MArrayExpressionPtr ptr = new MArrayExpressionPtr();
 			ptr.operand = eval1Expr(expr.getArrayExpression());
 			ptr.subscript.addAll(evalExpr(expr.getSubscriptExpression()));
 			ret.add(ptr);
-		}
-		else
-		{
-			MArrayExpressionPlain array = new MArrayExpressionPlain();
-			array.operand = eval1Expr(expr.getArrayExpression());
-			array.subscript.addAll(evalExpr(expr.getSubscriptExpression()));
-			ret.add(array);
 		}
 	}
 
@@ -2414,6 +2409,30 @@ public class SourceConverterStage2
 				infix.operator = evaluateBinaryOperator(expr.getOperator());
 				ret.add(infix);
 			}
+		}
+		else if (expr.getOperator() == IASTBinaryExpression.op_assign &&
+				isEventualPtr(expr.getOperand1().getExpressionType()))
+		{
+			MInfixAssignmentWithPtrOnLeft infix = new MInfixAssignmentWithPtrOnLeft();
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			ret.add(infix);
+		}
+		else if (isEventualPtr(expr.getOperand1().getExpressionType()))
+		{
+			MInfixExpressionWithPtrOnLeft infix = new MInfixExpressionWithPtrOnLeft();
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			infix.operator = evaluateBinaryOperator(expr.getOperator());
+			ret.add(infix);
+		}
+		else if (isEventualPtr(expr.getOperand2().getExpressionType()))
+		{
+			MInfixExpressionWithPtrOnRight infix = new MInfixExpressionWithPtrOnRight();
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			infix.operator = evaluateBinaryOperator(expr.getOperator());
+			ret.add(infix);
 		}
 		else if (isNumberExpression(expr.getOperand1()))
 		{
@@ -3801,7 +3820,11 @@ public class SourceConverterStage2
 			else
 				return false;
 		}
-
+		else if (type instanceof IArrayType)
+		{
+			return true;
+		}
+		
 		return false;
 	}
 	
@@ -3847,13 +3870,13 @@ public class SourceConverterStage2
 			IBasicType basic = (IBasicType) type;
 			
 			//if (needBoxed)
-				return "M" + evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
+				return evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 			//return evaluateSimpleType(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 		}
 		else if (type instanceof IArrayType)
 		{
 			IArrayType array = (IArrayType) type;
-			return cppToJavaType(array.getType()) + " []";
+			return cppToJavaType(array.getType()) + "Multi";
 		}
 		else if (type instanceof ICompositeType)
 		{

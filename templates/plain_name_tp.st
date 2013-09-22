@@ -28,7 +28,7 @@ plain_name_tp(expr_obj) ::= <%
    <expr_obj.field>
 
   <else>
-    /* 3 */
+   <expression_tp(expr_obj)>
 
   <endif>
 %>

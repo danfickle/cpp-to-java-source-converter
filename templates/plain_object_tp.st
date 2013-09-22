@@ -7,7 +7,7 @@ plain_object_tp(expr_obj) ::= <%
     <really_plain_object_tp(expr_obj.object)>.
 
   <elseif(expr_obj.isPtrArray)>
-   <expression_tp(expr_obj.operand)>.add(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).
+   <expression_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).
 
   <elseif(expr_obj.isPrefixPointerStar)>
     <expression_tp(expr_obj.operand)>.

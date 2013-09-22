@@ -54,7 +54,7 @@ expression_tp(expr_obj) ::= <%
     <plain_variable_tp(expr_obj.operand)>.ptrAdjust(-1)
 
   <elseif(expr_obj.isPrefixPointerStar)>
-    <expression_tp(expr_obj.operand)>.get()
+    <plain_variable_tp(expr_obj.operand)>.get()
 
   <elseif(expr_obj.isPrefixBitfieldInc)>
     <plain_object_tp(expr_obj.operand)>set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> + 1)
@@ -97,9 +97,6 @@ expression_tp(expr_obj) ::= <%
 
   <elseif(expr_obj.isTernary)>
     <expression_tp(expr_obj.condition)> ? <expression_tp(expr_obj.positive)> : <expression_tp(expr_obj.negative)>
-
-  <elseif(expr_obj.isArray)>
-    <expression_tp(expr_obj.operand)><expr_obj.subscript:{s | [<expression_tp(s)>]}>
 
   <elseif(expr_obj.isPtrArray)>
    <expression_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).get()
