@@ -8,7 +8,6 @@ import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
 
-import com.github.danfickle.cpptojavasourceconverter.SourceConverterStage2.GlobalContext;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 
 class ExpressionEvaluator
@@ -211,7 +210,7 @@ class ExpressionEvaluator
 		else if (expr.getName().resolveBinding() instanceof IEnumerator)
 		{
 			MIdentityExpressionEnumerator ident = new MIdentityExpressionEnumerator();
-			ident.enumName = ctx.converter.getEnumerationName((IEnumerator) expr.getName().resolveBinding());
+			ident.enumName = ctx.enumMngr.getEnumerationName((IEnumerator) expr.getName().resolveBinding());
 			ident.ident = TypeHelpers.getSimpleName(expr.getName());
 			ret.add(ident);
 		}

@@ -6,7 +6,6 @@ import java.util.Set;
 import org.eclipse.cdt.core.dom.ast.*;
 
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppBitfield;
-import com.github.danfickle.cpptojavasourceconverter.SourceConverterStage2.GlobalContext;
 
 public class BitfieldManager
 {

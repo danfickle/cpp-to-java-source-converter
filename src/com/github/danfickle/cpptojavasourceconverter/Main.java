@@ -27,7 +27,7 @@ public class Main
 	    	if (!line.isEmpty() && !line.startsWith("#"))
 	    	{
 	    		IASTTranslationUnit tu = getTranslationUnit(HOME_PATH + "tests/" + line + ".cpp");
-	    		SourceConverterStage2 parser = new SourceConverterStage2();
+	    		Traverser parser = new Traverser();
 	    		String outputCode = parser.traverse(tu);
 	    		
 	    		FileOutputStream fos = new FileOutputStream(HOME_PATH + "crap/" + line + ".java");

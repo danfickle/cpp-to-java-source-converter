@@ -7,7 +7,6 @@ import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
-import com.github.danfickle.cpptojavasourceconverter.SourceConverterStage2.GlobalContext;
 
 class EnumManager
 {

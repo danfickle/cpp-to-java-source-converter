@@ -3,7 +3,6 @@ package com.github.danfickle.cpptojavasourceconverter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import com.github.danfickle.cpptojavasourceconverter.SourceConverterStage2.GlobalContext;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MStmt;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 

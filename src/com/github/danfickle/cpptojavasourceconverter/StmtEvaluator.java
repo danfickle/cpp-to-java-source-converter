@@ -12,7 +12,6 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTWhileStatement;
 
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MValueOfExpressionNumber;
-import com.github.danfickle.cpptojavasourceconverter.SourceConverterStage2.GlobalContext;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 

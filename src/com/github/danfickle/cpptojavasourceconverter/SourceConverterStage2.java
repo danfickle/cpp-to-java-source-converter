@@ -41,23 +41,17 @@ import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
  */
 public class SourceConverterStage2
 {
-	static class GlobalContext
-	{
-		SourceConverterStage2 converter;
-		StackManager stackMngr;
-		ExpressionEvaluator exprEvaluator;
-		StmtEvaluator stmtEvaluator;
-		BitfieldManager bitfieldMngr;
-		EnumManager enumMngr;
-	}
+	private final GlobalContext ctx;
 	
-	private GlobalContext ctx;
+	SourceConverterStage2(GlobalContext con) {
+		ctx = con;
+	}
 	
 	/**
 	 * This class keeps track of all the info on a C++ class
 	 * or struct.
 	 */
-	private static class CompositeInfo
+	static class CompositeInfo
 	{
 		CompositeInfo(CppDeclaration tydArg)
 		{
@@ -74,7 +68,7 @@ public class SourceConverterStage2
 		boolean hasSuper;
 	}
 	
-	private List<CppDeclaration> decls2 = new ArrayList<CppDeclaration>();
+
 
 	/**
 	 * The info for the current class/struct.
@@ -92,7 +86,7 @@ public class SourceConverterStage2
 
 		if (currentInfo == null)
 		{
-			decls2.add(decl);
+			ctx.globalDeclarations.add(decl);
 			nested = false;
 		}
 		else
@@ -110,84 +104,12 @@ public class SourceConverterStage2
 		currentInfo = currentInfoStack.peekFirst();
 	}
 
-	private CompositeInfo getCurrentCompositeInfo()
+	CompositeInfo getCurrentCompositeInfo()
 	{
 		return currentInfo;
 	}
 	
-	/**
-	 * Builds default argument function calls.
-	 * For example:
-	 *   int func_with_defaults(int one, int two = 5);
-	 * would generate:
-	 * 	 int func_with_defaults(int one) {
-	 *	     return func_with_defaults(one, 5);
-	 *   }
-	 */
-	private void makeDefaultCalls(IASTFunctionDeclarator func, IBinding funcBinding) throws DOMException
-	{
-		// getDefaultValues will return an item for every parameter.
-		// ie. null for params without a default value.
-		List<MExpression> defaultValues = getDefaultValues(func);
 
-		// We start from the right because C++ can only have default values at the
-		// right and we can stop when we get to a null (meaning there is no more defaults).
-		for (int k = defaultValues.size() - 1; k >= 0; k--)
-		{
-			if (defaultValues.get(k) == null)
-				break;
-
-			// Create the method declaration.
-			// This will handle void return types.
-			CppFunction methodDef = new CppFunction();
-			methodDef.name = TypeHelpers.getSimpleName(func.getName());
-			methodDef.retType = evalReturnType(funcBinding);
-			
-			// This gets a parameter variable declaration for each param.
-			List<MSimpleDecl> list = evalParameters(funcBinding);
-
-			// Add a param declaration for each param up until we want to use
-			// default values (which won't have a param).
-			for (int k2 = 0; k2 < k; k2++)
-				methodDef.args.add(list.get(k2));
-
-			// This code block simple calls the original method with
-			// passed in arguments plus default arguments.
-			MFunctionCallExpression method = ModelCreation.createFuncCall(TypeHelpers.getSimpleName(func.getName()));
-
-			// Add the passed in params by name.
-			List<String> names = getArgumentNames(funcBinding);
-			for (int k3 = 0; k3 < k; k3++)
-			{
-				method.args.add(ModelCreation.createLiteral(names.get(k3)));
-			}
-
-			// Now add the default values.
-			List<MExpression> vals = getDefaultValues(func);
-			for (int k4 = k; k4 < defaultValues.size(); k4++)
-				method.args.add(vals.get(k4));
-
-			MCompoundStmt block = new MCompoundStmt();
-			
-			// If not a void function, return the result of the method call.
-			if (evalReturnType(funcBinding).toString().equals("void"))
-			{
-				MExprStmt exprStmt = ModelCreation.createExprStmt(method);
-				block.statements.add(exprStmt);
-			}
-			else
-			{
-				MReturnStmt retu = new MReturnStmt();
-				retu.expr = method;
-				block.statements.add(retu);
-			}
-
-			methodDef.body = block;
-			
-			addDeclaration(methodDef);
-			popDeclaration();
-		}
-	}
 	
 	/**
 	 * Given a list of fields for a class, adds initialization statements
@@ -196,12 +118,12 @@ public class SourceConverterStage2
 	 * lists, and implicit initializers for objects.
 	 * Note: We must initialize in order that fields were declared.
 	 */
-	private void generateCtorStatements(List<FieldInfo> fields, MCompoundStmt method)
+	void generateCtorStatements(List<FieldInfo> fields, MCompoundStmt method)
 	{
 		int start = 0;
 		for (FieldInfo fieldInfo : fields)
 		{
-			print(fieldInfo.field.getName());
+			MyLogger.log(fieldInfo.field.getName());
 
 			// Static fields can't be initialized in the constructor.
 			if (fieldInfo.init != null && !fieldInfo.isStatic)
@@ -221,11 +143,11 @@ public class SourceConverterStage2
 	/**
 	 * Generate destruct calls for fields in reverse order of field declaration.
 	 */
-	private void generateDtorStatements(List<FieldInfo> fields, MCompoundStmt method, boolean hasSuper) throws DOMException
+	void generateDtorStatements(List<FieldInfo> fields, MCompoundStmt method, boolean hasSuper) throws DOMException
 	{
 		for (int i = fields.size() - 1; i >= 0; i--)
 		{
-			print(fields.get(i).field.getName());
+			MyLogger.log(fields.get(i).field.getName());
 
 			if (fields.get(i).isStatic)
 				/* Do nothing. */ ;
@@ -256,159 +178,6 @@ public class SourceConverterStage2
 			method.statements.add(stmt);
 		}
 	}
-
-	// The return type of the function currently being evaluated.
-	// We need this so we know if the return expression needs to be made
-	// java boolean.
-	String currentReturnType = null;
-	
-	/**
-	 * Evaluates a function definition and converts it to Java.
-	 */
-	private void evalFunction(IASTDeclaration declaration) throws DOMException
-	{
-		IASTFunctionDefinition func = (IASTFunctionDefinition) declaration;
-		IBinding funcBinding = func.getDeclarator().getName().resolveBinding();
-		
-		CppFunction method = new CppFunction();
-		method.name = TypeHelpers.getSimpleName(func.getDeclarator().getName());
-		method.isStatic = ((IFunction) funcBinding).isStatic();
-		method.retType = evalReturnType(funcBinding);
-
-		boolean isCtor = false, isDtor = false;
-
-		if (method.retType == null || method.retType.equalsIgnoreCase("void"))
-		{
-			if (method.name.contains("destruct"))
-			{
-				method.isCtor = true;
-			}
-			else
-			{
-				method.isDtor = true;
-			}
-		}
-
-		method.args.addAll(evalParameters(funcBinding));
-		
-		ctx.stackMngr.reset();
-
-		// We need this so we know if the return expression needs to be made
-		// java boolean.
-		currentReturnType = method.retType;
-		
-		// eval1Stmt work recursively to generate the function body.
-		method.body = (MCompoundStmt) ctx.stmtEvaluator.eval1Stmt(func.getBody());
-
-		// For debugging purposes, we put return type back to null.
-		currentReturnType = null;
-		
-		// If we have any local variables that are objects, or arrays of objects,
-		// we must create an explicit stack so they can be added to it and explicity
-		// cleaned up at termination points (return, break, continue, end block).
-		if (ctx.stackMngr.getMaxLocalVariableId() != null)
-		{
-			MLiteralExpression expr = new MLiteralExpression();
-			expr.literal = String.valueOf(ctx.stackMngr.getMaxLocalVariableId());
-
-			MNewArrayExpressionObject array = new MNewArrayExpressionObject();
-			array.type = "Object";
-			array.sizes.add(expr);
-
-			MSimpleDecl decl = new MSimpleDecl();
-			decl.name = "__stack";
-			decl.initExpr = array; 
-			decl.type = "Object";
-			
-			MDeclarationStmt stmt = new MDeclarationStmt();
-			stmt.simple = decl;
-			
-			method.body.statements.add(0, stmt);
-		}
-
-		CompositeInfo info = getCurrentCompositeInfo();
-		List<FieldInfo> fields = collectFieldsForClass(info.declSpecifier);
-		List<MExpression> superInit = null;
-		
-		if (func instanceof ICPPASTFunctionDefinition)
-		{
-			// Now check for C++ constructor initializers...
-			ICPPASTFunctionDefinition funcCpp = (ICPPASTFunctionDefinition) func;
-			ICPPASTConstructorChainInitializer[] chains = funcCpp.getMemberInitializers();
-
-			if (chains != null && chains.length != 0)
-			{
-				for (ICPPASTConstructorChainInitializer chain : chains)
-				{
-					// We may have to call a constructor... 
-					if ((chain.getMemberInitializerId().resolveBinding() instanceof IVariable &&
-						((IVariable)chain.getMemberInitializerId().resolveBinding()).getType() instanceof ICompositeType)) // &&
-						//!(eval1Expr(chain.getInitializerValue()) instanceof ClassInstanceCreation))
-					{
-						MLiteralExpression lit = 
-								ModelCreation.createLiteral(TypeHelpers.cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()));
-						
-						MClassInstanceCreation create = new MClassInstanceCreation();
-						create.name = lit;
-						create.args.addAll(ctx.exprEvaluator.evalExpr(chain.getInitializerValue()));
-						
-						// Match this initializer with the correct field.
-						for (FieldInfo fieldInfo : fields)
-						{
-							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
-								fieldInfo.init = create;
-						}
-					}
-					else if (chain.getInitializerValue() != null)
-					{
-						// Match this initializer with the correct field.
-						for (FieldInfo fieldInfo : fields)
-						{
-							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
-								; // TODOfieldInfo.init = eval1Expr(chain.getInitializerValue());
-						}
-						
-						if (info.hasSuper && chain.getMemberInitializerId().resolveBinding().getName().equals(info.superClass))
-						{
-							superInit = ctx.exprEvaluator.evalExpr(chain.getInitializerValue());
-						}
-					}
-					else
-					{
-						// TODO...
-					}
-				}
-			}
-		}
-		
-		if (isCtor)
-		{
-			// This function generates an initializer for all fields that need initializing.
-			generateCtorStatements(fields, method.body);
-			
-			// If we have a super class, call super constructor.
-			if (info.hasSuper)
-			{
-				MFunctionCallExpression expr = ModelCreation.createFuncCall("super");
-				
-				if (superInit != null)
-					expr.args.addAll(superInit);
-				
-				method.body.statements.add(0, ModelCreation.createExprStmt(expr));
-			}
-		}
-		else if (isDtor)
-		{
-			// This will destruct all fields that need destructing.
-			generateDtorStatements(fields, method.body, info.hasSuper);
-		}
-		
-		info.tyd.declarations.add(method);		
-		
-		// Generates functions for default arguments.
-		makeDefaultCalls(func.getDeclarator(), funcBinding);
-	}
-	
 
 	/**
 	 * Generates a Java field, given a C++ field.
@@ -514,7 +283,7 @@ public class SourceConverterStage2
 	/**
 	 * This method creates a list of fields present in the class.
 	 */
-	private List<FieldInfo> collectFieldsForClass(IASTDeclSpecifier declSpec) throws DOMException
+	List<FieldInfo> collectFieldsForClass(IASTDeclSpecifier declSpec) throws DOMException
 	{
 		if (!(declSpec instanceof IASTCompositeTypeSpecifier))
 			return Collections.emptyList();
@@ -581,22 +350,22 @@ public class SourceConverterStage2
 	 * Attempts to evaluate the given declaration (function, class,
 	 * namespace, template, etc).
 	 */
-	private void evalDeclaration(IASTDeclaration declaration) throws DOMException
+	void evalDeclaration(IASTDeclaration declaration) throws DOMException
 	{
 		if (declaration instanceof IASTFunctionDefinition &&
 			((IASTFunctionDefinition)declaration).getDeclarator().getName().resolveBinding() instanceof IFunction)
 		{
-			print("function definition");
-			evalFunction(declaration);
+			MyLogger.log("function definition");
+			ctx.funcMngr.evalFunction(declaration);
 		}
 		else if (declaration instanceof IASTFunctionDefinition)
 		{
 			IBinding bind = ((IASTFunctionDefinition) declaration).getDeclarator().getName().resolveBinding();
 			
 			if (bind instanceof IProblemBinding)
-				printerr("Problem function: " + ((IProblemBinding) bind).getMessage() + ((IProblemBinding) bind).getLineNumber());
+				MyLogger.logImportant("Problem function: " + ((IProblemBinding) bind).getMessage() + ((IProblemBinding) bind).getLineNumber());
 			else
-				printerr("Function with unknown binding: " + bind.getClass().getCanonicalName());
+				MyLogger.logImportant("Function with unknown binding: " + bind.getClass().getCanonicalName());
 		}
 		else if (declaration instanceof IASTSimpleDeclaration)
 		{
@@ -613,19 +382,19 @@ public class SourceConverterStage2
 				if (declarator instanceof IASTFieldDeclarator &&
 					((IASTFieldDeclarator) declarator).getBitFieldSize() != null)
 				{
-					print("bit field");
+					MyLogger.log("bit field");
 					// We replace bit field fields with getter and setter methods...
 					ctx.bitfieldMngr.evalDeclBitfield((IField) binding, declarator);
 				}
 				else if (binding instanceof IField)
 				{
-					print("standard field");
+					MyLogger.log("standard field");
 					generateField(binding, declarator, exprs.get(i));
 				}
 				else if (binding instanceof IFunction &&
 						declarator instanceof IASTFunctionDeclarator)
 				{
-					makeDefaultCalls((IASTFunctionDeclarator) declarator, binding);
+					ctx.funcMngr.makeDefaultCalls((IASTFunctionDeclarator) declarator, binding);
 				}
 				else if (binding instanceof IVariable)
 				{
@@ -633,7 +402,7 @@ public class SourceConverterStage2
 				}
 				else
 				{
-					printerr("Unsupported declarator: " + declarator.getClass().getCanonicalName() + ":" + binding.getClass().getName());
+					MyLogger.logImportant("Unsupported declarator: " + declarator.getClass().getCanonicalName() + ":" + binding.getClass().getName());
 				}
 				i++;
 			}
@@ -641,7 +410,7 @@ public class SourceConverterStage2
 		else if (declaration instanceof ICPPASTNamespaceDefinition)
 		{
 			ICPPASTNamespaceDefinition namespace = (ICPPASTNamespaceDefinition) declaration;
-			print("namespace definition");
+			MyLogger.log("namespace definition");
 
 			// We don't care about namespaces but obviously must process the declarations
 			// they contain...
@@ -651,44 +420,44 @@ public class SourceConverterStage2
 		else if (declaration instanceof IASTASMDeclaration)
 		{
 			// Can't do anything with assembly...
-			printerr("ASM : " + declaration.getRawSignature());
-			exitOnError();
+			MyLogger.logImportant("ASM : " + declaration.getRawSignature());
+			MyLogger.exitOnError();
 		}
 		else if (declaration instanceof IASTProblemDeclaration)
 		{
 			IASTProblemDeclaration p = (IASTProblemDeclaration) declaration;
-			printerr("Problem declaration: " + p.getProblem().getMessageWithLocation() + ":" + p.getRawSignature());
+			MyLogger.logImportant("Problem declaration: " + p.getProblem().getMessageWithLocation() + ":" + p.getRawSignature());
 			//exitOnError();
 		}
 		else if (declaration instanceof ICPPASTVisibilityLabel)
 		{
 			//ICPPASTVisibilityLabel vis = (ICPPASTVisibilityLabel) declaration;
-			print("visibility");
+			MyLogger.log("visibility");
 			// We currently ignore visibility labels. If you wish to process
 			// labels remember friend classes...
 		}
 		else if (declaration instanceof ICPPASTUsingDirective)
 		{
 			// ICPPASTUsingDirective usingDirective = (ICPPASTUsingDirective)declaration;
-			print("using directive");
+			MyLogger.log("using directive");
 			// We ignore using directives, for now everything goes in the one package...
 		}
 		else if (declaration instanceof ICPPASTNamespaceAlias)
 		{
 			//ICPPASTNamespaceAlias namespaceAlias = (ICPPASTNamespaceAlias)declaration;
-			print("Namespace alias");
+			MyLogger.log("Namespace alias");
 			// We ignore namespace aliases...
 		}
 		else if (declaration instanceof ICPPASTUsingDeclaration)
 		{
 			// ICPPASTUsingDeclaration usingDeclaration = (ICPPASTUsingDeclaration)declaration;
-			print("using declaration");
+			MyLogger.log("using declaration");
 			// We ignore the using declaration...
 		}
 		else if (declaration instanceof ICPPASTLinkageSpecification)
 		{
 			ICPPASTLinkageSpecification linkageSpecification = (ICPPASTLinkageSpecification)declaration;
-			print("linkage specification");
+			MyLogger.log("linkage specification");
 
 			// We don't care about linkage but we must process declarations using said linkage...
 			for (IASTDeclaration childDeclaration : linkageSpecification.getDeclarations())
@@ -707,21 +476,21 @@ public class SourceConverterStage2
 		else if (declaration instanceof ICPPASTExplicitTemplateInstantiation)
 		{
 			ICPPASTExplicitTemplateInstantiation explicitTemplateInstantiation = (ICPPASTExplicitTemplateInstantiation)declaration;
-			print("explicit template instantiation");
+			MyLogger.log("explicit template instantiation");
 
 			evalDeclaration(explicitTemplateInstantiation.getDeclaration());
 		}
 		else if (declaration instanceof ICPPASTTemplateSpecialization)
 		{
 			ICPPASTTemplateSpecialization templateSpecialization = (ICPPASTTemplateSpecialization)declaration;
-			print("template specialization");
+			MyLogger.log("template specialization");
 
 			evalDeclaration(templateSpecialization.getDeclaration());
 		}
 		else
 		{
-			printerr("Unknown declaration: " + declaration.getClass().getCanonicalName());
-			exitOnError();
+			MyLogger.log("Unknown declaration: " + declaration.getClass().getCanonicalName());
+			MyLogger.exitOnError();
 		}
 	}
 
@@ -774,106 +543,6 @@ public class SourceConverterStage2
 //		return ret;
 //	}
 	
-	
-	/**
-	 * Gets the argument names for a function.
-	 */
-	private List<String> getArgumentNames(IBinding funcBinding) throws DOMException
-	{
-		List<String> names = new ArrayList<String>();
-
-		if (funcBinding instanceof IFunction)
-		{
-			IFunction func = (IFunction) funcBinding;
-			IParameter[] params = func.getParameters();
-
-			int missingCount = 0;
-			for (IParameter param : params)
-			{	
-				if (param.getName() == null || param.getName().isEmpty())
-					names.add("missing" + missingCount++);
-				else
-					names.add(param.getName());
-			}
-		}
-		return names;
-	}
-
-	/**
-	 * Gets the default expressions for function arguments (null where default is not provided).
-	 */
-	private List<MExpression> getDefaultValues(IASTFunctionDeclarator func) throws DOMException
-	{
-		IASTStandardFunctionDeclarator declarator = (IASTStandardFunctionDeclarator) func;
-		IASTParameterDeclaration[] params = declarator.getParameters();
-
-		List<MExpression> exprs = new ArrayList<MExpression>();
-
-		for (IASTParameterDeclaration param : params)
-		{
-			IASTDeclarator paramDeclarator = param.getDeclarator(); 
-
-			if (paramDeclarator.getInitializer() != null)
-				exprs.add(eval1Init(paramDeclarator.getInitializer()));
-			else
-				exprs.add(null);
-		}
-
-		return exprs;
-	}
-
-	/**
-	 * Evaluates the parameters for a function. A SingleVariableDeclaration
-	 * contains a type and a name. 
-	 */
-	private List<MSimpleDecl> evalParameters(IBinding funcBinding) throws DOMException
-	{
-		List<MSimpleDecl> ret = new ArrayList<MSimpleDecl>();
-
-		if (funcBinding instanceof IFunction)
-		{
-			IFunction func = (IFunction) funcBinding;
-			IParameter[] params = func.getParameters();
-
-			int missingCount = 0;
-			for (IParameter param : params)
-			{	
-				MSimpleDecl var = new MSimpleDecl();
-				var.type = TypeHelpers.cppToJavaType(param.getType());
-
-				print("Found param: " + param.getName());
-
-				// Remember C++ can have missing function argument names...
-				if (param.getName() == null || param.getName().isEmpty())
-					var.name = "missing" + missingCount++;
-				else
-					var.name = param.getName();
-
-				ret.add(var);
-			}
-		}
-		return ret;
-	}
-
-	/**
-	 * Gets the type of the return value of a function.
-	 * @return
-	 */
-	private String evalReturnType(IBinding funcBinding) throws DOMException
-	{
-		if (funcBinding instanceof IFunction)
-		{
-			IFunction func = (IFunction) funcBinding;
-			IFunctionType funcType = func.getType();
-			return TypeHelpers.cppToJavaType(funcType.getReturnType(), true, false);
-		}
-
-		printerr("Unexpected binding for return type: " + funcBinding.getClass().getCanonicalName());
-		exitOnError();
-		return null;
-	}
-	
-	
 	/**
 	 * Evaluates a variable declaration and returns types for each variable.
 	 * For example int a, b, * c; would return two ints and an int *. 
@@ -885,7 +554,7 @@ public class SourceConverterStage2
 		if (declaration instanceof IASTSimpleDeclaration)
 		{
 			IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration)declaration;
-			print("simple declaration");
+			MyLogger.log("simple declaration");
 
 			for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
 			{
@@ -900,13 +569,13 @@ public class SourceConverterStage2
 		else if (declaration instanceof IASTProblemDeclaration)
 		{
 			IASTProblemDeclaration p = (IASTProblemDeclaration) declaration;
-			printerr("Problem declaration" + p.getProblem().getMessageWithLocation());
-			exitOnError();
+			MyLogger.logImportant("Problem declaration" + p.getProblem().getMessageWithLocation());
+			MyLogger.exitOnError();
 		}
 		else
 		{
-			printerr("Unexpected declaration type here: " + declaration.getClass().getCanonicalName());
-			exitOnError();
+			MyLogger.logImportant("Unexpected declaration type here: " + declaration.getClass().getCanonicalName());
+			MyLogger.exitOnError();
 		}
 		return ret;
 	}
@@ -918,7 +587,7 @@ public class SourceConverterStage2
 		if (declaration instanceof IASTSimpleDeclaration)
 		{
 			IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration)declaration;
-			print("simple declaration");
+			MyLogger.log("simple declaration");
 
 			if (simpleDeclaration.getDeclarators().length > 0)
 			{
@@ -936,13 +605,13 @@ public class SourceConverterStage2
 		else if (declaration instanceof IASTProblemDeclaration)
 		{
 			IASTProblemDeclaration p = (IASTProblemDeclaration) declaration;
-			printerr("Problem declaration" + p.getProblem().getMessageWithLocation());
-			exitOnError();
+			MyLogger.logImportant("Problem declaration" + p.getProblem().getMessageWithLocation());
+			MyLogger.exitOnError();
 		}
 		else
 		{
-			printerr("Unexpected declaration type here: " + declaration.getClass().getCanonicalName());
-			exitOnError();
+			MyLogger.logImportant("Unexpected declaration type here: " + declaration.getClass().getCanonicalName());
+			MyLogger.exitOnError();
 		}
 		return ret;
 	}
@@ -951,9 +620,7 @@ public class SourceConverterStage2
 	{
 		return evaluateDeclarationReturnCppTypes(decl).get(0);
 	}
-	
 
-	
 	private String evaluateDeclSpecifierReturnType(IASTDeclSpecifier declSpecifier) throws DOMException
 	{
 //		evaluateStorageClass(declSpecifier.getStorageClass());
@@ -1009,7 +676,7 @@ public class SourceConverterStage2
 		if (declSpecifier instanceof IASTNamedTypeSpecifier)
 		{
 			IASTNamedTypeSpecifier namedTypeSpecifier = (IASTNamedTypeSpecifier)declSpecifier;
-			print("named type");
+			MyLogger.log("named type");
 
 			return TypeHelpers.getSimpleName(namedTypeSpecifier.getName());
 
@@ -1029,7 +696,7 @@ public class SourceConverterStage2
 		else if (declSpecifier instanceof IASTSimpleDeclSpecifier)
 		{
 			IASTSimpleDeclSpecifier simple = (IASTSimpleDeclSpecifier) declSpecifier;
-			print("simple decl specifier");
+			MyLogger.log("simple decl specifier");
 //
 //			if (declSpecifier instanceof ICPPASTSimpleDeclSpecifier)
 //			{
@@ -1042,14 +709,11 @@ public class SourceConverterStage2
 		else if (declSpecifier instanceof ICASTDeclSpecifier)
 		{
 			//			ICASTDeclSpecifier spec = (ICASTDeclSpecifier) declSpecifier;
-			print("C declaration specifier (unimplemented)");
+			MyLogger.log("C declaration specifier (unimplemented)");
 		}
 
 		return null;
 	}
-
-
-
 
 	/**
 	 * Attempts to evaluate the given declaration specifier
@@ -1059,7 +723,7 @@ public class SourceConverterStage2
 		if (declSpecifier instanceof IASTCompositeTypeSpecifier)
 		{
 			IASTCompositeTypeSpecifier compositeTypeSpecifier = (IASTCompositeTypeSpecifier)declSpecifier;
-			print("composite type specifier");
+			MyLogger.log("composite type specifier");
 
 			CppClass tyd = new CppClass();
 			tyd.isNested = addDeclaration(tyd);
@@ -1160,7 +824,7 @@ public class SourceConverterStage2
 
 				for (FieldInfo fieldInfo : fields)
 				{
-					print(fieldInfo.field.getName());
+					MyLogger.log(fieldInfo.field.getName());
 
 					if (fieldInfo.isStatic)
 						/* Do nothing. */ ;
@@ -1246,7 +910,7 @@ public class SourceConverterStage2
 
 				for (FieldInfo fieldInfo : fields)
 				{
-					print(fieldInfo.field.getName());
+					MyLogger.log(fieldInfo.field.getName());
 
 					if (fieldInfo.isStatic)
 						/* Do nothing. */ ;
@@ -1331,7 +995,7 @@ public class SourceConverterStage2
 		else if (declSpecifier instanceof IASTElaboratedTypeSpecifier)
 		{
 			IASTElaboratedTypeSpecifier elaboratedTypeSpecifier = (IASTElaboratedTypeSpecifier)declSpecifier;
-			print("elaborated type specifier" + elaboratedTypeSpecifier.getRawSignature());
+			MyLogger.log("elaborated type specifier" + elaboratedTypeSpecifier.getRawSignature());
 
 			//evaluateElaborated(elaboratedTypeSpecifier.getKind());
 			TypeHelpers.getSimpleName(elaboratedTypeSpecifier.getName());
@@ -1339,7 +1003,7 @@ public class SourceConverterStage2
 			if (declSpecifier instanceof ICPPASTElaboratedTypeSpecifier)
 			{
 				//				ICPPASTElaboratedTypeSpecifier elaborated = (ICPPASTElaboratedTypeSpecifier) declSpecifier;
-				print("cpp elaborated");
+				MyLogger.log("cpp elaborated");
 			}
 		}
 		else if (declSpecifier instanceof IASTEnumerationSpecifier)
@@ -1350,24 +1014,24 @@ public class SourceConverterStage2
 		else if (declSpecifier instanceof IASTNamedTypeSpecifier)
 		{
 			IASTNamedTypeSpecifier namedTypeSpecifier = (IASTNamedTypeSpecifier)declSpecifier;
-			print("named type");
+			MyLogger.log("named type");
 			TypeHelpers.getSimpleName(namedTypeSpecifier.getName());
 
 			if (declSpecifier instanceof ICPPASTNamedTypeSpecifier)
 			{
 				//				ICPPASTNamedTypeSpecifier named = (ICPPASTNamedTypeSpecifier) declSpecifier;
-				print("cpp named");
+				MyLogger.log("cpp named");
 			}
 		}
 		else if (declSpecifier instanceof IASTSimpleDeclSpecifier)
 		{
 			IASTSimpleDeclSpecifier simple = (IASTSimpleDeclSpecifier) declSpecifier;
-			print("simple decl specifier");
+			MyLogger.log("simple decl specifier");
 
 			if (declSpecifier instanceof ICPPASTSimpleDeclSpecifier)
 			{
 				//				ICPPASTSimpleDeclSpecifier simple2 = (ICPPASTSimpleDeclSpecifier) declSpecifier;
-				print("cpp simple");
+				MyLogger.log("cpp simple");
 			}
 
 			TypeHelpers.evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned());
@@ -1375,7 +1039,7 @@ public class SourceConverterStage2
 		else if (declSpecifier instanceof ICASTDeclSpecifier)
 		{
 			//			ICASTDeclSpecifier spec = (ICASTDeclSpecifier) declSpecifier;
-			print("C declaration specifier (unimplemented)");
+			MyLogger.log("C declaration specifier (unimplemented)");
 		}
 
 		return null;
@@ -1453,7 +1117,7 @@ public class SourceConverterStage2
 		if (declaration instanceof IASTSimpleDeclaration)
 		{
 			IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration)declaration;
-			print("simple declaration");
+			MyLogger.log("simple declaration");
 
 			for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
 				ret.add(TypeHelpers.getSimpleName(decl.getName()));
@@ -1461,15 +1125,15 @@ public class SourceConverterStage2
 		else if (declaration instanceof ICPPASTExplicitTemplateInstantiation)
 		{
 			ICPPASTExplicitTemplateInstantiation explicitTemplateInstantiation = (ICPPASTExplicitTemplateInstantiation)declaration;
-			printerr("explicit template instantiation");
-			exitOnError();
+			MyLogger.logImportant("explicit template instantiation");
+			MyLogger.exitOnError();
 			//evaluate(explicitTemplateInstantiation.getDeclaration());
 		}
 		else if (declaration instanceof IASTProblemDeclaration)
 		{
 			IASTProblemDeclaration p = (IASTProblemDeclaration) declaration;
-			printerr("Problem declaration" + p.getProblem().getMessageWithLocation());
-			exitOnError();
+			MyLogger.logImportant("Problem declaration" + p.getProblem().getMessageWithLocation());
+			MyLogger.exitOnError();
 		}
 		return ret;
 	}
@@ -1505,7 +1169,7 @@ public class SourceConverterStage2
 
 
 
-	private MExpression eval1Init(IASTInitializer initializer) throws DOMException 
+	MExpression eval1Init(IASTInitializer initializer) throws DOMException 
 	{
 		IASTEqualsInitializer eq = (IASTEqualsInitializer) initializer;
 		IASTInitializerClause clause = eq.getInitializerClause();
@@ -1524,7 +1188,7 @@ public class SourceConverterStage2
 		MSimpleDecl dec = new MSimpleDecl();
 
 		IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) decla;
-		print("simple declaration");
+		MyLogger.log("simple declaration");
 			
 		IASTDeclarator decl = simpleDeclaration.getDeclarators()[0];
 
@@ -1573,36 +1237,6 @@ public class SourceConverterStage2
 //		}
 	}
 
-	private void print(String arg)
-	{
-		// Comment out for big speed improvement...
-		System.out.println(arg);
-	}
-
-	private void printerr(String arg)
-	{
-		System.err.println(arg);
-	}
-	
-	private void exitOnError()
-	{
-		// Comment out if you wish to continue on error...
-		try
-		{
-			throw new RuntimeException();
-		} catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-
-		System.exit(-1);
-	}
-
-
-
-
-
-
 	/**
 	 * Given a typeId returns a Java type. Used in sizeof, etc. 
 	 */
@@ -1614,18 +1248,6 @@ public class SourceConverterStage2
 		}
 		return null;
 	}
-
-	
-
-	
-
-
-	List<MStmt> globalStmts = new ArrayList<MStmt>();
-
-
-	
-	
-
 
 	/**
 	 * Given a declaration like: int a = 5;
@@ -1695,7 +1317,7 @@ public class SourceConverterStage2
 		return decl;
 	}
 
-	private static class FieldInfo
+	static class FieldInfo
 	{
 		FieldInfo(IASTDeclarator declaratorArg, MExpression initArg, IField fieldArg)
 		{
@@ -1712,74 +1334,5 @@ public class SourceConverterStage2
 	}
 	
 
-	/**
-	 * Traverses the AST of the given translation unit
-	 * and tries to convert the C++ abstract syntax tree to
-	 * a Java AST.
-	 */
-	String traverse(IASTTranslationUnit translationUnit)
-	{
-		GlobalContext con = new GlobalContext();
 
-		con.converter = this;
-		con.exprEvaluator = new ExpressionEvaluator(con);
-		con.stmtEvaluator = new StmtEvaluator(con);
-		con.bitfieldMngr = new BitfieldManager(con);
-		con.stackMngr = new StackManager(con);
-		con.enumMngr = new EnumManager(con);
-		
-		ctx = con;
-		ctx.bitfieldMngr.addBitfield("cls::_b");
-		ctx.bitfieldMngr.addBitfield("_b");
-
-		//compositeMap.put("", new CompositeInfo(global));
-		CppClass global = new CppClass();
-		global.name = "Global";
-		addDeclaration(global);
-	
-		for (IASTProblem prob : translationUnit.getPreprocessorProblems())
-		{
-			printerr(prob.getRawSignature());
-		}
-
-		try
-		{
-			for (IASTDeclaration declaration : translationUnit.getDeclarations())
-			{
-				printerr(declaration.getFileLocation().getEndingLineNumber() + ":" + declaration.getContainingFilename());
-				evalDeclaration(declaration);
-			}
-		}
-		catch (Exception e)
-		{
-			printerr(e.getMessage());
-			e.printStackTrace();
-		}
-		popDeclaration();
-		String output = "";
-		STGroup group = new STGroupDir("/home/daniel/workspace/cpp-to-java-source-converter/templates");
-		//System.err.println("!!!!" + decls2.get(0).declarations.get(0).getClass().toString());
-//		for (MExpression expr : expressions)
-//		{
-//			ST test2 = group.getInstanceOf("expression_tp");
-//			test2.add("expr_obj", expr);
-//			//System.err.println("####" + test2.render());
-//		}
-		
-		for (CppDeclaration decl : decls2)
-		{
-			ST test3 = group.getInstanceOf("declaration_tp");
-			test3.add("decl", decl);
-			output += test3.render();
-		}
-		
-		for (MStmt stmt : globalStmts)
-		{
-			ST test4 = group.getInstanceOf("statement_tp");
-			test4.add("stmt_obj", stmt);
-			//System.err.println("$$$" + test4.render());
-		}
-
-		return output;
-	}
 }
