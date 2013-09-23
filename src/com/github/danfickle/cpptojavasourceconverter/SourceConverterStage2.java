@@ -47,7 +47,8 @@ public class SourceConverterStage2
 		StackManager stackMngr;
 		ExpressionEvaluator exprEvaluator;
 		StmtEvaluator stmtEvaluator;
-		BitfieldHelpers bitfieldHelpers;
+		BitfieldManager bitfieldMngr;
+		EnumManager enumMngr;
 	}
 	
 	private GlobalContext ctx;
@@ -441,9 +442,6 @@ public class SourceConverterStage2
 		popDeclaration();
 	}
 	
-
-	private int anonEnumCount = 0;
-	
 	private int anonClassCount = 0;
 	
 	/**
@@ -545,7 +543,7 @@ public class SourceConverterStage2
 						if (declarator instanceof IASTFieldDeclarator &&
 							((IASTFieldDeclarator) declarator).getBitFieldSize() != null)
 						{
-							ctx.bitfieldHelpers.addBitfield(declarator.getName());
+							ctx.bitfieldMngr.addBitfield(declarator.getName());
 							field.isBitfield = true;
 						}
 						
@@ -617,7 +615,7 @@ public class SourceConverterStage2
 				{
 					print("bit field");
 					// We replace bit field fields with getter and setter methods...
-					ctx.bitfieldHelpers.evalDeclBitfield((IField) binding, declarator);
+					ctx.bitfieldMngr.evalDeclBitfield((IField) binding, declarator);
 				}
 				else if (binding instanceof IField)
 				{
@@ -954,7 +952,7 @@ public class SourceConverterStage2
 		return evaluateDeclarationReturnCppTypes(decl).get(0);
 	}
 	
-	private HashMap<String, String> anonEnumMap = new HashMap<String, String>();
+
 	
 	private String evaluateDeclSpecifierReturnType(IASTDeclSpecifier declSpecifier) throws DOMException
 	{
@@ -1050,54 +1048,7 @@ public class SourceConverterStage2
 		return null;
 	}
 
-	private void evalDeclEnum(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
-	{
-		IASTEnumerator[] enumerators = enumerationSpecifier.getEnumerators();
-		
-		if (enumerators == null || enumerators.length == 0)
-			return;
 
-		CppEnum enumModel = new CppEnum();
-		enumModel.simpleName = TypeHelpers.getSimpleName(enumerationSpecifier.getName());
-		enumModel.qualified = TypeHelpers.getQualifiedPart(enumerationSpecifier.getName()); 
-
-		String first = enumerators[0].getName().toString();		
-		anonEnumMap.put(first, enumModel.simpleName);
-		
-		int nextValue = 0;
-		int sinceLastValue = 1;
-		MExpression lastValue = null;
-
-		
-		for (IASTEnumerator e : enumerators)
-		{
-			CppEnumerator enumerator = new CppEnumerator();
-			enumerator.name = TypeHelpers.getSimpleName(e.getName());
-
-			if (e.getValue() != null)
-			{
-				enumerator.value = ctx.exprEvaluator.eval1Expr(e.getValue());
-				lastValue = enumerator.value;
-				sinceLastValue = 1;
-			}
-			else if (lastValue != null)
-			{
-				enumerator.value = ModelCreation.createInfixExpr(
-						lastValue,
-						ModelCreation.createLiteral(String.valueOf(sinceLastValue++)),
-						"+");
-			}
-			else
-			{
-				enumerator.value = ModelCreation.createLiteral(String.valueOf(nextValue++));
-			}
-			
-			enumModel.enumerators.add(enumerator);
-		}
-		
-		addDeclaration(enumModel);
-		popDeclaration();
-	}
 
 
 	/**
@@ -1394,7 +1345,7 @@ public class SourceConverterStage2
 		else if (declSpecifier instanceof IASTEnumerationSpecifier)
 		{
 			IASTEnumerationSpecifier enumerationSpecifier = (IASTEnumerationSpecifier)declSpecifier;
-			evalDeclEnum(enumerationSpecifier);
+			ctx.enumMngr.evalDeclEnum(enumerationSpecifier);
 		}
 		else if (declSpecifier instanceof IASTNamedTypeSpecifier)
 		{
@@ -1430,23 +1381,7 @@ public class SourceConverterStage2
 		return null;
 	}
 
-	String getEnumerationName(IEnumerator enumerator) throws DOMException
-	{
-		String enumeration = TypeHelpers.getSimpleType(((IEnumeration) enumerator.getType()).getName());
 
-		if (enumeration.equals("MISSING"))
-		{
-			String first = ((IEnumeration) enumerator.getOwner()).getEnumerators()[0].getName();
-			String enumName = anonEnumMap.get(first);
-			
-			if (enumName == null)
-				MyLogger.exitOnError();
-			
-			return enumName;
-		}
-		
-		return enumeration;
-	}
 //	private MExpression generateArrayCreationExpression(IType tp, List<MExpression> sizeExprs) throws DOMException
 //	{
 //		Type jtp = null;
@@ -1789,12 +1724,13 @@ public class SourceConverterStage2
 		con.converter = this;
 		con.exprEvaluator = new ExpressionEvaluator(con);
 		con.stmtEvaluator = new StmtEvaluator(con);
-		con.bitfieldHelpers = new BitfieldHelpers(con);
+		con.bitfieldMngr = new BitfieldManager(con);
 		con.stackMngr = new StackManager(con);
+		con.enumMngr = new EnumManager(con);
 		
 		ctx = con;
-		ctx.bitfieldHelpers.add("cls::_b");
-		ctx.bitfieldHelpers.add("_b");
+		ctx.bitfieldMngr.addBitfield("cls::_b");
+		ctx.bitfieldMngr.addBitfield("_b");
 
 		//compositeMap.put("", new CompositeInfo(global));
 		CppClass global = new CppClass();

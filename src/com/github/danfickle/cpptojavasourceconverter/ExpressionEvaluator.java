@@ -202,7 +202,7 @@ class ExpressionEvaluator
 	
 	private void evalExprId(IASTIdExpression expr, List<MExpression> ret) throws DOMException
 	{
-		if (ctx.bitfieldHelpers.isBitfield(expr.getName()))
+		if (ctx.bitfieldMngr.isBitfield(expr.getName()))
 		{
 			MIdentityExpressionBitfield ident = new MIdentityExpressionBitfield();
 			ident.ident = TypeHelpers.getSimpleName(expr.getName());
@@ -237,7 +237,7 @@ class ExpressionEvaluator
 
 	private void evalExprFieldReference(IASTFieldReference expr, List<MExpression> ret) throws DOMException
 	{
-		if (ctx.bitfieldHelpers.isBitfield(expr.getFieldName()))
+		if (ctx.bitfieldMngr.isBitfield(expr.getFieldName()))
 		{
 			MFieldReferenceExpressionBitfield field = new MFieldReferenceExpressionBitfield();
 			field.object = eval1Expr(expr.getFieldOwner());
@@ -393,7 +393,7 @@ class ExpressionEvaluator
 				ret.add(add);
 			}
 		}
-		else if (ctx.bitfieldHelpers.isBitfield(expr.getOperand()))
+		else if (ctx.bitfieldMngr.isBitfield(expr.getOperand()))
 		{
 			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
 			{
@@ -542,7 +542,7 @@ class ExpressionEvaluator
 
 	private void evalExprBinary(IASTBinaryExpression expr, List<MExpression> ret) throws DOMException 
 	{
-		if (ctx.bitfieldHelpers.isBitfield(expr.getOperand1()))
+		if (ctx.bitfieldMngr.isBitfield(expr.getOperand1()))
 		{
 			if (expr.getOperator() == IASTBinaryExpression.op_assign)
 			{

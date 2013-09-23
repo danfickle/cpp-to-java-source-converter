@@ -1,6 +1,5 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -9,14 +8,14 @@ import org.eclipse.cdt.core.dom.ast.*;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppBitfield;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverterStage2.GlobalContext;
 
-public class BitfieldHelpers
+public class BitfieldManager
 {
 	// A set of qualified names containing the bitfields...
 	private Set<String> bitfields = new HashSet<String>();
 
 	private GlobalContext ctx;
 	
-	BitfieldHelpers(GlobalContext con) {
+	BitfieldManager(GlobalContext con) {
 		ctx = con;
 	}
 
@@ -65,7 +64,7 @@ public class BitfieldHelpers
 		ctx.converter.popDeclaration();
 	}
 
-	void add(String nm)
+	void addBitfield(String nm)
 	{
 		bitfields.add(nm);
 	}
