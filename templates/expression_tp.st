@@ -1,6 +1,6 @@
 expression_tp(expr_obj) ::= <% 
 
-  <! Return a complete expression. !>
+  <! Return a complete RHS capable expression. !>
 
   <if(expr_obj.isIdentity)>
    <expr_obj.ident>
@@ -18,25 +18,25 @@ expression_tp(expr_obj) ::= <%
     <expr_obj.ident>.get()
 
   <elseif(expr_obj.isFieldReferenceNumber)>
-    <expression_tp(expr_obj.object)>.<expr_obj.field>.get()
+    <lhs_object_tp(expr_obj.object)>.<expr_obj.field>.get()
 
   <elseif(expr_obj.isPostfixNumberInc)>
-    <plain_variable_tp(expr_obj.operand)>.postInc().get()
+    <lhs_object_tp(expr_obj)>.get()
 
   <elseif(expr_obj.isPostfixNumberDec)>
-    <plain_variable_tp(expr_obj.operand)>.postDec().get()
+    <lhs_object_tp(expr_obj)>.get()
 
   <elseif(expr_obj.isPrefixNumberInc)>
-    <plain_variable_tp(expr_obj.operand)>.set(<expression_tp(expr_obj.operand)> + 1)
+    <lhs_object_tp(expr_obj)>.set(<expression_tp(expr_obj.operand)> + 1)
 
   <elseif(expr_obj.isPrefixNumberDec)>
-    <plain_variable_tp(expr_obj.operand)>.set(<expression_tp(expr_obj.operand)> - 1)
+    <lhs_object_tp(expr_obj)>.set(<expression_tp(expr_obj.operand)> - 1)
 
   <elseif(expr_obj.isAssignmentWithNumberOnLeft)>
-    <plain_variable_tp(expr_obj.left)>.set(<expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)>.set(<expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isCompoundWithNumberOnLeft)>
-    <plain_variable_tp(expr_obj.left)>.set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)>.set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isValueOfNumber)>
     <expr_obj.type>.valueOf(<expression_tp(expr_obj.operand)>)
@@ -51,46 +51,46 @@ expression_tp(expr_obj) ::= <%
     <expr_obj.operator><expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isPrefixPointerInc)>
-    <lhs_pointer_tp(expr_obj)>
+    <lhs_object_tp(expr_obj)>
 
   <elseif(expr_obj.isPrefixPointerDec)>
-    <lhs_pointer_tp(expr_obj)>
+    <lhs_object_tp(expr_obj)>
 
   <elseif(expr_obj.isPrefixPointerStar)>
-    <plain_variable_tp(expr_obj.operand)>.get()
+    <lhs_object_tp(expr_obj.operand)>.get()
 
   <elseif(expr_obj.isPrefixBitfieldInc)>
-    <plain_object_tp(expr_obj.operand)>set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> + 1)
+    <lhs_object_tp(expr_obj.operand)>.set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> + 1)
 
   <elseif(expr_obj.isPrefixBitfieldDec)>
-    <plain_object_tp(expr_obj.operand)>set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> - 1)
+    <lhs_object_tp(expr_obj.operand)>.set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> - 1)
 
   <elseif(expr_obj.isPrefixBitfield)>
     <expr_obj.operator><expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isPostfixPointerInc)>
-    <lhs_pointer_tp(expr_obj)>
+    <lhs_object_tp(expr_obj)>
 
   <elseif(expr_obj.isPostfixPointerDec)>
-    <lhs_pointer_tp(expr_obj)>
+    <lhs_object_tp(expr_obj)>
 
   <elseif(expr_obj.isPostfixBitfieldInc)>
-    <plain_object_tp(expr_obj.operand)>postInc__<plain_name_tp(expr_obj.operand)>()
+    <lhs_object_tp(expr_obj.operand)>.postInc__<plain_name_tp(expr_obj.operand)>()
 
   <elseif(expr_obj.isPostfixBitfieldDec)>
-    <plain_object_tp(expr_obj.operand)>postDec__<plain_name_tp(expr_obj.operand)>()
+    <lhs_object_tp(expr_obj.operand)>.postDec__<plain_name_tp(expr_obj.operand)>()
 
   <elseif(expr_obj.isFieldReference)>
-    <expression_tp(expr_obj.object)>.<expr_obj.field>
+    <lhs_object_tp(expr_obj.object)>.<expr_obj.field>
 
   <elseif(expr_obj.isFieldReferenceBitfield)>
-    <expression_tp(expr_obj.object)>.get__<expr_obj.field>()
+    <lhs_object_tp(expr_obj.object)>.get__<expr_obj.field>()
 
   <elseif(expr_obj.isFieldReferencePtr)>
-    <expression_tp(expr_obj.object)>.<expr_obj.field>.ptrCopy()
+    <lhs_object_tp(expr_obj.object)>.<expr_obj.field>.ptrCopy()
 
   <elseif(expr_obj.isFieldReferenceEnumerator)>
-    <expression_tp(expr_obj.object)>.<expr_obj.field>.val
+    <lhs_object_tp(expr_obj.object)>.<expr_obj.field>.val
 
   <elseif(expr_obj.isPrefix)>
     <expr_obj.operator><expression_tp(expr_obj.operand)>
@@ -102,10 +102,10 @@ expression_tp(expr_obj) ::= <%
     <expression_tp(expr_obj.condition)> ? <expression_tp(expr_obj.positive)> : <expression_tp(expr_obj.negative)>
 
   <elseif(expr_obj.isPtrArray)>
-   <plain_variable_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).get()
+   <lhs_object_tp(expr_obj.operand)>.ptrOffset(<expr_obj.subscript:{s | <expression_tp(s)>}; separator=", ">).get()
 
   <elseif(expr_obj.isArrayAccessWithAddressOf)>
-   <lhs_pointer_tp(expr_obj)>.addressOf()
+   <lhs_object_tp(expr_obj)>.addressOf()
 
   <elseif(expr_obj.isFunctionCall)>
     <expression_tp(expr_obj.name)>(<expr_obj.args:{a | <expression_tp(a)>}; separator=", ">)
@@ -120,19 +120,19 @@ expression_tp(expr_obj) ::= <%
     (<expr_obj.type>) <expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isInfixWithPtrOnLeft)>
-    <expression_tp(expr_obj.left)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isInfixWithPtrOnRight)>
-    <plain_variable_tp(expr_obj.right)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.left)>)
+    <lhs_object_tp(expr_obj.right)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.left)>)
 
   <elseif(expr_obj.isAssignmentWithPtrOnLeft)>
-    <plain_variable_tp(expr_obj.left)> = <expression_tp(expr_obj.right)>
+    <lhs_object_tp(expr_obj.left)> = <expression_tp(expr_obj.right)>
 
   <elseif(expr_obj.isCompoundWithPtrOnLeft)>
-    <plain_variable_tp(expr_obj.left)>.ptrAdjust(<expr_obj.operator><expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)>.ptrAdjust(<expr_obj.operator><expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isAddressOfPtr)>
-    <plain_variable_tp(expr_obj.operand)>.ptrAddressOf()
+    <lhs_object_tp(expr_obj.operand)>.ptrAddressOf()
 
   <elseif(expr_obj.isPtrCopy)>
     <expression_tp(expr_obj.operand)>
@@ -144,19 +144,19 @@ expression_tp(expr_obj) ::= <%
     <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
 
   <elseif(expr_obj.isAssignmentWithBitfieldOnLeft)>
-    <plain_object_tp(expr_obj.left)>set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)>.set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isCompoundWithBitfieldOnLeft)>
-    <plain_object_tp(expr_obj.left)>set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)>.set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isInfixWithDerefOnLeft)>
     <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
 
   <elseif(expr_obj.isAssignmentWithDerefOnLeft)>
-    <lhs_pointer_tp(expr_obj.left)>.set(<expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)>.set(<expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isCompoundWithDerefOnLeft)>
-    <lhs_pointer_tp(expr_obj.left)>.set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)>.set(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isDeleteObjectSingle)>
     <expression_tp(expr_obj.operand)>.destruct()
@@ -177,7 +177,7 @@ expression_tp(expr_obj) ::= <%
     new <expr_obj.type>(<expr_obj.arguments:{a | <expression_tp(a)>}; separator=", ">)
 
   <elseif(expr_obj.isAddressOf)>
-    <plain_variable_tp(expr_obj.operand)>.addressOf()
+    <lhs_object_tp(expr_obj.operand)>.addressOf()
 
   <elseif(expr_obj.isEmpty)>
     /* Empty expression */
