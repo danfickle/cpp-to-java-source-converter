@@ -60,10 +60,10 @@ expression_tp(expr_obj) ::= <%
     <lhs_object_tp(expr_obj.operand)>.get()
 
   <elseif(expr_obj.isPrefixBitfieldInc)>
-    <lhs_object_tp(expr_obj.operand)>.set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> + 1)
+    <lhs_object_tp(expr_obj.operand)><if(expr_obj.operand.isFieldReferenceBitfield)>.<endif>set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> + 1)
 
   <elseif(expr_obj.isPrefixBitfieldDec)>
-    <lhs_object_tp(expr_obj.operand)>.set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> - 1)
+    <lhs_object_tp(expr_obj.operand)><if(expr_obj.operand.isFieldReferenceBitfield)>.<endif>set__<plain_name_tp(expr_obj.operand)>(<expression_tp(expr_obj.operand)> - 1)
 
   <elseif(expr_obj.isPrefixBitfield)>
     <expr_obj.operator><expression_tp(expr_obj.operand)>
@@ -75,10 +75,10 @@ expression_tp(expr_obj) ::= <%
     <lhs_object_tp(expr_obj)>
 
   <elseif(expr_obj.isPostfixBitfieldInc)>
-    <lhs_object_tp(expr_obj.operand)>.postInc__<plain_name_tp(expr_obj.operand)>()
+    <lhs_object_tp(expr_obj.operand)><if(expr_obj.operand.isFieldReferenceBitfield)>.<endif>postInc__<plain_name_tp(expr_obj.operand)>()
 
   <elseif(expr_obj.isPostfixBitfieldDec)>
-    <lhs_object_tp(expr_obj.operand)>.postDec__<plain_name_tp(expr_obj.operand)>()
+    <lhs_object_tp(expr_obj.operand)><if(expr_obj.operand.isFieldReferenceBitfield)>.<endif>postDec__<plain_name_tp(expr_obj.operand)>()
 
   <elseif(expr_obj.isFieldReference)>
     <lhs_object_tp(expr_obj.object)>.<expr_obj.field>
@@ -144,10 +144,10 @@ expression_tp(expr_obj) ::= <%
     <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
 
   <elseif(expr_obj.isAssignmentWithBitfieldOnLeft)>
-    <lhs_object_tp(expr_obj.left)>.set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)><if(expr_obj.left.isFieldReferenceBitfield)>.<endif>set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isCompoundWithBitfieldOnLeft)>
-    <lhs_object_tp(expr_obj.left)>.set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
+    <lhs_object_tp(expr_obj.left)><if(expr_obj.left.isFieldReferenceBitfield)>.<endif>set__<plain_name_tp(expr_obj.left)>(<expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isInfixWithDerefOnLeft)>
     <expression_tp(expr_obj.left)> <expr_obj.operator> <expression_tp(expr_obj.right)>
