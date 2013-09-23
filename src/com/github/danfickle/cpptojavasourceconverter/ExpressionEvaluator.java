@@ -250,6 +250,13 @@ class ExpressionEvaluator
 			field.field = TypeHelpers.getSimpleName(expr.getFieldName());
 			ret.add(field);
 		}
+		else if (ExpressionHelpers.isNumberExpression(expr))
+		{
+			MFieldReferenceExpressionNumber field = new MFieldReferenceExpressionNumber();
+			field.object = eval1Expr(expr.getFieldOwner());
+			field.field = TypeHelpers.getSimpleName(expr.getFieldName());
+			ret.add(field);
+		}
 		else if (TypeHelpers.isEventualPtr(expr.getExpressionType()) && expr.isPointerDereference())
 		{
 			MFieldReferenceExpressionPtr field = new MFieldReferenceExpressionPtr();
@@ -567,6 +574,44 @@ class ExpressionEvaluator
 				ret.add(infix);
 			}
 		}
+		else if (ExpressionHelpers.isNumberExpression(expr.getOperand1()))
+		{
+			MInfixExpression infix = null;
+			
+			if (expr.getOperator() == IASTBinaryExpression.op_assign)
+			{
+				infix = new MInfixAssignmentWithNumberOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				ret.add(infix);
+			}
+			else if (ExpressionHelpers.isAssignmentExpression(expr.getOperator()))
+			{
+				infix = new MCompoundWithNumberOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = ExpressionHelpers.compoundAssignmentToInfixOperator(expr.getOperator());
+				ret.add(infix);
+			}
+			else
+			{
+				infix = new MInfixWithNumberOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
+				ret.add(infix);
+			}
+			
+			if (ExpressionHelpers.needBooleanExpressions(expr.getOperator()))
+			{
+				infix.left = ExpressionHelpers.makeExpressionBoolean(infix.left, expr.getOperand1());
+				infix.right = ExpressionHelpers.makeExpressionBoolean(infix.right, expr.getOperand2());
+			}
+			else if (ExpressionHelpers.isBooleanExpression(expr.getOperand1()) && expr.getOperator() == IASTBinaryExpression.op_assign)
+			{
+				infix.right = ExpressionHelpers.makeExpressionBoolean(infix.right, expr.getOperand2());
+			}
+		}
 		else if(ExpressionHelpers.isEventualPtrDeref(expr.getOperand1()))
 		{
 			if (expr.getOperator() == IASTBinaryExpression.op_assign)
@@ -616,44 +661,6 @@ class ExpressionEvaluator
 			infix.right = eval1Expr(expr.getOperand2());
 			infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
 			ret.add(infix);
-		}
-		else if (ExpressionHelpers.isNumberExpression(expr.getOperand1()))
-		{
-			MInfixExpression infix = null;
-			
-			if (expr.getOperator() == IASTBinaryExpression.op_assign)
-			{
-				infix = new MInfixAssignmentWithNumberOnLeft();
-				infix.left = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
-				ret.add(infix);
-			}
-			else if (ExpressionHelpers.isAssignmentExpression(expr.getOperator()))
-			{
-				infix = new MCompoundWithNumberOnLeft();
-				infix.left = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
-				infix.operator = ExpressionHelpers.compoundAssignmentToInfixOperator(expr.getOperator());
-				ret.add(infix);
-			}
-			else
-			{
-				infix = new MInfixWithNumberOnLeft();
-				infix.left = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
-				infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
-				ret.add(infix);
-			}
-			
-			if (ExpressionHelpers.needBooleanExpressions(expr.getOperator()))
-			{
-				infix.left = ExpressionHelpers.makeExpressionBoolean(infix.left, expr.getOperand1());
-				infix.right = ExpressionHelpers.makeExpressionBoolean(infix.right, expr.getOperand2());
-			}
-			else if (ExpressionHelpers.isBooleanExpression(expr.getOperand1()) && expr.getOperator() == IASTBinaryExpression.op_assign)
-			{
-				infix.right = ExpressionHelpers.makeExpressionBoolean(infix.right, expr.getOperand2());
-			}
 		}
 		else
 		{

@@ -17,6 +17,9 @@ expression_tp(expr_obj) ::= <%
   <elseif(expr_obj.isIdentityNumber)>
     <expr_obj.ident>.get()
 
+  <elseif(expr_obj.isFieldReferenceNumber)>
+    <expression_tp(expr_obj.object)>.<expr_obj.field>.get()
+
   <elseif(expr_obj.isPostfixNumberInc)>
     <plain_variable_tp(expr_obj.operand)>.postInc().get()
 
