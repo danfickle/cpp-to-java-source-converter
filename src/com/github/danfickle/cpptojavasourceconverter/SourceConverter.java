@@ -39,11 +39,11 @@ import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
  * @author DanFickle
  * http://github.com/danfickle/cpp-to-java-source-converter/
  */
-public class SourceConverterStage2
+public class SourceConverter
 {
 	private final GlobalContext ctx;
 	
-	SourceConverterStage2(GlobalContext con) {
+	SourceConverter(GlobalContext con) {
 		ctx = con;
 	}
 	
@@ -68,8 +68,6 @@ public class SourceConverterStage2
 		boolean hasSuper;
 	}
 	
-
-
 	/**
 	 * The info for the current class/struct.
 	 */
@@ -108,8 +106,6 @@ public class SourceConverterStage2
 	{
 		return currentInfo;
 	}
-	
-
 	
 	/**
 	 * Given a list of fields for a class, adds initialization statements
@@ -327,7 +323,6 @@ public class SourceConverterStage2
 		}
 		return fields;
 	}
-	
 	
 	List<MExpression> evaluateDeclarationReturnInitializers(IASTSimpleDeclaration simple) throws DOMException 
 	{
@@ -1104,8 +1099,6 @@ public class SourceConverterStage2
 //		}
 //	}
 	
-
-	
 	/**
 	 * Returns the names contained in a declaration.
 	 * Eg. int a, b, * c; will return [a, b, c].
@@ -1137,10 +1130,6 @@ public class SourceConverterStage2
 		}
 		return ret;
 	}
-
-
-
-
 	
 	MExpression callCopyIfNeeded(MExpression expr, IASTExpression cppExpr) throws DOMException
 	{
@@ -1166,8 +1155,6 @@ public class SourceConverterStage2
 //			return copy;
 //		}
 	}
-
-
 
 	MExpression eval1Init(IASTInitializer initializer) throws DOMException 
 	{
@@ -1203,8 +1190,6 @@ public class SourceConverterStage2
 		dec.type = TypeHelpers.cppToJavaType(var.getType());
 		
 		return dec;
-
-		
 		
 //		if (type == TypeEnum.OBJECT || type == TypeEnum.REFERENCE)
 //		{
@@ -1332,7 +1317,4 @@ public class SourceConverterStage2
 		boolean isBitfield;
 		boolean isStatic;
 	}
-	
-
-
 }

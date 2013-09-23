@@ -7,7 +7,7 @@ import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclar
 
 class GlobalContext 
 {
-	SourceConverterStage2 converter;
+	SourceConverter converter;
 	StackManager stackMngr;
 	ExpressionEvaluator exprEvaluator;
 	StmtEvaluator stmtEvaluator;

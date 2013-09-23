@@ -20,7 +20,7 @@ class Traverser
 	{
 		GlobalContext con = new GlobalContext();
 
-		con.converter = new SourceConverterStage2(con);
+		con.converter = new SourceConverter(con);
 		con.exprEvaluator = new ExpressionEvaluator(con);
 		con.stmtEvaluator = new StmtEvaluator(con);
 		con.bitfieldMngr = new BitfieldManager(con);

@@ -6,8 +6,8 @@ import java.util.List;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 
-import com.github.danfickle.cpptojavasourceconverter.SourceConverterStage2.CompositeInfo;
-import com.github.danfickle.cpptojavasourceconverter.SourceConverterStage2.FieldInfo;
+import com.github.danfickle.cpptojavasourceconverter.SourceConverter.CompositeInfo;
+import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
