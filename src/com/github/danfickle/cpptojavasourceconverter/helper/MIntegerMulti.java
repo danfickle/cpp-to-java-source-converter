@@ -1,6 +1,6 @@
 package com.github.danfickle.cpptojavasourceconverter.helper;
 
-public class MIntegerMulti implements PtrLike<MIntegerMulti, Integer> 
+public class MIntegerMulti implements IInteger
 {
 	private final int[] val;
 	private int currentOffset;
@@ -11,7 +11,7 @@ public class MIntegerMulti implements PtrLike<MIntegerMulti, Integer>
 		currentOffset = offset;
 	}
 	
-	public static MIntegerMulti valueOf(int[] arr, int offset)
+	public static IInteger valueOf(int[] arr, int offset)
 	{
 		return new MIntegerMulti(arr, offset);
 	}
@@ -23,22 +23,16 @@ public class MIntegerMulti implements PtrLike<MIntegerMulti, Integer>
 	}
 
 	@Override
-	public MIntegerMulti copy() 
-	{
-		return new MIntegerMulti(val, currentOffset);
-	}
-
-	@Override
-	public Integer get()
+	public int get()
 	{
 		return val[currentOffset];
 	}
 
 	@Override
-	public MIntegerMulti set(Integer val) 
+	public int set(int value) 
 	{
-		this.val[currentOffset] = val;
-		return this;
+		val[currentOffset] = value;
+		return value;
 	}
 
 	@Override
@@ -69,13 +63,13 @@ public class MIntegerMulti implements PtrLike<MIntegerMulti, Integer>
 	}
 
 	@Override
-	public Integer postInc() 
+	public int postInc() 
 	{
 		return val[currentOffset]++;
 	}
 
 	@Override
-	public Integer postDec() 
+	public int postDec() 
 	{
 		return val[currentOffset]--;
 	}
@@ -85,5 +79,11 @@ public class MIntegerMulti implements PtrLike<MIntegerMulti, Integer>
 	{
 		// must make a copy of currentOffset like real pointers
 		return new MIntegerMulti(val, currentOffset);
+	}
+
+	@Override
+	public IInteger ptrAddressOf() 
+	{
+		return this;
 	}
 }

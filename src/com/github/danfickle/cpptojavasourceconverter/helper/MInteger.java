@@ -1,8 +1,8 @@
 package com.github.danfickle.cpptojavasourceconverter.helper;
 
-public class MInteger implements PtrLike<MInteger, Integer>
+public class MInteger implements IInteger
 {
-	int m_value;
+	private int m_value;
 	
 	private MInteger(int value)
 	{
@@ -16,6 +16,12 @@ public class MInteger implements PtrLike<MInteger, Integer>
 	public static MInteger valueOf(int value)
 	{
 		return new MInteger(value);
+	}
+	
+	@Override
+	public MInteger ptrAddressOf()
+	{
+		return this;
 	}
 	
 	/**
@@ -33,7 +39,7 @@ public class MInteger implements PtrLike<MInteger, Integer>
 	 * MShort shrt = MShort.valueOf(val.get()); 
 	 */
 	@Override
-	public Integer get()
+	public int get()
 	{
 		return m_value;
 	}
@@ -46,10 +52,10 @@ public class MInteger implements PtrLike<MInteger, Integer>
 	 * ptr.set(4);
 	 */
 	@Override
-	public MInteger set(Integer value)
+	public int set(int value)
 	{
 		m_value = value;
-		return this;
+		return m_value;
 	}
 	
 	/**
@@ -57,7 +63,7 @@ public class MInteger implements PtrLike<MInteger, Integer>
 	 * val.postInc();
 	 */
 	@Override
-	public Integer postInc()
+	public int postInc()
 	{
 		return m_value++;
 	}
@@ -67,27 +73,10 @@ public class MInteger implements PtrLike<MInteger, Integer>
 	 * val.postDec();
 	 */
 	@Override
-	public Integer postDec()
+	public int postDec()
 	{
 		return m_value--;
 	}
-	
-	/**
-	 * Copy when passing or assigning unless its being used
-	 * as a pointer. If using as a pointer use the addressOf function.
-	 *
-	 * int * ptr = &val; 
-	 * MInteger ptr = val.addressOf();
-	 *
-	 * int val2 = val;
-	 * MInteger val2 = val.copy();
-	 */
-	@Override
-	public MInteger copy()
-	{
-		return new MInteger(m_value);
-	}
-	
 	
 	/*
 	 * Pointer operation methods.
