@@ -258,7 +258,13 @@ class ExpressionHelpers
 		}
 	}
 	
-
+	static TypeEnum expressionGetType(IASTExpression expr) throws DOMException
+	{
+//		if (expr == null || expr.getExpressionType() == null)
+//			return TypeEnum.BOOLEAN; // FIXME..
+		
+		return TypeHelpers.getTypeEnum(expr.getExpressionType());
+	}
 	
 	static boolean isBooleanExpression(IASTExpression expr) throws DOMException
 	{
@@ -273,8 +279,9 @@ class ExpressionHelpers
 	/**
 	 * Returns true if the C++ expression is a pointer deref such as (*), (->) or array
 	 * access.
+	 * @throws DOMException 
 	 */
-	static boolean isEventualPtrDeref(IASTExpression expr)
+	static boolean isEventualPtrDeref(IASTExpression expr) throws DOMException
 	{
 		expr = unwrap(expr);
 
@@ -289,7 +296,7 @@ class ExpressionHelpers
 		
 		// Finally check for the array access operator on a pointer...
 		if (expr instanceof IASTArraySubscriptExpression &&
-			TypeHelpers.isEventualPtr(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
+			TypeHelpers.isEventualPtrBasic(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
 			return true;
 		
 		return false;
@@ -315,7 +322,7 @@ class ExpressionHelpers
 	 */
 	static MExpression makeExpressionBoolean(MExpression exp, IASTExpression expcpp) throws DOMException
 	{
-		return makeExpressionBoolean(exp, TypeHelpers.expressionGetType(expcpp));
+		return makeExpressionBoolean(exp, expressionGetType(expcpp));
 	}
 	
 	/**
@@ -328,8 +335,8 @@ class ExpressionHelpers
 			MExpression r = null;
 			
 			if (expType == TypeEnum.OBJECT ||
-				expType == TypeEnum.POINTER ||
-				expType == TypeEnum.REFERENCE)
+				expType == TypeEnum.OBJECT_POINTER ||
+				expType == TypeEnum.BASIC_POINTER)
 			{
 				r = ModelCreation.createLiteral("null");
 			}

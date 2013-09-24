@@ -153,8 +153,7 @@ public class SourceConverter
 				MStmt stmt = ModelCreation.createMethodCall("this", fields.get(i).field.getName(), "destruct");
 				method.statements.add(stmt);
 			}
-			else if (TypeHelpers.getTypeEnum(fields.get(i).field.getType()) == TypeEnum.ARRAY &&
-					TypeHelpers.getTypeEnum(TypeHelpers.getArrayBaseType(fields.get(i).field.getType())) == TypeEnum.OBJECT)
+			else if (TypeHelpers.getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OBJECT_ARRAY)
 			{
 				// Call DestructHelper.destruct(this.field)
 				MStmt stmt = ModelCreation.createMethodCall(
@@ -190,7 +189,7 @@ public class SourceConverter
 			frag.isStatic = true;
 			
 			if (TypeHelpers.getTypeEnum(ifield.getType()) == TypeEnum.OBJECT ||
-				TypeHelpers.getTypeEnum(ifield.getType()) == TypeEnum.ARRAY)
+				TypeHelpers.getTypeEnum(ifield.getType()) == TypeEnum.OBJECT_ARRAY)
 			{
 				frag.initExpr = init;
 			}
@@ -256,7 +255,7 @@ public class SourceConverter
 					ICPPParameter[] params  = ctor.getParameters();
 
 					if (params.length != 0 &&
-						TypeHelpers.getTypeEnum(params[0].getType()) == TypeEnum.REFERENCE &&
+						TypeHelpers.getTypeEnum(params[0].getType()) == TypeEnum.OBJECT_REFERENCE &&
 						TypeHelpers.cppToJavaType(params[0].getType()).toString().equals(ctor.getName()))
 					{
 						// TODO: We should check there are no params or others have default values...
@@ -824,19 +823,18 @@ public class SourceConverter
 					if (fieldInfo.isStatic)
 						/* Do nothing. */ ;
 					else if (fieldInfo.init != null &&
-							TypeHelpers.getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
+							TypeHelpers.getTypeEnum(fieldInfo.field.getType()) != TypeEnum.BASIC_ARRAY)
 					{
 						MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 						ifBlock.statements.add(ModelCreation.createMethodCall("this", fieldInfo.field.getName(), "opAssign", right));
 					}
-					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
-							TypeHelpers.getTypeEnum(TypeHelpers.getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OBJECT)
+					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.OBJECT_ARRAY)
 					{
 						MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 						MFieldReferenceExpression left = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
 						ifBlock.statements.add(ModelCreation.createMethodCall("CPP", "assignArray", left, right));
 					}
-					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
+					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.BASIC_ARRAY)
 					{
 						MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 						MFieldReferenceExpression left = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
@@ -910,7 +908,7 @@ public class SourceConverter
 					if (fieldInfo.isStatic)
 						/* Do nothing. */ ;
 					else if (fieldInfo.init != null &&
-							TypeHelpers.getTypeEnum(fieldInfo.field.getType()) != TypeEnum.ARRAY)
+							TypeHelpers.getTypeEnum(fieldInfo.field.getType()) != TypeEnum.BASIC_ARRAY)
 					{
 						// this.field = right.field.copy();
 						MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("right", fieldInfo.field.getName());	
@@ -923,8 +921,7 @@ public class SourceConverter
 						MExpression infix = ModelCreation.createInfixExpr(fr3, fcall, "=");
 						meth.body.statements.add(ModelCreation.createExprStmt(infix));
 					}
-					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY &&
-							TypeHelpers.getTypeEnum(TypeHelpers.getArrayBaseType(fieldInfo.field.getType())) == TypeEnum.OBJECT)
+					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.OBJECT_ARRAY)
 					{
 						// this.field = CPP.copyArray(right.field);
 						MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
@@ -938,7 +935,7 @@ public class SourceConverter
 						MExpression infix = ModelCreation.createInfixExpr(fr1, fcall, "=");						
 						meth.body.statements.add(ModelCreation.createExprStmt(infix));
 					}
-					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.ARRAY)
+					else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.BASIC_ARRAY)
 					{
 						// this.field = CPP.copy*Array(right.field);
 						MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("this", fieldInfo.field.getName());

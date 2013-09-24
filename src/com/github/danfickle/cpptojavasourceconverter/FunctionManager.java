@@ -11,6 +11,7 @@ import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
+import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
 
 class FunctionManager 
@@ -31,7 +32,7 @@ class FunctionManager
 		{
 			IFunction func = (IFunction) funcBinding;
 			IFunctionType funcType = func.getType();
-			return TypeHelpers.cppToJavaType(funcType.getReturnType(), true, false);
+			return TypeHelpers.cppToJavaType(funcType.getReturnType(), TypeType.INTERFACE);
 		}
 
 		MyLogger.logImportant("Unexpected binding for return type: " + funcBinding.getClass().getCanonicalName());
