@@ -21,10 +21,10 @@ expression_tp(expr_obj) ::= <%
     <lhs_object_tp(expr_obj.object)>.<expr_obj.field>.get()
 
   <elseif(expr_obj.isPostfixNumberInc)>
-    <lhs_object_tp(expr_obj)>.get()
+    <lhs_object_tp(expr_obj)>
 
   <elseif(expr_obj.isPostfixNumberDec)>
-    <lhs_object_tp(expr_obj)>.get()
+    <lhs_object_tp(expr_obj)>
 
   <elseif(expr_obj.isPrefixNumberInc)>
     <lhs_object_tp(expr_obj)>.set(<expression_tp(expr_obj.operand)> + 1)

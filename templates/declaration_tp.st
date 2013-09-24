@@ -1,43 +1,43 @@
-declaration_tp(decl) ::= <<
+declaration_tp(decl) ::= <%
 
  <if(decl.isEnum)>
-   <enum_tp(decl.simpleName, decl.enumerators, "int")>
+  <\n><enum_tp(decl.simpleName, decl.enumerators, "int")>
 
  <elseif(decl.isBitfield)>
-   <bitfield_tp(decl)>
+  <\n><bitfield_tp(decl)>
 
  <elseif(decl.isGeneratedDtor)>
-  @Override
-  public void destruct()
-  <statement_tp(decl.body)>
+  <\n>@Override
+  <\n>public void destruct()
+  <\n><statement_tp(decl.body)>
 
  <elseif(decl.isGeneratedCtor)>
-  public <decl.type>()
-  <statement_tp(decl.body)>
+  <\n>public <decl.type>()
+  <\n><statement_tp(decl.body)>
  
  <elseif(decl.isGeneratedAssign)>
-  @Override
-  public <decl.type> opAssign(<decl.type> right)
-  <statement_tp(decl.body)>
+  <\n>@Override
+  <\n>public <decl.type> opAssign(<decl.type> right)
+  <\n><statement_tp(decl.body)>
 
  <elseif(decl.isFunctionDeclaration)>
-  public <decl.retType> <decl.name>(<decl.args:{a | <a.type> <a.name>}; separator=", ">)
-  <statement_tp(decl.body)>
+  <\n>public <decl.retType> <decl.name>(<decl.args:{a | <a.type> <a.name>}; separator=", ">)
+  <\n><statement_tp(decl.body)>
 
  <elseif(decl.isClassDeclaration)>
-  <if(decl.isUnion)>@CppUnion<endif>
-  public<if(decl.isNested)> static<endif> class <decl.name><if(decl.superclass)> extends <decl.superclass><endif> implements CppType\<<decl.name>\>/* <decl.additionalSupers:{s | <s>}> */
-  {
-    <decl.declarations:{d | <declaration_tp(d)>}>
-  }
+  <\n><if(decl.isUnion)>@CppUnion<endif>
+  <\n>public<if(decl.isNested)> static<endif> class <decl.name><if(decl.superclass)> extends <decl.superclass><endif> implements CppType\<<decl.name>\>/* <decl.additionalSupers:{s | <s>}> */
+  <\n>{
+  <\n>  <decl.declarations:{d | <declaration_tp(d)>}>
+  <\n>}
 
  <elseif(decl.isSimpleDecl)>
-  <if(decl.isPublic)>public<endif><if(decl.isNested)> static<endif> <decl.type> <decl.name><if(decl.initExpr)> = <expression_tp(decl.initExpr)><endif><if(decl.isPublic)>;<endif>
+  <\n><if(decl.isPublic)>public<endif><if(decl.isNested)> static<endif> <decl.type> <decl.name><if(decl.initExpr)> = <expression_tp(decl.initExpr)><endif><if(decl.isPublic)>;<endif>
 
  <else>
-  // ERROR.
+  <\n>// ERROR.
 
  <endif>
 
->>
+%>
 
