@@ -86,4 +86,12 @@ public class MIntegerMulti implements IInteger
 	{
 		return this;
 	}
+
+	@Override
+	public int ptrCompare()
+	{
+		// Get the pointer offset to compare with
+		// another pointer offset from the same block.
+		return currentOffset;
+	}
 }

@@ -15,6 +15,7 @@ public interface IInteger
 	public IInteger ptrPostDec();
 	public IInteger ptrAddressOf();
 	public IInteger addressOf();
+	public int ptrCompare();
 	public int get();
 	public int set(int value);
 	public int postInc();

@@ -7,6 +7,7 @@ Each object to have following methods:
 -> ptrPostInc
 -> ptrPostDec
 -> ptrAddressOf
+-> ptrCompare
 
 Number and boolean objects to have following methods:
 -> get

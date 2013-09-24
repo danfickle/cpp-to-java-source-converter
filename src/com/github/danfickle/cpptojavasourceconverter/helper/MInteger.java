@@ -110,4 +110,10 @@ public class MInteger implements IInteger
 	{
 		return this;
 	}
+
+	@Override
+	public int ptrCompare() 
+	{
+		return 0;
+	}
 }

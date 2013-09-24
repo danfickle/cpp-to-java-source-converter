@@ -27,6 +27,10 @@ void ptr_test_method()
 	// Test compound assignment...
 	f[1] *= 3;
 	(*f) += 4;
+
+	// Test pointer comparison
+	f < &f[1];
+	&f[0] == f;
 }
 
 class foo { };
