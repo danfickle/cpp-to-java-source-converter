@@ -1,3 +1,14 @@
+Not to be implemented for first version:
+-> goto
+-> setjmp/longjmp
+-> untyped malloc
+-> template code generation (generics to be used instead).
+-> C++/C std lib
+-> order of operation differences
+-> platform dependent/undefined behavior
+-> unions
+
+
 test-enums
  -> names for anonymous enums.
 
@@ -31,7 +42,4 @@ technical challenges
  -> pointers.
  -> templates.
 
-general
- -> too much white space.
- -> number postfix and prefix.
 
