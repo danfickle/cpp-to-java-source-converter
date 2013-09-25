@@ -621,16 +621,22 @@ public class SourceConverter
 			IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration)declaration;
 			MyLogger.log("simple declaration");
 
-			if (simpleDeclaration.getDeclarators().length > 0)
+			for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
 			{
-				for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
-				{
-					IBinding binding  = decl.getName().resolveBinding();
+				IBinding binding  = decl.getName().resolveBinding();
 
-					if (binding instanceof IVariable)
-					{
-						ret.add(((IVariable) binding).getType());
-					}
+				if (binding instanceof IVariable)
+				{
+					ret.add(((IVariable) binding).getType());
+				}
+				else if (binding instanceof IFunction)
+				{
+					ret.add(((IFunction) binding).getType());
+				}
+				else
+				{
+					MyLogger.logImportant("binding not a variable or function:" + binding.getName());
+					ret.add(null);
 				}
 			}
 		}

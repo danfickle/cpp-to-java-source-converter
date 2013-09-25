@@ -2,7 +2,9 @@ package com.github.danfickle.cpptojavasourceconverter;
 
 import org.eclipse.cdt.core.dom.ast.*;
 
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MValueOfExpressionNumber;
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
 
@@ -363,13 +365,19 @@ class ExpressionHelpers
 
 	
 	/**
-	 * Given a type, creates a new expression.
-	 * eg. 'int' becomes 'new MInteger()'
+	 * Given a type, creates a factory create expression.
+	 * eg. 'int' becomes 'MInteger.valueOf(0)'
 	 */
 	static MExpression makeSimpleCreationExpression(IType tp) throws DOMException
 	{
-		MClassInstanceCreation create = new MClassInstanceCreation();
-		create.name = ModelCreation.createLiteral(TypeHelpers.cppToJavaType(tp));
-		return create;
+		String literal = "0";
+		
+		if (TypeHelpers.getTypeEnum(tp) == TypeEnum.BOOLEAN)
+			literal = "false";
+		
+		MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
+		expr.operand = ModelCreation.createLiteral(literal);
+		expr.type = TypeHelpers.cppToJavaType(tp, TypeType.IMPLEMENTATION);
+		return expr;
 	}
 }
