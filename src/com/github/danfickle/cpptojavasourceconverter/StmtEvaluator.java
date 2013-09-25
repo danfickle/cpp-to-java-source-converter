@@ -224,8 +224,12 @@ class StmtEvaluator
 			MIfStmt ifs = new MIfStmt();
 			stmts.add(ifs);
 
-			ifs.condition = ctx.exprEvaluator.eval1Expr(ifStatement.getConditionExpression());
-			ifs.condition = ExpressionHelpers.makeExpressionBoolean(ifs.condition, ifStatement.getConditionExpression());
+			if (ifStatement.getConditionExpression() != null)
+			{
+				ifs.condition = ctx.exprEvaluator.eval1Expr(ifStatement.getConditionExpression());
+				ifs.condition = ExpressionHelpers.makeExpressionBoolean(ifs.condition, ifStatement.getConditionExpression());
+			}
+			
 			ifs.body = surround(evalStmt(ifStatement.getThenClause()));
 			
 			if (ifStatement.getElseClause() != null)
@@ -295,7 +299,11 @@ class StmtEvaluator
 			stmts.add(swi);
 			
 			swi.body = surround(evalStmt(switchStatement.getBody()));
-			swi.expr = ctx.exprEvaluator.eval1Expr(switchStatement.getControllerExpression());
+
+			if (switchStatement.getControllerExpression() != null)
+			{
+				swi.expr = ctx.exprEvaluator.eval1Expr(switchStatement.getControllerExpression());
+			}
 			
 			if (switchStatement instanceof ICPPASTSwitchStatement &&
 			    ((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration() != null)
@@ -317,8 +325,12 @@ class StmtEvaluator
 			stmts.add(whi);
 			
 			whi.body = surround(evalStmt(whileStatement.getBody()));
-			whi.expr = ctx.exprEvaluator.eval1Expr(whileStatement.getCondition());
-			whi.expr = ExpressionHelpers.makeExpressionBoolean(whi.expr, whileStatement.getCondition());
+
+			if (whileStatement.getCondition() != null)
+			{
+				whi.expr = ctx.exprEvaluator.eval1Expr(whileStatement.getCondition());
+				whi.expr = ExpressionHelpers.makeExpressionBoolean(whi.expr, whileStatement.getCondition());
+			}
 			
 			if (whileStatement instanceof ICPPASTWhileStatement &&
 				((ICPPASTWhileStatement) whileStatement).getConditionDeclaration() != null)

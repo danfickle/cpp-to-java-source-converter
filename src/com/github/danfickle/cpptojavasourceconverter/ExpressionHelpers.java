@@ -260,9 +260,17 @@ class ExpressionHelpers
 	
 	static TypeEnum expressionGetType(IASTExpression expr) throws DOMException
 	{
-//		if (expr == null || expr.getExpressionType() == null)
-//			return TypeEnum.BOOLEAN; // FIXME..
-		
+		if (expr == null)
+		{
+			MyLogger.logImportant("Null expression");
+			MyLogger.exitOnError();
+		}
+		else if (expr.getExpressionType() == null)
+		{
+			MyLogger.logImportant("Null expression type: " + expr.getRawSignature());
+			MyLogger.exitOnError();
+		}
+
 		return TypeHelpers.getTypeEnum(expr.getExpressionType());
 	}
 	

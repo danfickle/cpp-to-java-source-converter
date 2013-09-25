@@ -4,7 +4,7 @@ class MyLogger
 {
 	static void log(String msg)
 	{
-		System.out.println(msg);
+		//System.out.println(msg);
 	}
 
 	static void logImportant(String msg)
@@ -14,6 +14,17 @@ class MyLogger
 	
 	static void exitOnError()
 	{
-		System.exit(-1);
+		try 
+		{
+			throw new RuntimeException();
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			System.exit(-1);
+		}
 	}
 }
