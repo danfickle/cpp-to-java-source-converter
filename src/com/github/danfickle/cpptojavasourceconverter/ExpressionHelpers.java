@@ -348,11 +348,9 @@ class ExpressionHelpers
 			{
 				r = ModelCreation.createLiteral("null");
 			}
-			else if (expType == TypeEnum.CHAR)
-			{
-				r = ModelCreation.createLiteral("'\\0'");
-			}
-			else if (expType == TypeEnum.NUMBER)
+			else if (expType == TypeEnum.NUMBER ||
+					 expType == TypeEnum.BASIC_REFERENCE ||
+					 expType == TypeEnum.CHAR)
 			{
 				r = ModelCreation.createLiteral("0");
 			}

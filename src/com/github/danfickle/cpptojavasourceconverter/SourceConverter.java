@@ -28,7 +28,9 @@ import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupDir;
 
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MValueOfExpressionNumber;
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
@@ -326,15 +328,51 @@ public class SourceConverter
 	List<MExpression> evaluateDeclarationReturnInitializers(IASTSimpleDeclaration simple) throws DOMException 
 	{
 		List<MExpression> exprs = new ArrayList<MExpression>();
+		List<IType> types = evaluateDeclarationReturnCppTypes(simple);
+		int i = 0;
 		
 		for (IASTDeclarator decl : simple.getDeclarators())
 		{
 			if (decl.getInitializer() == null)
+			{
+				if (TypeHelpers.isBasicType(types.get(i)))
+				{
+					MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
+					
+					expr.type = TypeHelpers.cppToJavaType(types.get(i), TypeType.IMPLEMENTATION);
+
+					if (TypeHelpers.getTypeEnum(types.get(i)) == TypeEnum.BOOLEAN)
+						expr.operand = ModelCreation.createLiteral("false");
+					else
+						expr.operand = ModelCreation.createLiteral("0");
+
+					exprs.add(expr);
+				}
+
 				exprs.add(null);
+			}
 			else if (decl.getInitializer() instanceof IASTEqualsInitializer)
-				exprs.add(ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) decl.getInitializer()).getInitializerClause()));
+			{
+				MExpression expr = ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) decl.getInitializer()).getInitializerClause()); 
+
+				if (TypeHelpers.isBasicType(types.get(i)))
+				{
+					MValueOfExpressionNumber wrap = new MValueOfExpressionNumber();
+					wrap.type = TypeHelpers.cppToJavaType(types.get(i), TypeType.IMPLEMENTATION);
+					wrap.operand = expr;
+					exprs.add(wrap);
+				}
+				else
+				{
+					exprs.add(expr);
+				}
+			}
 			else if (decl.getInitializer() instanceof ICPPASTConstructorInitializer)
+			{
 				exprs.add(ctx.exprEvaluator.eval1Expr((IASTExpression) ((ICPPASTConstructorInitializer) decl.getInitializer()).getExpression()));
+			}
+
+			i++;
 		}
 
 		return exprs;
@@ -552,7 +590,7 @@ public class SourceConverter
 
 			for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
 			{
-				IBinding binding  = decl.getName().resolveBinding();
+				IBinding binding = decl.getName().resolveBinding();
 
 				if (binding instanceof IVariable)
 				{
