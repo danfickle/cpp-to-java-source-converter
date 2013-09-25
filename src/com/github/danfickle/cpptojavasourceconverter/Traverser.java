@@ -55,16 +55,17 @@ class Traverser
 			e.printStackTrace();
 		}
 		con.converter.popDeclaration();
-		String output = "";
+		StringBuilder output = new StringBuilder();
 		STGroup group = new STGroupDir("/home/daniel/workspace/cpp-to-java-source-converter/templates");
 		
 		for (CppDeclaration decl : con.globalDeclarations)
 		{
 			ST test3 = group.getInstanceOf("declaration_tp");
 			test3.add("decl", decl);
-			output += test3.render();
+			output.append(test3.render());
 		}
 		
-		return output;
+		// Replace 2 or more (greedy) newlines with 2 newlines.
+		return output.toString().replaceAll("(\\n){2,}", "\n\n");
 	}
 }
