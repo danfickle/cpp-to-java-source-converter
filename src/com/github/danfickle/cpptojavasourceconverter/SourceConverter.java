@@ -361,25 +361,8 @@ public class SourceConverter
 			}
 			else if (decl.getInitializer() instanceof IASTEqualsInitializer)
 			{
-				MExpression expr = ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) decl.getInitializer()).getInitializerClause()); 
-
-				if (TypeHelpers.isBasicType(types.get(i)))
-				{
-					MValueOfExpressionNumber wrap = new MValueOfExpressionNumber();
-					wrap.type = TypeHelpers.cppToJavaType(types.get(i), TypeType.IMPLEMENTATION);
-					wrap.operand = expr;
-					exprs.add(wrap);
-				}
-				else if (TypeHelpers.getTypeEnum(types.get(i)) == TypeEnum.BASIC_REFERENCE)
-				{
-					MRefWrapper wrap = new MRefWrapper();
-					wrap.operand = expr;
-					exprs.add(wrap);
-				}
-				else
-				{
-					exprs.add(expr);
-				}
+				MExpression expr = ctx.exprEvaluator.wrapIfNeeded((IASTExpression) ((IASTEqualsInitializer) decl.getInitializer()).getInitializerClause(), types.get(i));
+				exprs.add(expr);
 			}
 			else if (decl.getInitializer() instanceof ICPPASTConstructorInitializer)
 			{

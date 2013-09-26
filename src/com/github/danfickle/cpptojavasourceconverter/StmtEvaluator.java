@@ -124,7 +124,7 @@ class StmtEvaluator
 			stmts.add(compound);
 
 			for (IASTStatement s : compoundStatement.getStatements())
-				compound.statements.add(eval1Stmt(s));
+				compound.statements.addAll(evalStmt(s));
 			
 			Integer idToCleanTo = ctx.stackMngr.endCompoundStmt();
 			
