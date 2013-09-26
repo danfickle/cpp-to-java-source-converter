@@ -679,22 +679,21 @@ class ExpressionEvaluator
 				 expr.getOperator() == IASTBinaryExpression.op_plus) &&
 				 TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
 		{
-			if (TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
-			{
-				MInfixExpressionWithPtrOnLeft infix = new MInfixExpressionWithPtrOnLeft();
-				infix.left = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
-				infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
-				ret.add(infix);
-			}
-			else if (TypeHelpers.isEventualPtrBasic(expr.getOperand2().getExpressionType()))
-			{
-				MInfixExpressionWithPtrOnRight infix = new MInfixExpressionWithPtrOnRight();
-				infix.left = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
-				infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
-				ret.add(infix);
-			}
+			MInfixExpressionWithPtrOnLeft infix = new MInfixExpressionWithPtrOnLeft();
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
+			ret.add(infix);
+		}
+		else if ((expr.getOperator() == IASTBinaryExpression.op_minus ||
+				 expr.getOperator() == IASTBinaryExpression.op_plus) &&
+				 TypeHelpers.isEventualPtrBasic(expr.getOperand2().getExpressionType()))
+		{
+			MInfixExpressionWithPtrOnRight infix = new MInfixExpressionWithPtrOnRight();
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
+			ret.add(infix);
 		}
 		else if (TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
 		{
@@ -714,9 +713,6 @@ class ExpressionEvaluator
 			infix.left = eval1Expr(expr.getOperand1());
 			infix.right = eval1Expr(expr.getOperand2());
 			infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
-
-
-			
 			ret.add(infix);
 		}
 	}
