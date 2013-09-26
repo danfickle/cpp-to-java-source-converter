@@ -87,6 +87,13 @@ class ExpressionModels
 		public String type;
 	}
 	
+	static class MValueOfExpressionArray extends MExpression
+	{
+		public boolean isValueOfArray = true;
+		public List<MExpression> operands;
+		public String type;
+	}
+	
 	static class MInfixExpressionWithPtrOnLeft extends MInfixExpression
 	{
 		public boolean isInfixWithPtrOnLeft = true;

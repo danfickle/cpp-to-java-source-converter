@@ -26,7 +26,7 @@ declaration_tp(decl) ::= <%
 
  <elseif(decl.isClassDeclaration)>
   <\n><if(decl.isUnion)>@CppUnion<endif>
-  <\n>public<if(decl.isNested)> static<endif> class <decl.name><if(decl.superclass)> extends <decl.superclass><endif> implements CppType\<<decl.name>\>/* <decl.additionalSupers:{s | <s>}> */
+  <\n>public<if(decl.isNested)> static<endif> class <decl.name><if(decl.superclass)> extends <decl.superclass><endif> implements CppType\<<decl.name>>/* <decl.additionalSupers:{s | <s>}> */
   <\n>{
   <\n>  <decl.declarations:{d | <declaration_tp(d)>}>
   <\n>}

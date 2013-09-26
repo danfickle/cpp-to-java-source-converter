@@ -348,6 +348,14 @@ public class SourceConverter
 
 					exprs.add(expr);
 				}
+				else if (TypeHelpers.getTypeEnum(types.get(i)) == TypeEnum.BASIC_ARRAY)
+				{
+					MValueOfExpressionArray expr = new MValueOfExpressionArray();
+
+					expr.type = TypeHelpers.cppToJavaType(types.get(i), TypeType.IMPLEMENTATION);
+					expr.operands = ctx.exprEvaluator.getArraySizeExpressions(types.get(i));
+					exprs.add(expr);
+				}
 
 				exprs.add(null);
 			}

@@ -41,6 +41,9 @@ expression_tp(expr_obj) ::= <%
   <elseif(expr_obj.isValueOfNumber)>
     <expr_obj.type>.valueOf(<expression_tp(expr_obj.operand)>)
 
+  <elseif(expr_obj.isValueOfArray)>
+    <expr_obj.type>.valueOf(<expr_obj.operands:{s | <expression_tp(s)>}; separator=", ">)
+
   <elseif(expr_obj.isBrackets)>
    (<expression_tp(expr_obj.operand)>)
 
