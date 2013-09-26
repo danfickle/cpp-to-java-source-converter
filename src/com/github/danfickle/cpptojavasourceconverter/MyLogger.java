@@ -7,8 +7,11 @@ class MyLogger
 		//System.out.println(msg);
 	}
 
+	static GlobalContext ctx;
+	
 	static void logImportant(String msg)
 	{
+		System.err.println("In: " + ctx.currentFileName);
 		System.err.println(msg);
 	}
 	

@@ -104,6 +104,11 @@ class ExpressionModels
 		public boolean isInfixWithPtrOnRight = true;
 	}
 	
+	static class MInfixExpressionPtrComparison extends MInfixExpression
+	{
+		public boolean isInfixWithPtrComparison = true;
+	}
+	
 	static class MCompoundWithPtrOnLeft extends MInfixExpression
 	{
 		public boolean isCompoundWithPtrOnLeft = true;

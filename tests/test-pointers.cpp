@@ -16,7 +16,15 @@ void ptr_test_method()
 	int l = *j;
 	int * m = &f[4];
 
+	// Test compound ptr assignment...
+	f += 2;
+	f -= 5;
+
+	// Test null pointers...
 	f = 0;
+	f == 0;
+	f != 0;
+	if (f) ;
 
 	// Test plain assignment...
 	f[4] = 111;

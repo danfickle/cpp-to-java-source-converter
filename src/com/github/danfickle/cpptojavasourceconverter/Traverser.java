@@ -27,6 +27,9 @@ class Traverser
 		con.stackMngr = new StackManager(con);
 		con.enumMngr = new EnumManager(con);
 		con.funcMngr = new FunctionManager(con);
+		con.currentFileName = translationUnit.getContainingFilename();
+
+		MyLogger.ctx = con;
 		
 		con.bitfieldMngr.addBitfield("cls::_b");
 		con.bitfieldMngr.addBitfield("_b");

@@ -17,5 +17,6 @@ class GlobalContext
 	
 	List<CppDeclaration> globalDeclarations = new ArrayList<CppDeclaration>();
 	
+	String currentFileName;
 	String currentReturnType;
 }

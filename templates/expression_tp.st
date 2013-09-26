@@ -123,10 +123,13 @@ expression_tp(expr_obj) ::= <%
     (<expr_obj.type>) <expression_tp(expr_obj.operand)>
 
   <elseif(expr_obj.isInfixWithPtrOnLeft)>
-    <lhs_object_tp(expr_obj.left)>.ptrCompare() <expr_obj.operator> <lhs_object_tp(expr_obj.right)>.ptrCompare()
+    <lhs_object_tp(expr_obj.left)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.right)>)
 
   <elseif(expr_obj.isInfixWithPtrOnRight)>
     <lhs_object_tp(expr_obj.right)>.ptrOffset(<expr_obj.operator><expression_tp(expr_obj.left)>)
+
+  <elseif(expr_obj.isInfixWithPtrComparison)>
+    <lhs_object_tp(expr_obj.left)>.ptrCompare() <expr_obj.operator> <lhs_object_tp(expr_obj.right)>.ptrCompare()
 
   <elseif(expr_obj.isAssignmentWithPtrOnLeft)>
     <lhs_object_tp(expr_obj.left)> = <expression_tp(expr_obj.right)>
