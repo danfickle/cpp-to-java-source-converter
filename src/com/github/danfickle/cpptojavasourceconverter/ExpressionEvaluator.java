@@ -666,9 +666,18 @@ class ExpressionEvaluator
 			
 			ret.add(infix);
 		}
-		// TODO: Compound ptr assignment.
-		else if (expr.getOperator() == IASTBinaryExpression.op_minus ||
-				 expr.getOperator() == IASTBinaryExpression.op_plus)
+		else if (ExpressionHelpers.isAssignmentExpression(expr.getOperator()) &&
+				TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
+		{
+			MCompoundWithPtrOnLeft infix = new MCompoundWithPtrOnLeft();
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			infix.operator = ExpressionHelpers.compoundAssignmentToInfixOperator(expr.getOperator());
+			ret.add(infix);
+		}
+		else if ((expr.getOperator() == IASTBinaryExpression.op_minus ||
+				 expr.getOperator() == IASTBinaryExpression.op_plus) &&
+				 TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
 		{
 			if (TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
 			{
