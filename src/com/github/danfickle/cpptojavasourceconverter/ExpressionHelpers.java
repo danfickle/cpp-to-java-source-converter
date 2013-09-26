@@ -348,16 +348,17 @@ class ExpressionHelpers
 				expType == TypeEnum.OBJECT_POINTER ||
 				expType == TypeEnum.BASIC_POINTER)
 			{
-				r = ModelCreation.createLiteral("null");
+				r = ModelCreation.createLiteral("PtrObjNull.instance()");
+				return bracket(ModelCreation.createInfixExprPtrComparison(bracket(exp), r, "!="));
 			}
 			else if (expType == TypeEnum.NUMBER ||
 					 expType == TypeEnum.BASIC_REFERENCE ||
 					 expType == TypeEnum.CHAR)
 			{
 				r = ModelCreation.createLiteral("0");
+				return bracket(ModelCreation.createInfixExpr(bracket(exp), r, "!="));
 			}
 
-			return bracket(ModelCreation.createInfixExpr(bracket(exp), r, "!="));
 		}
 		return bracket(exp);
 	}

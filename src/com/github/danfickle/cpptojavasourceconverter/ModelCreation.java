@@ -9,6 +9,7 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityE
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionNumber;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionPlain;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpression;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionPtrComparison;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MLiteralExpression;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MExprStmt;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MStmt;
@@ -121,6 +122,15 @@ public class ModelCreation
 		MFieldReferenceExpression frl = createFieldReference(left, lfield);
 		MFieldReferenceExpression frr = createFieldReference(right, rfield);
 		return createInfixExpr(frl, frr, op);
+	}
+	
+	static MExpression createInfixExprPtrComparison(MExpression l, MExpression r, String op)
+	{
+		MInfixExpressionPtrComparison infix = new MInfixExpressionPtrComparison();
+		infix.left = l;
+		infix.right = r;
+		infix.operator = op;
+		return infix;
 	}
 
 	/**
