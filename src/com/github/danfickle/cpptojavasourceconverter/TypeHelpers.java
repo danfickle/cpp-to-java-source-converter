@@ -58,7 +58,8 @@ public class TypeHelpers
 	 */
 	static boolean isEventualPtrBasic(IType type) throws DOMException
 	{
-		return getTypeEnum(type) == TypeEnum.BASIC_POINTER;
+		return getTypeEnum(type) == TypeEnum.BASIC_POINTER ||
+			   getTypeEnum(type) == TypeEnum.BASIC_ARRAY;
 	}
 	
 	static boolean isEventualRefBasic(IType type) throws DOMException
