@@ -1078,65 +1078,6 @@ public class SourceConverter
 		return null;
 	}
 
-
-//	private MExpression generateArrayCreationExpression(IType tp, List<MExpression> sizeExprs) throws DOMException
-//	{
-//		Type jtp = null;
-//		boolean isBasic = false;
-//		
-//		if ((getTypeEnum(tp) == TypeEnum.ARRAY))
-//		{
-//			jtp = cppToJavaType(getArrayBaseType(tp));
-//			TypeEnum te = getTypeEnum(getArrayBaseType(tp));
-//			isBasic = te == TypeEnum.BOOLEAN || te == TypeEnum.CHAR || te == TypeEnum.NUMBER; 
-//		}
-//		else if ((getTypeEnum(tp) == TypeEnum.POINTER))
-//		{
-//			jtp = cppToJavaType(getPointerBaseType(tp));
-//			TypeEnum te = getTypeEnum(getPointerBaseType(tp));
-//			isBasic = te == TypeEnum.BOOLEAN || te == TypeEnum.CHAR || te == TypeEnum.NUMBER; 
-//		}
-//		else
-//		{
-//			printerr("unexpected type here: " + tp.getClass().getCanonicalName());
-//			System.exit(-1);
-//		}
-//
-//		if (!isBasic)
-//		{
-//			TypeLiteral tl = ast.newTypeLiteral();
-//			tl.setType(jtp);
-//
-//			MethodInvocation meth = jast.newMethod()
-//					.on("CreateHelper")
-//					.call("allocateArray")
-//					.with(tl)
-//					.withArguments(sizeExprs).toAST();
-//
-//			CastExpression cast = ast.newCastExpression();
-//			cast.setExpression(meth);
-//			cast.setType(cppToJavaType(tp));
-//
-//			return cast;
-//		}
-//		else
-//		{
-//			ArrayCreation create = ast.newArrayCreation();
-//			if ((jtp instanceof ArrayType))
-//			{
-//				create.setType((ArrayType) jtp);
-//			}
-//			else
-//			{
-//				ArrayType arr = ast.newArrayType(jtp);
-//				create.setType(arr);
-//			}
-//			
-//			create.dimensions().addAll(sizeExprs);
-//			return create;
-//		}
-//	}
-	
 	/**
 	 * Returns the names contained in a declaration.
 	 * Eg. int a, b, * c; will return [a, b, c].
@@ -1203,36 +1144,6 @@ public class SourceConverter
 		dec.type = TypeHelpers.cppToJavaType(var.getType());
 		
 		return dec;
-		
-//		if (type == TypeEnum.OBJECT || type == TypeEnum.REFERENCE)
-//		{
-//			MClassInstanceCreation create = new MClassInstanceCreation();
-//			//create.args.addAll(evaluate(decl.getInitializer()));
-//			ret.add(create);
-//		}
-//		else if (type == TypeEnum.ARRAY)
-//		{
-//			//						print("Found array");
-//			//						//Expression ex = jast.newType(generateArrayCreationExpression(var.getType(), getArraySizeExpressions(var.getType())));
-//			//						Expression ex = jast.newNumber(0);
-//			//						TypeEnum te = getTypeEnum(getArrayBaseType(var.getType()));
-//			//						
-//			//						wrap = false;
-//			//						if ((te == TypeEnum.OBJECT || te == TypeEnum.REFERENCE || te == TypeEnum.POINTER) &&
-//			//							wrap)
-//			//						{
-//			////							MethodInvocation meth = createAddItemCall(ex);
-//			////							ret.set(ret.size() - 1, meth);
-//			//						}
-//			//						else
-//			//							ret.set(ret.size() - 1, ex);
-//		}
-//		else
-//		{
-//			//						evaluate(decl.getInitializer());
-//			//						if (!exprs.isEmpty())
-//			//							ret.set(ret.size() - 1, evaluate(decl.getInitializer()).get(0));	
-//		}
 	}
 
 	/**
@@ -1300,20 +1211,6 @@ public class SourceConverter
 //		}
 //		return null;
 //	}
-
-	/**
-	 * Given a declaration, returns a single variable. This is used for 
-	 * function arguments.
-	 */
-	private MSimpleDecl evaluateDeclarationReturnSingleVariable(IASTDeclaration declaration) throws DOMException
-	{
-		MSimpleDecl decl = new MSimpleDecl();
-		
-		List<String> names = evaluateDeclarationReturnNames(declaration);
-		decl.name = (names.get(0));
-		decl.type = (evaluateDeclarationReturnTypes(declaration).get(0));
-		return decl;
-	}
 
 	static class FieldInfo
 	{
