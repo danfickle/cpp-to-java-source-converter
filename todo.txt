@@ -7,7 +7,15 @@ Not to be implemented for first version:
 -> order of operation differences
 -> platform dependent/undefined behavior
 -> unions
+-> dynamic cast, etc.
+-> multiple inheritance
 
+To be done before first release:
+
+ -> integer promotion/demotion
+
+test-references
+ -> all
 
 test-enums
  -> names for anonymous enums.
@@ -18,7 +26,7 @@ test-bitfield
  -> StackHelper.cleanup being called when there is nothing to cleanup.
 
 test-basic-types
- -> arrays not being recognised as such.
+ -> multi dimension arrays.
 
 test-class
  -> copy not being marked with @Override
@@ -33,13 +41,7 @@ test-operator-overloading
 test-pointers
  -> address of operator.
 
-test-copying
- -> MInteger being copied when used in expressions other than direct return
-    value, function argument or assign.
-
 technical challenges
  -> references.
- -> pointers.
  -> templates.
-
 
