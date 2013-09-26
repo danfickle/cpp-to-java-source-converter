@@ -11,9 +11,15 @@ public class MIntegerMulti implements IInteger
 		currentOffset = offset;
 	}
 	
-	public static IInteger valueOf(int[] arr, int offset)
+	private MIntegerMulti(int dim1)
 	{
-		return new MIntegerMulti(arr, offset);
+		val = new int[dim1];
+		currentOffset = 0;
+	}
+	
+	public static IInteger create(int dim1)
+	{
+		return new MIntegerMulti(dim1);
 	}
 	
 	@Override
