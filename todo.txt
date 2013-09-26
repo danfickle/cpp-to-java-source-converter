@@ -13,6 +13,7 @@ Not to be implemented for first version:
 To be done before first release:
 
  -> integer promotion/demotion
+ -> losing second declarator
 
 test-references
  -> all

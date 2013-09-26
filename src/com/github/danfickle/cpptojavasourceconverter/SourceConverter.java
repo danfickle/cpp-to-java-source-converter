@@ -370,6 +370,12 @@ public class SourceConverter
 					wrap.operand = expr;
 					exprs.add(wrap);
 				}
+				else if (TypeHelpers.getTypeEnum(types.get(i)) == TypeEnum.BASIC_REFERENCE)
+				{
+					MRefWrapper wrap = new MRefWrapper();
+					wrap.operand = expr;
+					exprs.add(wrap);
+				}
 				else
 				{
 					exprs.add(expr);
@@ -1180,31 +1186,6 @@ public class SourceConverter
 		return ret;
 	}
 	
-	MExpression callCopyIfNeeded(MExpression expr, IASTExpression cppExpr) throws DOMException
-	{
-//		TypeEnum te = getTypeEnum(cppExpr.getExpressionType());
-
-		if (expr instanceof MClassInstanceCreation)
-			return expr;
-		
-		return expr;
-//		if (te != TypeEnum.POINTER &&
-//			te != TypeEnum.REFERENCE)
-//		{
-//			MFunctionCallExpression copy = new MFunctionCallExpression();
-//			MFieldReferenceExpression field = ModelCreation.createFieldReference(expr, "copy");
-//			copy.name = field;
-//			return copy;
-//		}
-//		else
-//		{
-//			MFunctionCallExpression copy = new MFunctionCallExpression();
-//			MFieldReferenceExpression field = ModelCreation.createFieldReference(expr, "ptrCopy");
-//			copy.name = field;
-//			return copy;
-//		}
-	}
-
 	MExpression eval1Init(IASTInitializer initializer) throws DOMException 
 	{
 		IASTEqualsInitializer eq = (IASTEqualsInitializer) initializer;

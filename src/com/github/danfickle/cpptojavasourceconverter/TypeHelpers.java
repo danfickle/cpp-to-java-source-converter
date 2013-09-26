@@ -186,7 +186,7 @@ public class TypeHelpers
 					basic = (IBasicType) ref.getType();
 
 				String basicStr = evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
-				String simpleType = "Ref" + basicStr;
+				String simpleType = "I" + basicStr;
 				return simpleType;
 			}
 //			else
@@ -538,7 +538,7 @@ public class TypeHelpers
 				else
 					type = ((ICPPReferenceType) expand(type)).getType();
 			}
-					
+
 			if (getTypeEnum(type) == TypeEnum.OBJECT)
 				return TypeEnum.OBJECT_REFERENCE;
 			else

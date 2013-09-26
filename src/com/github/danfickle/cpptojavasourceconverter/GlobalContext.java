@@ -3,6 +3,8 @@ package com.github.danfickle.cpptojavasourceconverter;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.cdt.core.dom.ast.IType;
+
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
 
 class GlobalContext 
@@ -18,5 +20,5 @@ class GlobalContext
 	List<CppDeclaration> globalDeclarations = new ArrayList<CppDeclaration>();
 	
 	String currentFileName;
-	String currentReturnType;
+	IType currentReturnType;
 }

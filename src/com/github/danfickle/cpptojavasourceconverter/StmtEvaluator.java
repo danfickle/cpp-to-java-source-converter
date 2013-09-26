@@ -13,6 +13,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTWhileStatement;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MValueOfExpressionNumber;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
+import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 
 class StmtEvaluator 
@@ -265,25 +266,13 @@ class StmtEvaluator
 
 			MReturnStmt retu = new MReturnStmt();
 			stmts.add(retu);
-			
 
-			if (ExpressionHelpers.isNumberExpression(returnStatement.getReturnValue()))
-			{
-				 MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
-				 valOfExpr.type = "MInteger"; // TODO
-				 valOfExpr.operand = ctx.exprEvaluator.eval1Expr(returnStatement.getReturnValue());
-				 
-				retu.expr = valOfExpr;
-			}
-			else
-			{
-				retu.expr = ctx.exprEvaluator.eval1Expr(returnStatement.getReturnValue());
-				retu.expr = ctx.converter.callCopyIfNeeded(retu.expr, returnStatement.getReturnValue());
-			}
+			retu.expr = ctx.exprEvaluator.wrapIfNeeded(returnStatement.getReturnValue(), ctx.currentReturnType);
 			
-// TODO
-//			if (currentReturnType.equals("Boolean"))
-//				retu.expr = ExpressionHelpers.makeExpressionBoolean(retu.expr, returnStatement.getReturnValue());
+			if (TypeHelpers.getTypeEnum(ctx.currentReturnType) == TypeEnum.BOOLEAN)
+			{
+				retu.expr = ExpressionHelpers.makeExpressionBoolean(retu.expr, returnStatement.getReturnValue());
+			}
 
 			// Only call cleanup if we have something on the stack.
 			if (ctx.stackMngr.getLocalVariableId() != 0)

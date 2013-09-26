@@ -129,7 +129,12 @@ class FunctionManager
 
 		// We need this so we know if the return expression needs to be made
 		// java boolean.
-		ctx.currentReturnType = method.retType;
+		if (funcBinding instanceof IFunction)
+		{
+			IFunction funcb = (IFunction) funcBinding;
+			IFunctionType funcType = funcb.getType();
+			ctx.currentReturnType = funcType.getReturnType();
+		}
 		
 		// eval1Stmt work recursively to generate the function body.
 		method.body = (MCompoundStmt) ctx.stmtEvaluator.eval1Stmt(func.getBody());

@@ -134,6 +134,9 @@ expression_tp(expr_obj) ::= <%
   <elseif(expr_obj.isAssignmentWithPtrOnLeft)>
     <lhs_object_tp(expr_obj.left)> = <expression_tp(expr_obj.right)>
 
+  <elseif(expr_obj.isRefWrapper)>
+    <lhs_object_tp(expr_obj.operand)>
+
   <elseif(expr_obj.isCompoundWithPtrOnLeft)>
     <lhs_object_tp(expr_obj.left)>.ptrAdjust(<expr_obj.operator><expression_tp(expr_obj.right)>)
 

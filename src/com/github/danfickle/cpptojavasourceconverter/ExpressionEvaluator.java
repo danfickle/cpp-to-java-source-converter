@@ -9,6 +9,8 @@ import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
 
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
 
 class ExpressionEvaluator
 {
@@ -524,40 +526,16 @@ class ExpressionEvaluator
 			IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
 			for (IASTExpression arg : list.getExpressions())
 			{
-				if (ExpressionHelpers.isNumberExpression(arg))
-				{
-					MExpression exarg = eval1Expr(arg);
-					MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
-					valOfExpr.operand = exarg;
-					valOfExpr.type = "MInteger"; // TODO
-					func.args.add(valOfExpr);
-				}
-				else
-				{
-					MExpression exarg = eval1Expr(arg);
-					exarg = ctx.converter.callCopyIfNeeded(exarg, arg);
-					func.args.add(exarg);
-				}
+				// TODO: Correct func arg type.
+				MExpression exarg = wrapIfNeeded(arg, arg.getExpressionType());
+				func.args.add(exarg);
 			}
 		}
 		else if (expr.getParameterExpression() instanceof IASTExpression)
 		{
-			IASTExpression arg = expr.getParameterExpression();
-			
-			if (ExpressionHelpers.isNumberExpression(arg))
-			{
-				MExpression exarg = eval1Expr(arg);
-				MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
-				valOfExpr.operand = exarg;
-				valOfExpr.type = "MInteger"; // TODO
-				func.args.add(valOfExpr);
-			}
-			else
-			{
-				MExpression exarg = eval1Expr(expr.getParameterExpression());
-				exarg = ctx.converter.callCopyIfNeeded(exarg, expr.getParameterExpression());
-				func.args.add(exarg);
-			}
+			// TODO: Correct func arg type.
+			MExpression exarg = wrapIfNeeded(expr.getParameterExpression(), expr.getParameterExpression().getExpressionType());
+			func.args.add(exarg);
 		}
 
 		ret.add(func);
@@ -737,5 +715,32 @@ class ExpressionEvaluator
 		}
 
 		return ret;
+	}
+	
+	/**
+	 * This function should be called for return values, function arguments and rhs of direct
+	 * assignment. It will wrap the expression, if required, so it is copied. 
+	 */
+	MExpression wrapIfNeeded(IASTExpression cppExpr, IType tpRequired) throws DOMException
+	{
+		if (TypeHelpers.getTypeEnum(tpRequired) == TypeEnum.BASIC_REFERENCE)
+		{
+			MRefWrapper wrap = new MRefWrapper();
+			wrap.operand = eval1Expr(cppExpr);
+			return wrap;
+		}
+		else if (TypeHelpers.getTypeEnum(tpRequired) == TypeEnum.BOOLEAN ||
+				TypeHelpers.getTypeEnum(tpRequired) == TypeEnum.CHAR ||
+				TypeHelpers.getTypeEnum(tpRequired) == TypeEnum.NUMBER)
+		{
+			 MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
+			 valOfExpr.type = TypeHelpers.cppToJavaType(tpRequired, TypeType.IMPLEMENTATION);
+			 valOfExpr.operand = eval1Expr(cppExpr);
+			 return valOfExpr;
+		}
+		else
+		{
+			return eval1Expr(cppExpr);
+		}
 	}
 }

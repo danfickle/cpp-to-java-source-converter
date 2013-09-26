@@ -140,6 +140,12 @@ class ExpressionModels
 		public boolean isAssignmentWithPtrOnLeft = true;
 	}
 	
+	static class MRefWrapper extends MExpression
+	{
+		public boolean isRefWrapper = true;
+		public MExpression operand;
+	}
+	
 	static class MAddressOfExpressionPtr extends MExpression
 	{
 		public boolean isAddressOfPtr = true;
