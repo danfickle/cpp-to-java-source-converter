@@ -18,6 +18,7 @@ class EnumManager
 	
 	private HashMap<String, String> anonEnumMap = new HashMap<String, String>();
 
+	// TODO: Persist over multiple translation units.
 	private int anonEnumCount = 0;
 	
 	void evalDeclEnum(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
@@ -29,6 +30,12 @@ class EnumManager
 
 		CppEnum enumModel = new CppEnum();
 		enumModel.simpleName = TypeHelpers.getSimpleName(enumerationSpecifier.getName());
+
+		if (enumModel.simpleName.equals("MISSING"))
+		{
+			enumModel.simpleName = "AnonEnum" + anonEnumCount++;
+		}
+		
 		enumModel.qualified = TypeHelpers.getQualifiedPart(enumerationSpecifier.getName()); 
 
 		String first = enumerators[0].getName().toString();		

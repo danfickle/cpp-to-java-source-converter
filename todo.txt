@@ -18,7 +18,6 @@ test-references
  -> all
 
 test-enums
- -> names for anonymous enums.
 
 test-bitfield
  -> exact bit position for bitfield.
