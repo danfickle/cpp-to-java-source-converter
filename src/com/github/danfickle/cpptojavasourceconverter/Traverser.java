@@ -30,9 +30,6 @@ class Traverser
 		con.currentFileName = translationUnit.getContainingFilename();
 
 		MyLogger.ctx = con;
-		
-		con.bitfieldMngr.addBitfield("cls::_b");
-		con.bitfieldMngr.addBitfield("_b");
 
 		//compositeMap.put("", new CompositeInfo(global));
 		CppClass global = new CppClass();

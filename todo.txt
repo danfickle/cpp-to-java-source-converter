@@ -21,7 +21,6 @@ test-enums
 
 test-bitfield
  -> exact bit position for bitfield.
- -> recognising bit fields when used.
  -> StackHelper.cleanup being called when there is nothing to cleanup.
 
 test-basic-types
