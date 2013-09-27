@@ -15,7 +15,6 @@ To be done before first release:
  -> integer promotion/demotion
 
 test-references
- -> func arg not being recognised as reference.
 
 test-enums
 
@@ -36,6 +35,5 @@ test-operator-overloading
 test-pointers
 
 technical challenges
- -> references.
  -> templates.
 

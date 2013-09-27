@@ -510,43 +510,53 @@ class ExpressionEvaluator
 		}
 	}
 
+	private void evalExprFuncCallArgs(IASTFunctionCallExpression expr, List<MExpression> args) throws DOMException
+	{
+		IFunction funcb;
 
+		if (expr.getFunctionNameExpression() instanceof IASTIdExpression)
+		{
+			funcb = (IFunction) ((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding();;
+		}
+		else // if (expr.getFunctionNameExpression() instanceof IASTFieldReference)
+		{
+			funcb = (IFunction) ((IASTFieldReference) expr.getFunctionNameExpression()).getFieldName().resolveBinding();
+		}
+		
+		IParameter[] params = funcb.getParameters();
+		
+		for (int i = 0; i < params.length; i++)
+		{
+			IASTExpression argExpr = (IASTExpression) expr.getArguments()[i];
+			args.add(wrapIfNeeded(argExpr, params[i].getType()));
+		}
+	}
+	
 	private void evalExprFuncCall(IASTFunctionCallExpression expr, List<MExpression> ret) throws DOMException
 	{
-		MFunctionCallExpressionParent func;
-		
 		if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
 			((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
 		{
-			func = new MClassInstanceCreation();
+			MClassInstanceCreation func = new MClassInstanceCreation();
+			func.name = eval1Expr(expr.getFunctionNameExpression());
+			
+			for (IASTInitializerClause cls : expr.getArguments())
+			{
+				IASTExpression argExpr = (IASTExpression) cls;
+				// TODO: Correct func arg type.
+				func.args.add(wrapIfNeeded(argExpr, argExpr.getExpressionType()));
+			}
+
+			ret.add(func);
 		}
 		else
 		{
-			func = new MFunctionCallExpression();
+			MFunctionCallExpression func = new MFunctionCallExpression();
+			func.name = eval1Expr(expr.getFunctionNameExpression());
+			evalExprFuncCallArgs(expr, func.args);
+			ret.add(func);
 		}
-
-		func.name = eval1Expr(expr.getFunctionNameExpression());
-
-		if (expr.getParameterExpression() instanceof IASTExpressionList)
-		{
-			IASTExpressionList list = (IASTExpressionList) expr.getParameterExpression();
-			for (IASTExpression arg : list.getExpressions())
-			{
-				// TODO: Correct func arg type.
-				MExpression exarg = wrapIfNeeded(arg, arg.getExpressionType());
-				func.args.add(exarg);
-			}
-		}
-		else if (expr.getParameterExpression() instanceof IASTExpression)
-		{
-			// TODO: Correct func arg type.
-			MExpression exarg = wrapIfNeeded(expr.getParameterExpression(), expr.getParameterExpression().getExpressionType());
-			func.args.add(exarg);
-		}
-
-		ret.add(func);
 	}
-
 
 	private void evalExprBinary(IASTBinaryExpression expr, List<MExpression> ret) throws DOMException 
 	{
