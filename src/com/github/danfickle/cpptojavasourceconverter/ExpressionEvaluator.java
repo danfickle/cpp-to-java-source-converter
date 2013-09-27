@@ -366,6 +366,12 @@ class ExpressionEvaluator
 				add.operand = eval1Expr(expr.getOperand());
 				ret.add(add);
 			}
+			else if (TypeHelpers.getTypeEnum(expr.getOperand().getExpressionType()) == TypeEnum.BASIC_POINTER)
+			{
+				MAddressOfExpressionPtr add = new MAddressOfExpressionPtr();
+				add.operand = eval1Expr(expr.getOperand());
+				ret.add(add);
+			}
 			else
 			{
 				MAddressOfExpression add = new MAddressOfExpression();

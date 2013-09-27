@@ -39,6 +39,9 @@ void ptr_test_method()
 	// Test pointer comparison
 	f < &f[1];
 	&f[0] == f;
+
+	// Test addressof ptr
+	&f;
 }
 
 class foo { };
