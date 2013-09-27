@@ -1003,6 +1003,7 @@ public class SourceConverter
 			CppFunction meth = new CppFunction();
 			meth.retType = tyd.name;
 			meth.name = "copy";
+			meth.isOverride = true;
 
 			MClassInstanceCreation create = new MClassInstanceCreation();
 			create.name = ModelCreation.createLiteral(tyd.name);
