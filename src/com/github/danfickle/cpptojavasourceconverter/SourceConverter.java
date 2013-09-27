@@ -830,13 +830,6 @@ public class SourceConverter
 				
 				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
 				generateDtorStatements(fields, dtor.body, info.hasSuper);
-
-				if (info.hasSuper)
-				{
-					MSuperDtorStmt sup = new MSuperDtorStmt();
-					blk.statements.add(0, sup);
-				}
-
 				tyd.declarations.add(dtor);
 			}
 			

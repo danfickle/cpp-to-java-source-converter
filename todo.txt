@@ -32,7 +32,6 @@ test-class
  -> copy not being marked with @Override
  -> top level class being marked as nested and nested inside Global.
  -> static member variable not being marked as static.
- -> super.destruct() being called twice.
  -> super constructor not being called as specified by ctor chain initializer.
 
 test-operator-overloading
