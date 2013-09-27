@@ -33,7 +33,7 @@ declaration_tp(decl) ::= <%
   <\n>}
 
  <elseif(decl.isSimpleDecl)>
-  <\n><if(decl.isPublic)>public<endif><if(decl.isNested)> static<endif> <decl.type> <decl.name><if(decl.initExpr)> = <expression_tp(decl.initExpr)><endif><if(decl.isPublic)>;<endif>
+  <\n><if(decl.isPublic)>public<endif><if(decl.isNested||decl.isStatic)> static<endif> <decl.type> <decl.name><if(decl.initExpr)> = <expression_tp(decl.initExpr)><endif><if(decl.isPublic)>;<endif>
 
  <else>
   <\n>// ERROR.
