@@ -28,6 +28,7 @@ import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupDir;
 
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithBitfieldOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MValueOfExpressionNumber;
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
@@ -879,6 +880,24 @@ public class SourceConverter
 							methodName = "assignMultiArray";
 
 						ifBlock.statements.add(ModelCreation.createMethodCall("CPP", methodName, left, right));
+					}
+					else if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
+					{
+						MInfixAssignmentWithBitfieldOnLeft infix = new MInfixAssignmentWithBitfieldOnLeft();
+						MFieldReferenceExpressionBitfield lbf = new MFieldReferenceExpressionBitfield();
+						MFieldReferenceExpressionBitfield rbf = new MFieldReferenceExpressionBitfield();
+						
+						lbf.object = ModelCreation.createLiteral("this");
+						lbf.field = fieldInfo.field.getName();
+						
+						rbf.object = ModelCreation.createLiteral("right");
+						rbf.field = fieldInfo.field.getName();
+						
+						infix.left = lbf;
+						infix.right = rbf;
+						
+						MStmt stmt = ModelCreation.createExprStmt(infix);
+						ifBlock.statements.add(stmt);
 					}
 					else
 					{
