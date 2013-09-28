@@ -335,7 +335,8 @@ public class SourceConverter
 		{
 			if (decl.getInitializer() == null)
 			{
-				if (TypeHelpers.isBasicType(types.get(i)))
+				if (TypeHelpers.isBasicType(types.get(i)) &&
+					!ctx.bitfieldMngr.isBitfield(decl.getName()))
 				{
 					MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
 					
