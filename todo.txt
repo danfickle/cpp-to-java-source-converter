@@ -20,7 +20,10 @@ test-enums
 
 test-bitfield
  -> exact bit position for bitfield.
- -> StackHelper.cleanup being called when there is nothing to cleanup.
+ -> StackHelper.cleanup not being called when there is something to cleanup.
+ -> Stack object not being created, etc.
+ -> copy being called on bitfield in opAssign.
+ -> bitfield assign being wrapped with MInteger.valueOf in initializer list.
 
 test-basic-types
  -> multi dimension arrays.
