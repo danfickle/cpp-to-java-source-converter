@@ -1006,6 +1006,24 @@ public class SourceConverter
 //						//cast.setType(cppToJavaType(fieldInfo.field.getType()));
 //						cast.setExpression(meth3);
 					}
+					else if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
+					{
+						MInfixAssignmentWithBitfieldOnLeft infix = new MInfixAssignmentWithBitfieldOnLeft();
+						MFieldReferenceExpressionBitfield lbf = new MFieldReferenceExpressionBitfield();
+						MFieldReferenceExpressionBitfield rbf = new MFieldReferenceExpressionBitfield();
+						
+						lbf.object = ModelCreation.createLiteral("this");
+						lbf.field = fieldInfo.field.getName();
+						
+						rbf.object = ModelCreation.createLiteral("right");
+						rbf.field = fieldInfo.field.getName();
+						
+						infix.left = lbf;
+						infix.right = rbf;
+						
+						MStmt stmt = ModelCreation.createExprStmt(infix);
+						meth.body.statements.add(stmt);
+					}
 					else
 					{
 						// this.field = right.field;

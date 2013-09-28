@@ -4,6 +4,8 @@ public:
 	// Test bit fields...
 	int test_with_bit_field : 5;
 
+	A() : test_with_bit_field(8) { }
+
 	int func2()
 	{
 		// Test setting of bit field...
