@@ -188,6 +188,9 @@ expression_tp(expr_obj) ::= <%
   <elseif(expr_obj.isAddressOf)>
     <lhs_object_tp(expr_obj.operand)>.addressOf()
 
+  <elseif(expr_obj.isMultiExpression)>
+    <expr_obj.exprs:{e | <expression_tp(e)>}; separator=", ">
+
   <elseif(expr_obj.isEmpty)>
     /* Empty expression */
 

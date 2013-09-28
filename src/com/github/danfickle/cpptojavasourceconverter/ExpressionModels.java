@@ -55,6 +55,12 @@ class ExpressionModels
 		public List<MExpression> args = new ArrayList<MExpression>();
 	}
 	
+	static class MMultiExpression extends MExpression
+	{
+		public boolean isMultiExpression = true;
+		public List<MExpression> exprs = new ArrayList<MExpression>();
+	}
+	
 	static class MAddressOfExpressionArrayItem extends MArrayExpression
 	{
 		public boolean isArrayAccessWithAddressOf = true;

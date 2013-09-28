@@ -3,8 +3,9 @@ class A
 public:
 	// Test bit fields...
 	int test_with_bit_field : 5;
+	int testi;
 
-	A() : test_with_bit_field(8) { }
+	A() : test_with_bit_field(8), testi(30) { }
 
 	int func2()
 	{

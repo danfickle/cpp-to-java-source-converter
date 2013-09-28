@@ -330,47 +330,11 @@ public class SourceConverter
 	{
 		List<MExpression> exprs = new ArrayList<MExpression>();
 		List<IType> types = evaluateDeclarationReturnCppTypes(simple);
+
 		int i = 0;
-		
 		for (IASTDeclarator decl : simple.getDeclarators())
 		{
-			if (decl.getInitializer() == null)
-			{
-				if (TypeHelpers.isBasicType(types.get(i)) &&
-					!ctx.bitfieldMngr.isBitfield(decl.getName()))
-				{
-					MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
-					
-					expr.type = TypeHelpers.cppToJavaType(types.get(i), TypeType.IMPLEMENTATION);
-
-					if (TypeHelpers.getTypeEnum(types.get(i)) == TypeEnum.BOOLEAN)
-						expr.operand = ModelCreation.createLiteral("false");
-					else
-						expr.operand = ModelCreation.createLiteral("0");
-
-					exprs.add(expr);
-				}
-				else if (TypeHelpers.getTypeEnum(types.get(i)) == TypeEnum.BASIC_ARRAY)
-				{
-					MValueOfExpressionArray expr = new MValueOfExpressionArray();
-
-					expr.type = TypeHelpers.cppToJavaType(types.get(i), TypeType.IMPLEMENTATION);
-					expr.operands = ctx.exprEvaluator.getArraySizeExpressions(types.get(i));
-					exprs.add(expr);
-				}
-
-				exprs.add(null);
-			}
-			else if (decl.getInitializer() instanceof IASTEqualsInitializer)
-			{
-				MExpression expr = ctx.exprEvaluator.wrapIfNeeded((IASTExpression) ((IASTEqualsInitializer) decl.getInitializer()).getInitializerClause(), types.get(i));
-				exprs.add(expr);
-			}
-			else if (decl.getInitializer() instanceof ICPPASTConstructorInitializer)
-			{
-				exprs.add(ctx.exprEvaluator.eval1Expr((IASTExpression) ((ICPPASTConstructorInitializer) decl.getInitializer()).getExpression()));
-			}
-
+			exprs.add(eval1Init(decl.getInitializer(), types.get(i), decl.getName()));
 			i++;
 		}
 
@@ -611,6 +575,27 @@ public class SourceConverter
 		return ret;
 	}
 
+	IType evalBindingReturnType(IBinding binding)
+	{
+		if (binding instanceof IVariable)
+		{
+			return (((IVariable) binding).getType());
+		}
+		else if (binding instanceof IFunction)
+		{
+			return (((IFunction) binding).getType());
+		}
+		else if (binding instanceof IParameter)
+		{
+			return (((IParameter) binding).getType());
+		}
+		else
+		{
+			MyLogger.logImportant("binding not a variable or function:" + binding.getName());
+			return (null);
+		}
+	}
+	
 	private List<IType> evaluateDeclarationReturnCppTypes(IASTDeclaration declaration) throws DOMException
 	{
 		List<IType> ret = new ArrayList<IType>();
@@ -622,21 +607,8 @@ public class SourceConverter
 
 			for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
 			{
-				IBinding binding  = decl.getName().resolveBinding();
-
-				if (binding instanceof IVariable)
-				{
-					ret.add(((IVariable) binding).getType());
-				}
-				else if (binding instanceof IFunction)
-				{
-					ret.add(((IFunction) binding).getType());
-				}
-				else
-				{
-					MyLogger.logImportant("binding not a variable or function:" + binding.getName());
-					ret.add(null);
-				}
+				IBinding binding = decl.getName().resolveBinding();
+				ret.add(evalBindingReturnType(binding));
 			}
 		}
 		else if (declaration instanceof IASTProblemDeclaration)
@@ -650,6 +622,7 @@ public class SourceConverter
 			MyLogger.logImportant("Unexpected declaration type here: " + declaration.getClass().getCanonicalName());
 			MyLogger.exitOnError();
 		}
+
 		return ret;
 	}
 
@@ -1142,13 +1115,59 @@ public class SourceConverter
 		return ret;
 	}
 	
-	MExpression eval1Init(IASTInitializer initializer) throws DOMException 
+	MExpression eval1Init(IASTInitializer initializer, IType typeRequired, IASTName name) throws DOMException 
 	{
-		IASTEqualsInitializer eq = (IASTEqualsInitializer) initializer;
-		IASTInitializerClause clause = eq.getInitializerClause();
-		IASTExpression expr = (IASTExpression) clause;
+		if (initializer == null)
+		{
+			if (TypeHelpers.isBasicType(typeRequired) &&
+				(name == null || !ctx.bitfieldMngr.isBitfield(name)))
+			{
+				MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
+				
+				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
+
+				if (TypeHelpers.getTypeEnum(typeRequired) == TypeEnum.BOOLEAN)
+					expr.operand = ModelCreation.createLiteral("false");
+				else
+					expr.operand = ModelCreation.createLiteral("0");
+
+				return expr;
+			}
+			else if (TypeHelpers.getTypeEnum(typeRequired) == TypeEnum.BASIC_ARRAY)
+			{
+				MValueOfExpressionArray expr = new MValueOfExpressionArray();
+
+				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
+				expr.operands = ctx.exprEvaluator.getArraySizeExpressions(typeRequired);
+				return expr;
+			}
+			else
+			{
+				return null;
+			}
+		}
+		else if (initializer instanceof IASTEqualsInitializer)
+		{
+			MExpression expr = ctx.exprEvaluator.wrapIfNeeded((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause(), typeRequired);
+			return expr;
+		}
+		else if (initializer instanceof ICPPASTConstructorInitializer)
+		{
+			ICPPASTConstructorInitializer inti = (ICPPASTConstructorInitializer) initializer;
+
+			MMultiExpression multi = new MMultiExpression();
+			
+			for (IASTInitializerClause cls : inti.getArguments())
+			{
+				IASTExpression expr = (IASTExpression) cls;
+				MExpression create = ctx.exprEvaluator.wrapIfNeeded(expr, typeRequired);
+				multi.exprs.add(create);
+			}
+
+			return multi;
+		}
 		
-		return ctx.exprEvaluator.eval1Expr(expr);
+		return null;
 	}
 
 	/**
@@ -1158,22 +1177,19 @@ public class SourceConverter
 	 */
 	MSimpleDecl eval1Decl(IASTDeclaration decla) throws DOMException
 	{
-		MSimpleDecl dec = new MSimpleDecl();
-
-		IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) decla;
 		MyLogger.log("simple declaration");
-			
-		IASTDeclarator decl = simpleDeclaration.getDeclarators()[0];
+		
+		IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) decla;
+		assert(simpleDeclaration.getDeclarators().length == 1);
+		
+		List<MExpression> inits = evaluateDeclarationReturnInitializers(simpleDeclaration);
+		List<String> names = evaluateDeclarationReturnNames(simpleDeclaration);
+		List<String> types = evaluateDeclarationReturnTypes(simpleDeclaration);
 
-		IASTName nm = decl.getName();
-		IBinding binding = nm.resolveBinding();
-		IVariable var = (IVariable) binding;
-			
-//		TypeEnum type = getTypeEnum(var.getType());
-
-		dec.name = TypeHelpers.getSimpleName(decl.getName());
-		dec.initExpr = eval1Init(decl.getInitializer());
-		dec.type = TypeHelpers.cppToJavaType(var.getType());
+		MSimpleDecl dec = new MSimpleDecl();
+		dec.name = names.get(0);
+		dec.initExpr = inits.get(0);
+		dec.type = types.get(0);
 		
 		return dec;
 	}

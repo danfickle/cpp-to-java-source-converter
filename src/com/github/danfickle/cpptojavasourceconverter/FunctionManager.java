@@ -87,10 +87,17 @@ class FunctionManager
 		{
 			IASTDeclarator paramDeclarator = param.getDeclarator(); 
 
+			IBinding binding = paramDeclarator.getName().resolveBinding();
+			IType tp = ctx.converter.evalBindingReturnType(binding);
+			
 			if (paramDeclarator.getInitializer() != null)
-				exprs.add(ctx.converter.eval1Init(paramDeclarator.getInitializer()));
+			{
+				exprs.add(ctx.converter.eval1Init(paramDeclarator.getInitializer(), tp, null));
+			}
 			else
+			{
 				exprs.add(null);
+			}
 		}
 
 		return exprs;
@@ -109,20 +116,14 @@ class FunctionManager
 		method.isStatic = ((IFunction) funcBinding).isStatic();
 		method.retType = evalReturnType(funcBinding);
 
-		boolean isCtor = false, isDtor = false;
-
-		if (method.retType == null || method.retType.equalsIgnoreCase("void"))
+		if (funcBinding instanceof ICPPConstructor)
 		{
-			if (method.name.contains("destruct"))
-			{
-				method.isCtor = true;
-			}
-			else
-			{
+			if (((ICPPConstructor) funcBinding).isDestructor())
 				method.isDtor = true;
-			}
+			else
+				method.isCtor = true;
 		}
-
+		
 		method.args.addAll(evalParameters(funcBinding));
 		
 		ctx.stackMngr.reset();
@@ -198,13 +199,21 @@ class FunctionManager
 								fieldInfo.init = create;
 						}
 					}
-					else if (chain.getInitializerValue() != null)
+					else if (chain.getInitializer() != null)
 					{
 						// Match this initializer with the correct field.
 						for (FieldInfo fieldInfo : fields)
 						{
-							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
-								; // TODOfieldInfo.init = eval1Expr(chain.getInitializerValue());
+							if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
+							{
+								// TODO: Deal with this...
+								
+							}
+							else if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
+							{
+								IType tp = ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding());
+								fieldInfo.init = ctx.converter.eval1Init(chain.getInitializer(), tp , fieldInfo.declarator.getName());
+							}
 						}
 						
 						if (info.hasSuper && chain.getMemberInitializerId().resolveBinding().getName().equals(info.superClass))
@@ -220,8 +229,10 @@ class FunctionManager
 			}
 		}
 		
-		if (isCtor)
+		if (method.isCtor)
 		{
+			MyLogger.log("ctor");
+			
 			// This function generates an initializer for all fields that need initializing.
 			ctx.converter.generateCtorStatements(fields, method.body);
 			
@@ -236,7 +247,7 @@ class FunctionManager
 				method.body.statements.add(0, ModelCreation.createExprStmt(expr));
 			}
 		}
-		else if (isDtor)
+		else if (method.isDtor)
 		{
 			// This will destruct all fields that need destructing.
 			ctx.converter.generateDtorStatements(fields, method.body, info.hasSuper);
