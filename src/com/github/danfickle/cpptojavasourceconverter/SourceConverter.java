@@ -14,20 +14,10 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-
 import org.eclipse.cdt.core.dom.ast.*;
-import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
-import org.eclipse.cdt.core.dom.ast.gnu.*;
-import org.stringtemplate.v4.ST;
-import org.stringtemplate.v4.STGroup;
-import org.stringtemplate.v4.STGroupDir;
-
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixAssignmentWithBitfieldOnLeft;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MValueOfExpressionNumber;
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
@@ -837,8 +827,10 @@ public class SourceConverter
 				MStmt stmt = ModelCreation.createExprStmt(infix);
 				meth.body.statements.add(stmt);
 			}
+			// TODO: basic objects, enums, etc.
 			else
 			{
+				// TODO: Is this needed?
 				// this.field = right.field;
 				MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
 				MFieldReferenceExpression fr2 = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
@@ -914,8 +906,10 @@ public class SourceConverter
 				MStmt stmt = ModelCreation.createExprStmt(infix);
 				ifBlock.statements.add(stmt);
 			}
+			// TODO: Basic objects, enums, etc.
 			else
 			{
+				// TODO: IS this needed?
 				MStmt stmt = ModelCreation.createExprStmt(
 						ModelCreation.createInfixExpr("this", fieldInfo.field.getName(), "right", fieldInfo.field.getName(), "="));
 				ifBlock.statements.add(stmt);
@@ -1132,7 +1126,7 @@ public class SourceConverter
 		}
 		else if (declaration instanceof ICPPASTExplicitTemplateInstantiation)
 		{
-			ICPPASTExplicitTemplateInstantiation explicitTemplateInstantiation = (ICPPASTExplicitTemplateInstantiation)declaration;
+			//ICPPASTExplicitTemplateInstantiation explicitTemplateInstantiation = (ICPPASTExplicitTemplateInstantiation)declaration;
 			MyLogger.logImportant("explicit template instantiation");
 			MyLogger.exitOnError();
 			//evaluate(explicitTemplateInstantiation.getDeclaration());
