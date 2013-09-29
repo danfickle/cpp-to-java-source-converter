@@ -117,7 +117,7 @@ public class SourceConverter
 	 * lists, and implicit initializers for objects.
 	 * Note: We must initialize in order that fields were declared.
 	 */
-	void generateCtorStatements(List<FieldInfo> fields, MCompoundStmt method)
+	void generateCtorStatements(List<FieldInfo> fields, MCompoundStmt method) throws DOMException
 	{
 		int start = 0;
 		for (FieldInfo fieldInfo : fields)
@@ -127,14 +127,32 @@ public class SourceConverter
 			// Static fields can't be initialized in the constructor.
 			if (fieldInfo.init != null && !fieldInfo.isStatic)
 			{
-				// Use 'this.field' construct as we may be shadowing a param name.
-				MFieldReferenceExpression frl = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
-				MExpression expr = ModelCreation.createInfixExpr(frl, fieldInfo.init, "=");
-				MStmt stmt = ModelCreation.createExprStmt(expr);
+				if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
+				{
+					MInfixAssignmentWithBitfieldOnLeft infix = new MInfixAssignmentWithBitfieldOnLeft();
+					MFieldReferenceExpressionBitfield lbf = new MFieldReferenceExpressionBitfield();
+					
+					lbf.object = ModelCreation.createLiteral("this");
+					lbf.field = fieldInfo.field.getName();
+					
+					infix.left = lbf;
+					infix.right = fieldInfo.init;
+					
+					MStmt stmt = ModelCreation.createExprStmt(infix);
+					method.statements.add(start, stmt);
+					start++;
+				}
+				else
+				{
+					// Use 'this.field' construct as we may be shadowing a param name.
+					MFieldReferenceExpression frl = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
+					MExpression expr = ModelCreation.createInfixExpr(frl, fieldInfo.init, "=");
+					MStmt stmt = ModelCreation.createExprStmt(expr);
 				
-				// Add assignment statements to start of generated method...
-				method.statements.add(start, stmt);
-				start++;
+					// Add assignment statements to start of generated method...
+					method.statements.add(start, stmt);
+					start++;
+				}
 			}
 		}
 	}
@@ -1148,8 +1166,10 @@ public class SourceConverter
 		}
 		else if (initializer instanceof IASTEqualsInitializer)
 		{
-			MExpression expr = ctx.exprEvaluator.wrapIfNeeded((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause(), typeRequired);
-			return expr;
+			if (ctx.bitfieldMngr.isBitfield(name))
+				return ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause());
+			else
+				return ctx.exprEvaluator.wrapIfNeeded((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause(), typeRequired);
 		}
 		else if (initializer instanceof ICPPASTConstructorInitializer)
 		{
@@ -1160,7 +1180,13 @@ public class SourceConverter
 			for (IASTInitializerClause cls : inti.getArguments())
 			{
 				IASTExpression expr = (IASTExpression) cls;
-				MExpression create = ctx.exprEvaluator.wrapIfNeeded(expr, typeRequired);
+				MExpression create;
+
+				if (ctx.bitfieldMngr.isBitfield(name))
+					create = ctx.exprEvaluator.eval1Expr(expr);
+				else
+					create = ctx.exprEvaluator.wrapIfNeeded(expr, typeRequired);
+				
 				multi.exprs.add(create);
 			}
 

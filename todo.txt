@@ -22,7 +22,6 @@ test-bitfield
  -> exact bit position for bitfield.
  -> StackHelper.cleanup not being called when there is something to cleanup.
  -> Stack object not being created, etc.
- -> Bitfield being ignored in initializer list.
 
 test-basic-types
  -> multi dimension arrays.

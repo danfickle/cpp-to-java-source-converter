@@ -92,7 +92,7 @@ class FunctionManager
 			
 			if (paramDeclarator.getInitializer() != null)
 			{
-				exprs.add(ctx.converter.eval1Init(paramDeclarator.getInitializer(), tp, null));
+				exprs.add(ctx.converter.eval1Init(paramDeclarator.getInitializer(), tp, paramDeclarator.getName()));
 			}
 			else
 			{
@@ -204,10 +204,11 @@ class FunctionManager
 						// Match this initializer with the correct field.
 						for (FieldInfo fieldInfo : fields)
 						{
-							if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
+							if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()) &&
+								ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
 							{
-								// TODO: Deal with this...
-								
+								IType tp = ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding());
+								fieldInfo.init = ctx.converter.eval1Init(chain.getInitializer(), tp, fieldInfo.declarator.getName());
 							}
 							else if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
 							{
