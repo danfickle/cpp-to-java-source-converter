@@ -27,6 +27,7 @@ class Traverser
 		con.stackMngr = new StackManager(con);
 		con.enumMngr = new EnumManager(con);
 		con.funcMngr = new FunctionManager(con);
+		con.specialGenerator = new SpecialGenerator(con);
 		con.currentFileName = translationUnit.getContainingFilename();
 
 		MyLogger.ctx = con;

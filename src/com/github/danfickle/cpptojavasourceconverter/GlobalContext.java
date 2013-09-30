@@ -16,6 +16,7 @@ class GlobalContext
 	BitfieldManager bitfieldMngr;
 	EnumManager enumMngr;
 	FunctionManager funcMngr;
+	SpecialGenerator specialGenerator;
 	
 	List<CppDeclaration> globalDeclarations = new ArrayList<CppDeclaration>();
 	

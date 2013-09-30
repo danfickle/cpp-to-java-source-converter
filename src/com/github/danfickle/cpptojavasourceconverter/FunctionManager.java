@@ -235,7 +235,7 @@ class FunctionManager
 			MyLogger.log("ctor");
 			
 			// This function generates an initializer for all fields that need initializing.
-			ctx.converter.generateCtorStatements(fields, method.body);
+			ctx.specialGenerator.generateCtorStatements(fields, method.body);
 			
 			// If we have a super class, call super constructor.
 			if (info.hasSuper)
@@ -251,7 +251,7 @@ class FunctionManager
 		else if (method.isDtor)
 		{
 			// This will destruct all fields that need destructing.
-			ctx.converter.generateDtorStatements(fields, method.body, info.hasSuper);
+			ctx.specialGenerator.generateDtorStatements(fields, method.body, info.hasSuper);
 		}
 		
 		info.tyd.declarations.add(method);		
