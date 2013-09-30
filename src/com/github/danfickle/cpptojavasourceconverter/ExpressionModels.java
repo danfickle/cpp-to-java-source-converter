@@ -55,6 +55,9 @@ class ExpressionModels
 		public List<MExpression> args = new ArrayList<MExpression>();
 	}
 	
+	/**
+	 * Note: MStringExpression breaks the MVC architecture.
+	 */
 	static class MStringExpression extends MExpression
 	{
 		public boolean isStringExpression = true;

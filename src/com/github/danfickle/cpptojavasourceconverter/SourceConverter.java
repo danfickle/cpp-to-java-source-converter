@@ -344,7 +344,7 @@ public class SourceConverter
 		else if (declaration instanceof IASTProblemDeclaration)
 		{
 			IASTProblemDeclaration p = (IASTProblemDeclaration) declaration;
-			MyLogger.logImportant("Problem declaration: " + p.getProblem().getMessageWithLocation() + ":" + p.getRawSignature());
+			MyLogger.logImportant("Problem declaration: " + ":" + p.getRawSignature());
 			//exitOnError();
 		}
 		else if (declaration instanceof ICPPASTVisibilityLabel)

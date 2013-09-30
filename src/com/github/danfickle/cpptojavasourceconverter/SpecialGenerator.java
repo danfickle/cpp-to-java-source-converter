@@ -6,8 +6,10 @@ import org.eclipse.cdt.core.dom.ast.*;
 
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MStringExpression;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.CompositeInfo;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
+import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
@@ -40,6 +42,7 @@ class SpecialGenerator
 			{
 				if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
 				{
+					// this.set__name(right.get__name);
 					MInfixAssignmentWithBitfieldOnLeft infix = new MInfixAssignmentWithBitfieldOnLeft();
 					MFieldReferenceExpressionBitfield lbf = new MFieldReferenceExpressionBitfield();
 					
@@ -49,20 +52,16 @@ class SpecialGenerator
 					infix.left = lbf;
 					infix.right = fieldInfo.init;
 					
-					MStmt stmt = ModelCreation.createExprStmt(infix);
-					method.statements.add(start, stmt);
-					start++;
+					method.statements.add(start++, ModelCreation.createExprStmt(infix));
 				}
 				else
 				{
 					// Use 'this.field' construct as we may be shadowing a param name.
 					MFieldReferenceExpression frl = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
 					MExpression expr = ModelCreation.createInfixExpr(frl, fieldInfo.init, "=");
-					MStmt stmt = ModelCreation.createExprStmt(expr);
 				
 					// Add assignment statements to start of generated method...
-					method.statements.add(start, stmt);
-					start++;
+					method.statements.add(start++, ModelCreation.createExprStmt(expr));
 				}
 			}
 		}
@@ -133,83 +132,85 @@ class SpecialGenerator
 
 		for (FieldInfo fieldInfo : fields)
 		{
-			MyLogger.log(fieldInfo.field.getName());
+			IType tp = fieldInfo.field.getType();
+			String nm = fieldInfo.field.getName();
+			
+			MyLogger.log(nm);
 
 			if (fieldInfo.isStatic)
-				/* Do nothing. */ ;
-			else if (fieldInfo.init != null &&
-					TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.OBJECT)
+			{
+				/* Do nothing. */
+			}
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.OBJECT))
 			{
 				// this.field = right.field.copy();
-				MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("right", fieldInfo.field.getName());	
-				MFieldReferenceExpression fr2 = ModelCreation.createFieldReference(fr1, "copy"); 
-				MFieldReferenceExpression fr3 = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
-
-				MFunctionCallExpression fcall = new MFunctionCallExpression();
-				fcall.name = fr2;
-			
-				MExpression infix = ModelCreation.createInfixExpr(fr3, fcall, "=");
-				meth.body.statements.add(ModelCreation.createExprStmt(infix));
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "this." + nm + " = right." + nm + ".copy()";
+				meth.body.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.OBJECT_ARRAY)
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.OBJECT_ARRAY))
 			{
 				// this.field = CPP.copyArray(right.field);
-				MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
-				MFieldReferenceExpression fr2 = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
-				MFieldReferenceExpression fr3 = ModelCreation.createFieldReference("CPP", "copyArray");
-
-				MFunctionCallExpression fcall = new MFunctionCallExpression();
-				fcall.name = fr3;
-				fcall.args.add(fr2);
-
-				MExpression infix = ModelCreation.createInfixExpr(fr1, fcall, "=");						
-				meth.body.statements.add(ModelCreation.createExprStmt(infix));
+				MStringExpression expr = new MStringExpression(); 
+				expr.contents = "this." + nm + " = CPP.copyArray(right." + nm + ")";				
+				meth.body.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.BASIC_ARRAY)
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_ARRAY))
 			{
-				// this.field = CPP.copy*Array(right.field);
-				MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
-				MFieldReferenceExpression fr2 = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
-				MFieldReferenceExpression fr3 = ModelCreation.createFieldReference("CPP", ctx.exprEvaluator.getArraySizeExpressions(fieldInfo.field.getType()).size() > 1 ? "copyMultiArray" : "copyBasicArray");
-
-				MFunctionCallExpression fcall = new MFunctionCallExpression();
-				fcall.name = fr3;
-				fcall.args.add(fr2);
+				MStringExpression expr = new MStringExpression();
+				// TODO: Is this right?
+				// TODO: Do we need to cast?
 				
-				MExpression infix = ModelCreation.createInfixExpr(fr1, fcall, "=");						
-				meth.body.statements.add(ModelCreation.createExprStmt(infix));
-//				CastExpression cast = ast.newCastExpression();
-//				//cast.setType(cppToJavaType(fieldInfo.field.getType()));
-//				cast.setExpression(meth3);
+				if (ctx.exprEvaluator.getArraySizeExpressions(tp).size() > 1)
+				{
+					// this.field = CPP.copyMultiArray(right.field);
+					expr.contents = "this." + nm + " = CPP.copyMultiArray(right." + nm +")";
+				}
+				else
+				{
+					// this.field = CPP.copyBasicArray(right.field);
+					expr.contents = "this." + nm + " = CPP.copyBasicArray(right." + nm + ")";
+				}
+				
+				meth.body.statements.add(ModelCreation.createExprStmt(expr));
 			}
 			else if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
 			{
-				MInfixAssignmentWithBitfieldOnLeft infix = new MInfixAssignmentWithBitfieldOnLeft();
-				MFieldReferenceExpressionBitfield lbf = new MFieldReferenceExpressionBitfield();
-				MFieldReferenceExpressionBitfield rbf = new MFieldReferenceExpressionBitfield();
-				
-				lbf.object = ModelCreation.createLiteral("this");
-				lbf.field = fieldInfo.field.getName();
-				
-				rbf.object = ModelCreation.createLiteral("right");
-				rbf.field = fieldInfo.field.getName();
-				
-				infix.left = lbf;
-				infix.right = rbf;
-				
-				MStmt stmt = ModelCreation.createExprStmt(infix);
-				meth.body.statements.add(stmt);
+				// this.set__name(right.get__name());
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "this.set__" + nm + "(right.get__" + nm + "())";
+				meth.body.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			// TODO: basic objects, enums, etc.
+			else if (TypeHelpers.isBasicType(tp))
+			{
+				// this.name = MInteger.valueOf(right.name.get());
+				
+				MStringExpression expr = new MStringExpression();
+
+				expr.contents = "this." + nm + " = " + 
+								TypeHelpers.cppToJavaType(tp, TypeType.IMPLEMENTATION) + 
+								".valueOf(right." + nm + ".get())";
+
+				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+			}
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.ENUMERATION))
+			{
+				// this.name = right.name
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "this." + nm + " = right." + nm;
+				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+			}
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
+			{
+				// this.name = right.name.ptrCopy()
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "this." + nm + " = right." + nm + ".ptrCopy()";
+				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+			}
 			else
 			{
-				// TODO: Is this needed?
-				// this.field = right.field;
-				MFieldReferenceExpression fr1 = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
-				MFieldReferenceExpression fr2 = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
-
-				MExpression infix = ModelCreation.createInfixExpr(fr1, fr2, "=");						
-				meth.body.statements.add(ModelCreation.createExprStmt(infix));
+				MyLogger.logImportant("Unexpected type in copy ctor:" + nm);
+				MyLogger.exitOnError();
 			}
 		}
 		return meth;

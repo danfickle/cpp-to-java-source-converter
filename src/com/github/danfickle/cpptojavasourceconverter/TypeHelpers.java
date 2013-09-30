@@ -26,6 +26,20 @@ public class TypeHelpers
 		FUNCTION;
 	}
 	
+	static boolean isOneOf(IType tp, TypeEnum... tps) throws DOMException
+	{
+		TypeEnum temp = getTypeEnum(tp);
+		
+		for (TypeEnum type : tps)
+		{
+			if (type == temp)
+				return true;
+		}
+
+		return false;
+	}
+	
+	
 	static boolean isBasicType(IType tp) throws DOMException
 	{
 		return getTypeEnum(tp) == TypeEnum.BOOLEAN ||
