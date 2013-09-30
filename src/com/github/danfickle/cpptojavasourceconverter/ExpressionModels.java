@@ -55,6 +55,12 @@ class ExpressionModels
 		public List<MExpression> args = new ArrayList<MExpression>();
 	}
 	
+	static class MStringExpression extends MExpression
+	{
+		public boolean isStringExpression = true;
+		public String contents;
+	}
+	
 	static class MMultiExpression extends MExpression
 	{
 		public boolean isMultiExpression = true;

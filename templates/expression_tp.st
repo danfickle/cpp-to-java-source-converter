@@ -17,6 +17,9 @@ expression_tp(expr_obj) ::= <%
   <elseif(expr_obj.isIdentityNumber)>
     <expr_obj.ident>.get()
 
+  <elseif(expr_obj.isStringExpression)>
+    <expr_obj.contents>
+
   <elseif(expr_obj.isFieldReferenceNumber)>
     <lhs_object_tp(expr_obj.object)>.<expr_obj.field>.get()
 
