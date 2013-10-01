@@ -184,7 +184,6 @@ class SpecialGenerator
 			else if (TypeHelpers.isBasicType(tp))
 			{
 				// this.name = MInteger.valueOf(right.name.get());
-				
 				MStringExpression expr = new MStringExpression();
 
 				expr.contents = "this." + nm + " = " + 
@@ -209,6 +208,7 @@ class SpecialGenerator
 			}
 			else
 			{
+				// TODO: Function pointers, template types.
 				MyLogger.logImportant("Unexpected type in copy ctor:" + nm);
 				MyLogger.exitOnError();
 			}
@@ -235,24 +235,32 @@ class SpecialGenerator
 
 		for (FieldInfo fieldInfo : fields)
 		{
-			MyLogger.log(fieldInfo.field.getName());
-
+			String nm = fieldInfo.field.getName();
+			IType tp = fieldInfo.field.getType();
+			
+			MyLogger.log(nm);
+			
 			if (fieldInfo.isStatic)
-				/* Do nothing. */ ;
-			else if (fieldInfo.init != null &&
-					TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.OBJECT)
 			{
-				MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
-				ifBlock.statements.add(ModelCreation.createMethodCall("this", fieldInfo.field.getName(), "opAssign", right));
+				/* Do nothing. */
 			}
-			else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.OBJECT_ARRAY)
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.OBJECT))
 			{
+				// this.name.opAssign(right.name);
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "this." + nm + ".opAssign(right." + nm + ")"; 
+				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+			}
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.OBJECT_ARRAY))
+			{
+				// TODO
 				MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 				MFieldReferenceExpression left = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
 				ifBlock.statements.add(ModelCreation.createMethodCall("CPP", "assignArray", left, right));
 			}
-			else if (TypeHelpers.getTypeEnum(fieldInfo.field.getType()) == TypeEnum.BASIC_ARRAY)
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_ARRAY))
 			{
+				// TODO
 				MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 				MFieldReferenceExpression left = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
 				String methodName = "assignBasicArray";
@@ -264,34 +272,43 @@ class SpecialGenerator
 			}
 			else if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
 			{
-				MInfixAssignmentWithBitfieldOnLeft infix = new MInfixAssignmentWithBitfieldOnLeft();
-				MFieldReferenceExpressionBitfield lbf = new MFieldReferenceExpressionBitfield();
-				MFieldReferenceExpressionBitfield rbf = new MFieldReferenceExpressionBitfield();
-				
-				lbf.object = ModelCreation.createLiteral("this");
-				lbf.field = fieldInfo.field.getName();
-				
-				rbf.object = ModelCreation.createLiteral("right");
-				rbf.field = fieldInfo.field.getName();
-				
-				infix.left = lbf;
-				infix.right = rbf;
-				
-				MStmt stmt = ModelCreation.createExprStmt(infix);
-				ifBlock.statements.add(stmt);
+				// this.set__name(right.get__name());
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "this.set__" + nm + "(right.get__" + nm + "())";
+				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			// TODO: Basic objects, enums, etc.
+			else if(TypeHelpers.isBasicType(tp))
+			{
+				// this.name.set(right.name.get())
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "this." + nm + ".set(right." + nm + ".get())";
+				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+			}
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.ENUMERATION))
+			{
+				// this.name = right.name
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "this." + nm + " = right." + nm;
+				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+			}
+			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
+			{
+				// this.name = right.name.ptrCopy()
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "this." + nm + " = right." + nm + ".ptrCopy()";
+				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+			}
 			else
 			{
-				// TODO: IS this needed?
-				MStmt stmt = ModelCreation.createExprStmt(
-						ModelCreation.createInfixExpr("this", fieldInfo.field.getName(), "right", fieldInfo.field.getName(), "="));
-				ifBlock.statements.add(stmt);
+				// TODO: Function pointers, template types.
+				MyLogger.logImportant("Unknown type in generated opAssign");
+				MyLogger.exitOnError();
 			}
 		}
 
 		if (!ifBlock.statements.isEmpty())
-		{	// if (right != this) { ... } 
+		{
+			// if (right != this) { ... } 
 			MExpression expr = ModelCreation.createInfixExpr(
 					ModelCreation.createLiteral("right"),
 					ModelCreation.createLiteral("this"),
