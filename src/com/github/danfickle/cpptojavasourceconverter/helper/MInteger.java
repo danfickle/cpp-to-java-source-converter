@@ -116,4 +116,9 @@ public class MInteger implements IInteger
 	{
 		return 0;
 	}
+
+	@Override
+	public int[] deep() {
+		throw new IllegalStateException();
+	}
 }

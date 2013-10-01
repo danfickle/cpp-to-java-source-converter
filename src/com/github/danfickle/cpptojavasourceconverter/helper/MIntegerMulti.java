@@ -22,6 +22,11 @@ public class MIntegerMulti implements IInteger
 		return new MIntegerMulti(dim1);
 	}
 	
+	public static IInteger create(int[] arr, int offset)
+	{
+		return new MIntegerMulti(arr, offset);
+	}
+	
 	@Override
 	public MIntegerMulti addressOf() 
 	{
@@ -99,5 +104,10 @@ public class MIntegerMulti implements IInteger
 		// Get the pointer offset to compare with
 		// another pointer offset from the same block.
 		return currentOffset;
+	}
+
+	@Override
+	public int[] deep() {
+		return val;
 	}
 }

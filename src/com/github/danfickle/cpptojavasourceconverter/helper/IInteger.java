@@ -20,4 +20,5 @@ public interface IInteger
 	public int set(int value);
 	public int postInc();
 	public int postDec();
+	public int[] deep();
 }

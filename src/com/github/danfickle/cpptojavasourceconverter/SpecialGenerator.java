@@ -158,18 +158,19 @@ class SpecialGenerator
 			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_ARRAY))
 			{
 				MStringExpression expr = new MStringExpression();
-				// TODO: Is this right?
-				// TODO: Do we need to cast?
 				
 				if (ctx.exprEvaluator.getArraySizeExpressions(tp).size() > 1)
 				{
+					// TODO: Is this right? No!
 					// this.field = CPP.copyMultiArray(right.field);
 					expr.contents = "this." + nm + " = CPP.copyMultiArray(right." + nm +")";
 				}
 				else
 				{
-					// this.field = CPP.copyBasicArray(right.field);
-					expr.contents = "this." + nm + " = CPP.copyBasicArray(right." + nm + ")";
+					// this.field = MIntegerMulti.create(right.field.deep().clone(), 0);
+					expr.contents = "this." + nm + " = " +
+							TypeHelpers.cppToJavaType(tp, TypeType.IMPLEMENTATION) + 
+							".create(right." + nm + ".deep().clone(), 0)";
 				}
 				
 				meth.body.statements.add(ModelCreation.createExprStmt(expr));
@@ -260,15 +261,19 @@ class SpecialGenerator
 			}
 			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_ARRAY))
 			{
-				// TODO
-				MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
-				MFieldReferenceExpression left = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
-				String methodName = "assignBasicArray";
-
 				if (ctx.exprEvaluator.getArraySizeExpressions(fieldInfo.field.getType()).size() > 1)
-					methodName = "assignMultiArray";
-
-				ifBlock.statements.add(ModelCreation.createMethodCall("CPP", methodName, left, right));
+				{
+					// TODO
+				}
+				else
+				{
+					// System.arraycopy(right.field.deep(), 0, this.field.deep(), 0, this.field.deep().length)
+					MStringExpression expr = new MStringExpression();
+					expr.contents = "System.arraycopy(right." + nm + ".deep(), 0, this." + nm +
+							".deep(), 0, this." + nm + ".deep().length)";
+				
+					ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+				}
 			}
 			else if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
 			{
