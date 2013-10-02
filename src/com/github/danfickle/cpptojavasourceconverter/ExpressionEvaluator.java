@@ -332,7 +332,7 @@ class ExpressionEvaluator
 		ret.add(out);
 	}
 	
-	private void modifyLiteralToPtr(MExpression lit) throws DOMException 
+	void modifyLiteralToPtr(MExpression lit) throws DOMException 
 	{
 		if (!(lit instanceof MLiteralExpression))
 			return;
@@ -739,15 +739,13 @@ class ExpressionEvaluator
 	 */
 	MExpression wrapIfNeeded(IASTExpression cppExpr, IType tpRequired) throws DOMException
 	{
-		if (TypeHelpers.getTypeEnum(tpRequired) == TypeEnum.BASIC_REFERENCE)
+		if (TypeHelpers.isOneOf(tpRequired, TypeEnum.BASIC_REFERENCE))
 		{
 			MRefWrapper wrap = new MRefWrapper();
 			wrap.operand = eval1Expr(cppExpr);
 			return wrap;
 		}
-		else if (TypeHelpers.getTypeEnum(tpRequired) == TypeEnum.BOOLEAN ||
-				TypeHelpers.getTypeEnum(tpRequired) == TypeEnum.CHAR ||
-				TypeHelpers.getTypeEnum(tpRequired) == TypeEnum.NUMBER)
+		else if (TypeHelpers.isBasicType(tpRequired))
 		{
 			 MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
 			 valOfExpr.type = TypeHelpers.cppToJavaType(tpRequired, TypeType.IMPLEMENTATION);

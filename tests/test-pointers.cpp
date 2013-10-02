@@ -25,6 +25,7 @@ void ptr_test_method()
 	f == 0;
 	f != 0;
 	if (f) ;
+	int * n = 0;
 
 	// Test plain assignment...
 	f[4] = 111;

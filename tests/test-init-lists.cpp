@@ -20,5 +20,13 @@ class foo_bar
   baz_far * r;  // Test object ptr
 
   // TODO: ptr to ptr, function ptr.
+
+  foo_bar(int k2) : i(k2), p(0), o(), k(5)
+  {
+
+
+  }
+
+
 };
 

@@ -897,9 +897,19 @@ public class SourceConverter
 		else if (initializer instanceof IASTEqualsInitializer)
 		{
 			if (ctx.bitfieldMngr.isBitfield(name))
+			{
 				return ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause());
+			}
+			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
+			{
+				MExpression expr = ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause());
+				ctx.exprEvaluator.modifyLiteralToPtr(expr);
+				return expr;
+			}
 			else
+			{
 				return ctx.exprEvaluator.wrapIfNeeded((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause(), typeRequired);
+			}
 		}
 		else if (initializer instanceof ICPPASTConstructorInitializer)
 		{
@@ -913,10 +923,18 @@ public class SourceConverter
 				MExpression create;
 
 				if (ctx.bitfieldMngr.isBitfield(name))
+				{
 					create = ctx.exprEvaluator.eval1Expr(expr);
+				}
+				else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
+				{
+					create = ctx.exprEvaluator.eval1Expr(expr);
+					ctx.exprEvaluator.modifyLiteralToPtr(create);
+				}
 				else
+				{
 					create = ctx.exprEvaluator.wrapIfNeeded(expr, typeRequired);
-				
+				}
 				multi.exprs.add(create);
 			}
 
