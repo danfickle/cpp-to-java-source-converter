@@ -67,7 +67,6 @@ They are from Eclipse Juno (4.2.x), CDT 8.1.1 for Eclipse Juno and StringTemplat
 + [Eclipse downloads](http://www.eclipse.org/downloads/)
 + [CDT downloads](http://www.eclipse.org/cdt/downloads.php)
 + [StringTemplate downloads](http://stringtemplate.org/download.html)
-
 + org.eclipse.cdt.core_5.4.1.201209170703.jar
 + org.eclipse.equinox.common_3.6.100.v20120522-1841.jar
 + ST-4.0.7.jar
@@ -86,8 +85,7 @@ This is an incomplete and fluid list of items that need doing before the initial
 + test-enums
 + test-bitfield
   + exact bit position for bitfield.
-  + StackHelper.cleanup not being called when there is something to cleanup.
-  + Stack object not being created, etc.
+  + StackHelper.cleanup being called at wrong location.
 + test-basic-types
   + multi dimension arrays.
 + test-class

@@ -33,7 +33,8 @@ class StackManager
 		int cnt;
 	}
 	
-	private GlobalContext ctx;
+	@SuppressWarnings("unused")
+	private final GlobalContext ctx;
 	
 	StackManager(GlobalContext con) {
 		ctx = con;

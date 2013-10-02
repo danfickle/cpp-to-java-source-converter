@@ -6,6 +6,7 @@ import java.util.List;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MStringExpression;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.CompositeInfo;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
@@ -148,22 +149,9 @@ class FunctionManager
 		// cleaned up at termination points (return, break, continue, end block).
 		if (ctx.stackMngr.getMaxLocalVariableId() != null)
 		{
-			MLiteralExpression expr = new MLiteralExpression();
-			expr.literal = String.valueOf(ctx.stackMngr.getMaxLocalVariableId());
-
-			MNewArrayExpressionObject array = new MNewArrayExpressionObject();
-			array.type = "Object";
-			array.sizes.add(expr);
-
-			MSimpleDecl decl = new MSimpleDecl();
-			decl.name = "__stack";
-			decl.initExpr = array; 
-			decl.type = "Object";
-			
-			MDeclarationStmt stmt = new MDeclarationStmt();
-			stmt.simple = decl;
-			
-			method.body.statements.add(0, stmt);
+			MStringExpression expr = new MStringExpression();
+			expr.contents = "Object[] __stack = new Object[" + ctx.stackMngr.getMaxLocalVariableId() + "]";
+			method.body.statements.add(0, ModelCreation.createExprStmt(expr));
 		}
 
 		CompositeInfo info = ctx.converter.getCurrentCompositeInfo();

@@ -4,14 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.cdt.core.dom.ast.*;
-import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTForStatement;
-import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTIfStatement;
-import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTSwitchStatement;
-import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTryBlockStatement;
-import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTWhileStatement;
+import org.eclipse.cdt.core.dom.ast.cpp.*;
 
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MValueOfExpressionNumber;
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;

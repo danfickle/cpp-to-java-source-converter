@@ -48,7 +48,8 @@ class InitializationManager
 				// new FooBar();
 				MNewExpressionObject expr = new MNewExpressionObject();
 				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
-				return expr;
+				// A plain object must be added to the stack so we can call its destructor.
+				return ctx.stackMngr.createAddItemCall(expr);
 			}
 			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.OBJECT_ARRAY))
 			{
@@ -71,6 +72,13 @@ class InitializationManager
 				MExpression expr = ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause());
 				ctx.exprEvaluator.modifyLiteralToPtr(expr);
 				return expr;
+			}
+			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.OBJECT))
+			{
+				// TODO: Is this needed?
+				MExpression expr = ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause());				
+				// A plain object must be added to the stack so we can call its destructor.
+				return ctx.stackMngr.createAddItemCall(expr);
 			}
 			else
 			{
