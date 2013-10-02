@@ -855,8 +855,9 @@ public class SourceConverter
 		if (initializer == null)
 		{
 			if (TypeHelpers.isBasicType(typeRequired) &&
-				(name == null || !ctx.bitfieldMngr.isBitfield(name)))
+				!ctx.bitfieldMngr.isBitfield(name))
 			{
+				// MInteger.valueOf(0);
 				MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
 				
 				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
@@ -868,13 +869,25 @@ public class SourceConverter
 
 				return expr;
 			}
-			else if (TypeHelpers.getTypeEnum(typeRequired) == TypeEnum.BASIC_ARRAY)
+			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.BASIC_ARRAY))
 			{
+				// MIntegerMulti.create(4);
 				MValueOfExpressionArray expr = new MValueOfExpressionArray();
-
 				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
 				expr.operands = ctx.exprEvaluator.getArraySizeExpressions(typeRequired);
 				return expr;
+			}
+			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.OBJECT))
+			{
+				// new FooBar();
+				MNewExpressionObject expr = new MNewExpressionObject();
+				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
+				return expr;
+			}
+			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.OBJECT_ARRAY))
+			{
+				// TODO
+				return null;
 			}
 			else
 			{
