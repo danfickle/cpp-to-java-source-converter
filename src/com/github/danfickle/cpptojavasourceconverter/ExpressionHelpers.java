@@ -6,7 +6,6 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MValueOfEx
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
-import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
 
 class ExpressionHelpers
 {

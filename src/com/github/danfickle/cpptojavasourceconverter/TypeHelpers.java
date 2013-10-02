@@ -481,26 +481,26 @@ public class TypeHelpers
 		
 		if (type instanceof IBasicType &&
 			type instanceof ICPPBasicType &&
-			((ICPPBasicType) type).getType() == ICPPBasicType.t_bool)
+			((ICPPBasicType) type).getKind() == IBasicType.Kind.eBoolean)
 		{
 			return TypeEnum.BOOLEAN;
 		}
 
 		if (type instanceof IBasicType &&
 			type instanceof ICPPBasicType &&
-			((ICPPBasicType) type).getType() == ICPPBasicType.t_wchar_t)
+			((ICPPBasicType) type).getKind() == IBasicType.Kind.eChar16)
 		{
 			return TypeEnum.CHAR;
 		}
 
 		if (type instanceof IBasicType &&
-			((IBasicType) type).getType() != IBasicType.t_void)
+			((IBasicType) type).getKind() != IBasicType.Kind.eVoid)
 		{
 			return TypeEnum.NUMBER;
 		}
 		
 		if (type instanceof IBasicType &&
-			((IBasicType) type).getType() == IBasicType.t_void)
+			((IBasicType) type).getKind() == IBasicType.Kind.eVoid)
 		{
 			return TypeEnum.VOID;
 		}
