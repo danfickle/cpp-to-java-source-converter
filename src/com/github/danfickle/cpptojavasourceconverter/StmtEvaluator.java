@@ -270,8 +270,15 @@ class StmtEvaluator
 			}
 
 			// Only call cleanup if we have something on the stack.
-			if (ctx.stackMngr.getLocalVariableId() != 0)
+			if (ctx.stackMngr.getLocalVariableId() != 0 &&
+				TypeHelpers.isOneOf(ctx.currentReturnType, TypeEnum.VOID))
+			{
 				retu.cleanup = ctx.stackMngr.createCleanupCall(0);
+			}
+			else if (ctx.stackMngr.getLocalVariableId() != 0)
+			{
+				retu.expr = ctx.stackMngr.wrapCleanupCall(retu.expr);
+			}
 		}
 		else if (statement instanceof IASTSwitchStatement)
 		{

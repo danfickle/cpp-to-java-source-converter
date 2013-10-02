@@ -1,8 +1,10 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Deque;
 
+import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MStmt;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 
@@ -142,5 +144,15 @@ class StackManager
 		nextVariableId = localVariableStack.peek().id;
 		localVariableStack.pop();
 		return cnt == 0 ? null : nextVariableId;
+	}
+
+	MExpression wrapCleanupCall(MExpression expr) 
+	{
+		MFunctionCallExpression funcCall = new MFunctionCallExpression();
+		funcCall.name = ModelCreation.createLiteral("StackHelper.cleanup");
+		funcCall.args = Arrays.asList(expr,
+				ModelCreation.createLiteral("__stack"),
+				ModelCreation.createLiteral("0"));
+		return funcCall;
 	}
 }

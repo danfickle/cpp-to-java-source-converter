@@ -85,7 +85,6 @@ This is an incomplete and fluid list of items that need doing before the initial
 + test-enums
 + test-bitfield
   + exact bit position for bitfield.
-  + StackHelper.cleanup being called at wrong location.
 + test-basic-types
   + multi dimension arrays.
 + test-class

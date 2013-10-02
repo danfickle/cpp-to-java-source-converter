@@ -156,7 +156,7 @@ class FunctionManager
 
 		CompositeInfo info = ctx.converter.getCurrentCompositeInfo();
 		List<FieldInfo> fields = ctx.converter.collectFieldsForClass(info.declSpecifier);
-		List<MExpression> superInit = null;
+		MExpression superInit = null;
 		
 		if (func instanceof ICPPASTFunctionDefinition)
 		{
@@ -178,7 +178,7 @@ class FunctionManager
 						
 						MClassInstanceCreation create = new MClassInstanceCreation();
 						create.name = lit;
-						create.args.addAll(ctx.exprEvaluator.evalExpr(chain.getInitializerValue()));
+						create.args.add(ctx.initMngr.eval1Init(chain.getInitializer(), ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding()), chain.getMemberInitializerId()));
 						
 						// Match this initializer with the correct field.
 						for (FieldInfo fieldInfo : fields)
@@ -207,7 +207,7 @@ class FunctionManager
 						
 						if (info.hasSuper && chain.getMemberInitializerId().resolveBinding().getName().equals(info.superClass))
 						{
-							superInit = ctx.exprEvaluator.evalExpr(chain.getInitializerValue());
+							superInit = ctx.initMngr.eval1Init(chain.getInitializer(), ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding()), chain.getMemberInitializerId());
 						}
 					}
 					else
@@ -231,7 +231,7 @@ class FunctionManager
 				MFunctionCallExpression expr = ModelCreation.createFuncCall("super");
 				
 				if (superInit != null)
-					expr.args.addAll(superInit);
+					expr.args.add(superInit);
 				
 				method.body.statements.add(0, ModelCreation.createExprStmt(expr));
 			}
