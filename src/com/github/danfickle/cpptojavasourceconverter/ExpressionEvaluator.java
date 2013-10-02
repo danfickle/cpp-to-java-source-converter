@@ -14,7 +14,7 @@ import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
 
 class ExpressionEvaluator
 {
-	private GlobalContext ctx;
+	private final GlobalContext ctx;
 	
 	ExpressionEvaluator(GlobalContext con)
 	{

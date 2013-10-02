@@ -9,14 +9,15 @@ import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclar
 
 class GlobalContext 
 {
-	SourceConverter converter;
-	StackManager stackMngr;
+	SourceConverter     converter;
+	StackManager        stackMngr;
 	ExpressionEvaluator exprEvaluator;
-	StmtEvaluator stmtEvaluator;
-	BitfieldManager bitfieldMngr;
-	EnumManager enumMngr;
-	FunctionManager funcMngr;
-	SpecialGenerator specialGenerator;
+	StmtEvaluator       stmtEvaluator;
+	BitfieldManager     bitfieldMngr;
+	EnumManager         enumMngr;
+	FunctionManager     funcMngr;
+	SpecialGenerator    specialGenerator;
+	InitializationManager initMngr;
 	
 	List<CppDeclaration> globalDeclarations = new ArrayList<CppDeclaration>();
 	

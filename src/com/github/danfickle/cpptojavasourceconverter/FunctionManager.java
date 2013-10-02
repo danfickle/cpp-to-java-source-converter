@@ -92,7 +92,7 @@ class FunctionManager
 			
 			if (paramDeclarator.getInitializer() != null)
 			{
-				exprs.add(ctx.converter.eval1Init(paramDeclarator.getInitializer(), tp, paramDeclarator.getName()));
+				exprs.add(ctx.initMngr.eval1Init(paramDeclarator.getInitializer(), tp, paramDeclarator.getName()));
 			}
 			else
 			{
@@ -208,12 +208,12 @@ class FunctionManager
 								ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
 							{
 								IType tp = ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding());
-								fieldInfo.init = ctx.converter.eval1Init(chain.getInitializer(), tp, fieldInfo.declarator.getName());
+								fieldInfo.init = ctx.initMngr.eval1Init(chain.getInitializer(), tp, fieldInfo.declarator.getName());
 							}
 							else if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
 							{
 								IType tp = ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding());
-								fieldInfo.init = ctx.converter.eval1Init(chain.getInitializer(), tp , fieldInfo.declarator.getName());
+								fieldInfo.init = ctx.initMngr.eval1Init(chain.getInitializer(), tp , fieldInfo.declarator.getName());
 							}
 						}
 						
