@@ -33,7 +33,7 @@ class FunctionManager
 		{
 			IFunction func = (IFunction) funcBinding;
 			IFunctionType funcType = func.getType();
-			return TypeHelpers.cppToJavaType(funcType.getReturnType(), TypeType.INTERFACE);
+			return ctx.typeMngr.cppToJavaType(funcType.getReturnType(), TypeType.INTERFACE);
 		}
 
 		MyLogger.logImportant("Unexpected binding for return type: " + funcBinding.getClass().getCanonicalName());
@@ -58,7 +58,7 @@ class FunctionManager
 			for (IParameter param : params)
 			{	
 				MSimpleDecl var = new MSimpleDecl();
-				var.type = TypeHelpers.cppToJavaType(param.getType());
+				var.type = ctx.typeMngr.cppToJavaType(param.getType(), TypeType.INTERFACE);
 
 				MyLogger.log("Found param: " + param.getName());
 
@@ -177,7 +177,7 @@ class FunctionManager
 						//!(eval1Expr(chain.getInitializerValue()) instanceof ClassInstanceCreation))
 					{
 						MLiteralExpression lit = 
-								ModelCreation.createLiteral(TypeHelpers.cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType()));
+								ModelCreation.createLiteral(ctx.typeMngr.cppToJavaType(((IVariable) chain.getMemberInitializerId().resolveBinding()).getType(), TypeType.IMPLEMENTATION));
 						
 						MClassInstanceCreation create = new MClassInstanceCreation();
 						create.name = lit;

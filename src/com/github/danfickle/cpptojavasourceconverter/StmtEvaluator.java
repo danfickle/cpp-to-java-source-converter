@@ -208,7 +208,7 @@ class StmtEvaluator
 				
 				fs.decl = ctx.converter.eval1Decl( ((ICPPASTForStatement) forStatement).getConditionDeclaration() );
 				fs.condition = ctx.converter.makeInfixFromDecl(fs.decl.name, fs.decl.initExpr, tp, true);
-				fs.decl.initExpr = ExpressionHelpers.makeSimpleCreationExpression(tp);
+				fs.decl.initExpr = ctx.exprEvaluator.makeSimpleCreationExpression(tp);
 			}
 		}
 		else if (statement instanceof IASTIfStatement)
@@ -238,7 +238,7 @@ class StmtEvaluator
 
 				ifs.decl = ctx.converter.eval1Decl(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
 				ifs.condition = ctx.converter.makeInfixFromDecl(ifs.decl.name, ifs.decl.initExpr, tp, true);
-				ifs.decl.initExpr = ExpressionHelpers.makeSimpleCreationExpression(tp);
+				ifs.decl.initExpr = ctx.exprEvaluator.makeSimpleCreationExpression(tp);
 			}
 		}
 		else if (statement instanceof IASTLabelStatement)
@@ -303,7 +303,7 @@ class StmtEvaluator
 
 				swi.decl = ctx.converter.eval1Decl(((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration());
 				swi.expr = ctx.converter.makeInfixFromDecl(swi.decl.name, swi.decl.initExpr, tp, false);
-				swi.decl.initExpr = ExpressionHelpers.makeSimpleCreationExpression(tp);
+				swi.decl.initExpr = ctx.exprEvaluator.makeSimpleCreationExpression(tp);
 			}
 		}
 		else if (statement instanceof IASTWhileStatement)
@@ -330,7 +330,7 @@ class StmtEvaluator
 				
 				whi.decl = ctx.converter.eval1Decl(((ICPPASTWhileStatement)whileStatement).getConditionDeclaration());
 				whi.expr = ctx.converter.makeInfixFromDecl(whi.decl.name, whi.decl.initExpr, tp, true);
-				whi.decl.initExpr = ExpressionHelpers.makeSimpleCreationExpression(tp);
+				whi.decl.initExpr = ctx.exprEvaluator.makeSimpleCreationExpression(tp);
 			}
 		}
 		else if (statement instanceof ICPPASTTryBlockStatement)

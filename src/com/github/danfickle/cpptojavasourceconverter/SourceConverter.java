@@ -19,6 +19,7 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
@@ -120,7 +121,7 @@ public class SourceConverter
 		if (ifield.getType().toString().isEmpty())
 			frag.type = "AnonClass" + (anonClassCount - 1);
 		else
-			frag.type = TypeHelpers.cppToJavaType(ifield.getType());
+			frag.type = ctx.typeMngr.cppToJavaType(ifield.getType(), TypeType.INTERFACE);
 
 		frag.isPublic = true;
 		
@@ -145,7 +146,7 @@ public class SourceConverter
 		if (ifield.getType().toString().isEmpty())
 			frag.type = "AnonClass" + (anonClassCount - 1);
 		else
-			frag.type = TypeHelpers.cppToJavaType(ifield.getType());
+			frag.type = ctx.typeMngr.cppToJavaType(ifield.getType(), TypeType.INTERFACE);
 
 		frag.isPublic = true;
 		
@@ -178,7 +179,7 @@ public class SourceConverter
 
 					if (params.length != 0 &&
 						TypeHelpers.isOneOf(params[0].getType(), TypeEnum.OBJECT_REFERENCE) &&
-						TypeHelpers.cppToJavaType(params[0].getType()).toString().equals(ctor.getName()))
+						ctx.typeMngr.cppToJavaType(params[0].getType(), TypeType.IMPLEMENTATION).toString().equals(ctor.getName()))
 					{
 						// TODO: We should check there are no params or others have default values...
 						info.hasCopy = true;
@@ -476,7 +477,7 @@ public class SourceConverter
 
 				if (binding instanceof IVariable)
 				{
-					ret.add(TypeHelpers.cppToJavaType(((IVariable) binding).getType()));
+					ret.add(ctx.typeMngr.cppToJavaType(((IVariable) binding).getType(), TypeType.INTERFACE));
 				}
 			}
 		}
@@ -674,9 +675,7 @@ public class SourceConverter
 			
 			if (TypeHelpers.getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
 			{
-				tyd.name = "AnonClass" + anonClassCount++;
-				IType tp = evalBindingReturnType(compositeTypeSpecifier.getName().resolveBinding());
-				TypeHelpers.registerType(ctx, tp, tyd.name);
+				tyd.name = ctx.typeMngr.getAnonymousClassName(evalBindingReturnType(compositeTypeSpecifier.getName().resolveBinding()));
 			}
 			else
 			{
@@ -699,7 +698,6 @@ public class SourceConverter
 					info.superClass = tyd.superclass = TypeHelpers.getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName());
 				}
 				
-
 				for (int i = 0; i < cppCompositeTypeSpecifier.getBaseSpecifiers().length; i++)
 					tyd.additionalSupers.add(TypeHelpers.getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[i].getName()));
 			}

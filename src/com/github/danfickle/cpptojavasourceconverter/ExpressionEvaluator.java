@@ -130,7 +130,7 @@ class ExpressionEvaluator
 			for (IASTExpression arraySize : expr.getNewTypeIdArrayExpressions())
 				ptr.sizes.add(eval1Expr(arraySize));
 			
-			ptr.type = TypeHelpers.cppToJavaType(expr.getExpressionType());
+			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.IMPLEMENTATION);
 			ret.add(ptr);
 		}
 		else if (expr.isArrayAllocation() && TypeHelpers.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
@@ -140,13 +140,13 @@ class ExpressionEvaluator
 			for (IASTExpression arraySize : expr.getNewTypeIdArrayExpressions())
 				ptr.sizes.add(eval1Expr(arraySize));
 			
-			ptr.type = TypeHelpers.cppToJavaType(expr.getExpressionType());
+			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.IMPLEMENTATION);
 			ret.add(ptr);
 		}
 		else if (!TypeHelpers.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
 			MNewExpression ptr = new MNewExpression();
-			ptr.type = TypeHelpers.cppToJavaType(expr.getExpressionType());
+			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.IMPLEMENTATION);
 			
 			if (expr.getNewInitializer() != null)
 				ptr.argument = eval1Expr(expr.getNewInitializer());
@@ -161,7 +161,7 @@ class ExpressionEvaluator
 		else
 		{
 			MNewExpressionObject ptr = new MNewExpressionObject();
-			ptr.type = TypeHelpers.cppToJavaType(expr.getExpressionType());
+			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.IMPLEMENTATION);
 
 			if (expr.getNewInitializer() instanceof IASTExpressionList)
 			{
@@ -748,7 +748,7 @@ class ExpressionEvaluator
 		else if (TypeHelpers.isBasicType(tpRequired))
 		{
 			 MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
-			 valOfExpr.type = TypeHelpers.cppToJavaType(tpRequired, TypeType.IMPLEMENTATION);
+			 valOfExpr.type = ctx.typeMngr.cppToJavaType(tpRequired, TypeType.IMPLEMENTATION);
 			 valOfExpr.operand = eval1Expr(cppExpr);
 			 return valOfExpr;
 		}
@@ -756,5 +756,22 @@ class ExpressionEvaluator
 		{
 			return eval1Expr(cppExpr);
 		}
+	}
+	
+	/**
+	 * Given a type, creates a factory create expression.
+	 * eg. 'int' becomes 'MInteger.valueOf(0)'
+	 */
+	MExpression makeSimpleCreationExpression(IType tp) throws DOMException
+	{
+		String literal = "0";
+		
+		if (TypeHelpers.isOneOf(tp, TypeEnum.BOOLEAN))
+			literal = "false";
+		
+		MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
+		expr.operand = ModelCreation.createLiteral(literal);
+		expr.type = ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION);
+		return expr;
 	}
 }

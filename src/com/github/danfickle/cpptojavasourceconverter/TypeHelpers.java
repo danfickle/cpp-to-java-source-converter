@@ -1,11 +1,20 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
+import java.util.Map;
+
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
 
-public class TypeHelpers 
+class TypeHelpers 
 {
+	private final GlobalContext ctx;
+	
+	TypeHelpers(GlobalContext con)
+	{
+		ctx = con;
+	}
+	
 	enum TypeEnum
 	{
 		NUMBER, 
@@ -82,8 +91,15 @@ public class TypeHelpers
 	 * Attempts to convert a CDT type to the approriate Java
 	 * type.
 	 */
-	static String cppToJavaType(IType type, TypeType tp) throws DOMException
+	String cppToJavaType(IType type, TypeType tp) throws DOMException
 	{
+		// Check that it is not an anonymous type.
+		for (Map.Entry<IType, String> ent : ctx.anonTypes.entrySet())
+		{
+			if (ent.getKey().isSameType(type))
+				return ent.getValue();
+		}
+		
 		if (type instanceof IBasicType)
 		{
 			// Primitive type - int, bool, char, etc...
@@ -145,7 +161,7 @@ public class TypeHelpers
 
 			if (ptrCount == 2)
 			{
-				return "Ptr" + cppToJavaType(pointer.getType());
+				return "Ptr" + cppToJavaType(pointer.getType(), TypeType.INTERFACE);
 			}
 			else if (pointer.getType() instanceof IBasicType ||
 					 (pointer.getType() instanceof ITypedef && 
@@ -161,7 +177,7 @@ public class TypeHelpers
 			}
 			else if (ptrCount == 1)
 			{
-				return cppToJavaType(pointer.getType());
+				return cppToJavaType(pointer.getType(), TypeType.INTERFACE);
 			}
 			else
 			{
@@ -246,11 +262,6 @@ public class TypeHelpers
 			MyLogger.exitOnError();
 		}
 		return null;
-	}
-	
-	static String cppToJavaType(IType type) throws DOMException
-	{
-		return cppToJavaType(type, TypeType.INTERFACE);
 	}
 	
 	/**
@@ -569,9 +580,11 @@ public class TypeHelpers
 		return null;
 	}
 
-	static void registerType(GlobalContext ctx, IType tp, String name)
+	String getAnonymousClassName(IType tp)
 	{
+		String name = "AnonClass" + ctx.anonClassCount++;
 		ctx.anonTypes.put(tp, name);
+		return name;
 	}
 	
 	static IType getReferenceBaseType(IType type) throws DOMException

@@ -29,6 +29,7 @@ class Traverser
 		con.funcMngr = new FunctionManager(con);
 		con.specialGenerator = new SpecialGenerator(con);
 		con.initMngr = new InitializationManager(con);
+		con.typeMngr = new TypeHelpers(con);
 		con.currentFileName = translationUnit.getContainingFilename();
 
 		MyLogger.ctx = con;

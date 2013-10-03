@@ -1,7 +1,5 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
-import java.util.Map;
-
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 
@@ -28,7 +26,7 @@ class InitializationManager
 				// MInteger.valueOf(0);
 				MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
 				
-				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
+				expr.type = ctx.typeMngr.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
 
 				if (TypeHelpers.isOneOf(typeRequired, TypeEnum.BOOLEAN))
 					expr.operand = ModelCreation.createLiteral("false");
@@ -41,7 +39,7 @@ class InitializationManager
 			{
 				// MIntegerMulti.create(4);
 				MValueOfExpressionArray expr = new MValueOfExpressionArray();
-				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
+				expr.type = ctx.typeMngr.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
 				expr.operands = ctx.exprEvaluator.getArraySizeExpressions(typeRequired);
 				return expr;
 			}
@@ -50,14 +48,7 @@ class InitializationManager
 				// new FooBar();
 				MNewExpressionObject expr = new MNewExpressionObject();
 
-				for (Map.Entry<IType, String> ent : ctx.anonTypes.entrySet())
-				{
-					if (ent.getKey().isSameType(typeRequired))
-						expr.type = ent.getValue();
-				}
-				
-				if (expr.type == null)
-					expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
+				expr.type = ctx.typeMngr.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
 
 				if (!(name.resolveBinding() instanceof IField))
 				{

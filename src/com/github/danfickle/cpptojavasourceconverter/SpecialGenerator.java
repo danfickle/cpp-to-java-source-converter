@@ -170,7 +170,7 @@ class SpecialGenerator
 				{
 					// this.field = MIntegerMulti.create(right.field.deep().clone(), 0);
 					expr.contents = "this." + nm + " = " +
-							TypeHelpers.cppToJavaType(tp, TypeType.IMPLEMENTATION) + 
+							ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION) + 
 							".create(right." + nm + ".deep().clone(), 0)";
 				}
 				
@@ -189,7 +189,7 @@ class SpecialGenerator
 				MStringExpression expr = new MStringExpression();
 
 				expr.contents = "this." + nm + " = " + 
-								TypeHelpers.cppToJavaType(tp, TypeType.IMPLEMENTATION) + 
+								ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION) + 
 								".valueOf(right." + nm + ".get())";
 
 				meth.body.statements.add(ModelCreation.createExprStmt(expr));
