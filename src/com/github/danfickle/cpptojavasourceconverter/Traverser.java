@@ -16,10 +16,11 @@ class Traverser
 	 * and tries to convert the C++ abstract syntax tree to
 	 * a Java AST.
 	 */
-	String traverse(IASTTranslationUnit translationUnit)
+	String traverse(IASTTranslationUnit translationUnit, GlobalCtx global2)
 	{
-		GlobalContext con = new GlobalContext();
+		TranslationUnitContext con = new TranslationUnitContext();
 
+		con.global = global2;
 		con.converter = new SourceConverter(con);
 		con.exprEvaluator = new ExpressionEvaluator(con);
 		con.stmtEvaluator = new StmtEvaluator(con);

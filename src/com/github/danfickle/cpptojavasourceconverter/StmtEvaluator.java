@@ -13,9 +13,9 @@ import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl
 
 class StmtEvaluator 
 {
-	private GlobalContext ctx;
+	private TranslationUnitContext ctx;
 	
-	StmtEvaluator(GlobalContext con) {
+	StmtEvaluator(TranslationUnitContext con) {
 		ctx = con;
 	}
 

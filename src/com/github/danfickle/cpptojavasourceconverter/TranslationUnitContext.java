@@ -9,7 +9,7 @@ import org.eclipse.cdt.core.dom.ast.IType;
 
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
 
-class GlobalContext 
+class TranslationUnitContext 
 {
 	SourceConverter     converter;
 	StackManager        stackMngr;
@@ -21,10 +21,11 @@ class GlobalContext
 	SpecialGenerator    specialGenerator;
 	InitializationManager initMngr;
 	TypeManager           typeMngr;
+	GlobalCtx             global;
 	
 	List<CppDeclaration> globalDeclarations = new ArrayList<CppDeclaration>();
 	Map<IType, String>   anonTypes = new HashMap<IType, String>();
-	int                  anonClassCount = 0;
+
 	
 	String currentFileName;
 	IType currentReturnType;

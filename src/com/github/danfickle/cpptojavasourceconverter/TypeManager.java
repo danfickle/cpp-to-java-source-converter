@@ -8,9 +8,9 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
 
 class TypeManager 
 {
-	private final GlobalContext ctx;
+	private final TranslationUnitContext ctx;
 	
-	TypeManager(GlobalContext con)
+	TypeManager(TranslationUnitContext con)
 	{
 		ctx = con;
 	}
@@ -582,7 +582,7 @@ class TypeManager
 
 	String getAnonymousClassName(IType tp)
 	{
-		String name = "AnonClass" + ctx.anonClassCount++;
+		String name = "AnonClass" + ctx.global.anonClassCount++;
 		ctx.anonTypes.put(tp, name);
 		return name;
 	}

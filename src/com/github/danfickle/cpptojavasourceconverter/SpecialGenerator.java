@@ -16,9 +16,9 @@ import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl
 
 class SpecialGenerator
 {
-	private final GlobalContext ctx;
+	private final TranslationUnitContext ctx;
 	
-	SpecialGenerator(GlobalContext con)
+	SpecialGenerator(TranslationUnitContext con)
 	{
 		ctx = con;
 	}

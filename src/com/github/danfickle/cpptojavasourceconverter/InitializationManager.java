@@ -9,9 +9,9 @@ import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 
 class InitializationManager
 {
-	private final GlobalContext ctx;
+	private final TranslationUnitContext ctx;
 	
-	InitializationManager(GlobalContext con)
+	InitializationManager(TranslationUnitContext con)
 	{
 		ctx = con;
 	}

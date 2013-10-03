@@ -13,9 +13,9 @@ public class BitfieldManager
 	// A set of qualified names containing the bitfields...
 	private Set<String> bitfields = new HashSet<String>();
 
-	private GlobalContext ctx;
+	private TranslationUnitContext ctx;
 	
-	BitfieldManager(GlobalContext con) {
+	BitfieldManager(TranslationUnitContext con) {
 		ctx = con;
 	}
 

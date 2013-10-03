@@ -14,9 +14,9 @@ import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 
 class ExpressionEvaluator
 {
-	private final GlobalContext ctx;
+	private final TranslationUnitContext ctx;
 	
-	ExpressionEvaluator(GlobalContext con)
+	ExpressionEvaluator(TranslationUnitContext con)
 	{
 		ctx = con;
 	}

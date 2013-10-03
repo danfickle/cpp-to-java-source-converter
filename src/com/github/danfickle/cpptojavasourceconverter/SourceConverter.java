@@ -32,9 +32,9 @@ import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
  */
 public class SourceConverter
 {
-	private final GlobalContext ctx;
+	private final TranslationUnitContext ctx;
 	
-	SourceConverter(GlobalContext con) {
+	SourceConverter(TranslationUnitContext con) {
 		ctx = con;
 	}
 	
@@ -118,18 +118,12 @@ public class SourceConverter
 			}
 		}
 
-		if (ifield.getType().toString().isEmpty())
-			frag.type = "AnonClass" + (anonClassCount - 1);
-		else
-			frag.type = ctx.typeMngr.cppToJavaType(ifield.getType(), TypeType.INTERFACE);
-
+		frag.type = ctx.typeMngr.cppToJavaType(ifield.getType(), TypeType.INTERFACE);
 		frag.isPublic = true;
 		
 		addDeclaration(frag);
 		popDeclaration();
 	}
-	
-	private int anonClassCount = 0;
 	
 	/**
 	 * Generates a Java field, given a C++ top-level (global) variable.
@@ -143,11 +137,7 @@ public class SourceConverter
 		frag.initExpr = init;
 		frag.isStatic = true;
 		
-		if (ifield.getType().toString().isEmpty())
-			frag.type = "AnonClass" + (anonClassCount - 1);
-		else
-			frag.type = ctx.typeMngr.cppToJavaType(ifield.getType(), TypeType.INTERFACE);
-
+		frag.type = ctx.typeMngr.cppToJavaType(ifield.getType(), TypeType.INTERFACE);
 		frag.isPublic = true;
 		
 		addDeclaration(frag);

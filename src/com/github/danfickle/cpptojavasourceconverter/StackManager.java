@@ -36,9 +36,9 @@ class StackManager
 	}
 	
 	@SuppressWarnings("unused")
-	private final GlobalContext ctx;
+	private final TranslationUnitContext ctx;
 	
-	StackManager(GlobalContext con) {
+	StackManager(TranslationUnitContext con) {
 		ctx = con;
 	}
 

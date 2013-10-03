@@ -17,9 +17,9 @@ import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
 
 class FunctionManager 
 {
-	private final GlobalContext ctx;
+	private final TranslationUnitContext ctx;
 	
-	public FunctionManager(GlobalContext con) {
+	public FunctionManager(TranslationUnitContext con) {
 		ctx = con;
 	}
 	

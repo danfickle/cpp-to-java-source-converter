@@ -1,7 +1,5 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
-import java.util.HashMap;
-
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 
@@ -10,16 +8,11 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 
 class EnumManager
 {
-	final GlobalContext ctx;
+	final TranslationUnitContext ctx;
 	
-	public EnumManager(GlobalContext con) {
+	public EnumManager(TranslationUnitContext con) {
 		ctx = con;
 	}
-	
-	private HashMap<String, String> anonEnumMap = new HashMap<String, String>();
-
-	// TODO: Persist over multiple translation units.
-	private int anonEnumCount = 0;
 	
 	void evalDeclEnum(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
 	{
@@ -33,13 +26,13 @@ class EnumManager
 
 		if (enumModel.simpleName.equals("MISSING"))
 		{
-			enumModel.simpleName = "AnonEnum" + anonEnumCount++;
+			enumModel.simpleName = "AnonEnum" + ctx.global.anonEnumCount++;
 		}
 		
 		enumModel.qualified = TypeManager.getQualifiedPart(enumerationSpecifier.getName()); 
 
 		String first = enumerators[0].getName().toString();		
-		anonEnumMap.put(first, enumModel.simpleName);
+		ctx.global.anonEnumMap.put(first, enumModel.simpleName);
 		
 		int nextValue = 0;
 		int sinceLastValue = 1;
@@ -82,7 +75,7 @@ class EnumManager
 		if (enumeration.equals("MISSING"))
 		{
 			String first = ((IEnumeration) enumerator.getOwner()).getEnumerators()[0].getName();
-			String enumName = anonEnumMap.get(first);
+			String enumName = ctx.global.anonEnumMap.get(first);
 			
 			if (enumName == null)
 				MyLogger.exitOnError();

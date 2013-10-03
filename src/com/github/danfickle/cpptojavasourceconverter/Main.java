@@ -20,7 +20,9 @@ public class Main
 	
 	public static void main(String... args) throws Exception
 	{
-	    BufferedReader br = new BufferedReader(new FileReader(HOME_PATH + "tests/" + "list-of-test-files.txt"));
+		GlobalCtx global = new GlobalCtx();
+		
+		BufferedReader br = new BufferedReader(new FileReader(HOME_PATH + "tests/" + "list-of-test-files.txt"));
 	    String line = br.readLine();
 
 	    while (line != null) {
@@ -28,7 +30,7 @@ public class Main
 	    	{
 	    		IASTTranslationUnit tu = getTranslationUnit(HOME_PATH + "tests/" + line + ".cpp");
 	    		Traverser parser = new Traverser();
-	    		String outputCode = parser.traverse(tu);
+	    		String outputCode = parser.traverse(tu, global);
 	    		
 	    		FileOutputStream fos = new FileOutputStream(HOME_PATH + "crap/" + line + ".java");
 	    		OutputStreamWriter out = new OutputStreamWriter(fos, "UTF-8"); 

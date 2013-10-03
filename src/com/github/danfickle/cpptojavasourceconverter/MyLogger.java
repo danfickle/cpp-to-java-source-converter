@@ -7,7 +7,7 @@ class MyLogger
 		//System.out.println(msg);
 	}
 
-	static GlobalContext ctx;
+	static TranslationUnitContext ctx;
 	
 	static void logImportant(String msg)
 	{
