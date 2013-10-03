@@ -81,8 +81,15 @@ This is an incomplete and fluid list of items that need doing before the initial
 
 + General
   + integer promotion/demotion
-  + Names for anonymous items not stomping on each other.
   + Object array/pointer interface.
+  + cleanup cpptojavatype method.
+  + putting global declarations other than classes and enums into a class.
+  + function pointers.
+  + typed malloc.
+  + testing cleanup.
+  + making logger useful.
+  + relacing deprecated methods.
+  + make lists.
 + test-references
 + test-enums
 + test-bitfield
