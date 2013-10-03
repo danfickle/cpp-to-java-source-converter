@@ -123,7 +123,7 @@ class ExpressionEvaluator
 	
 	private void evalExprNew(ICPPASTNewExpression expr, List<MExpression> ret) throws DOMException
 	{
-		if (expr.isArrayAllocation() && !TypeHelpers.isObjectPtr(expr.getExpressionType()))
+		if (expr.isArrayAllocation() && !TypeHelpers.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
 			MNewArrayExpression ptr = new MNewArrayExpression();
 			
@@ -133,7 +133,7 @@ class ExpressionEvaluator
 			ptr.type = TypeHelpers.cppToJavaType(expr.getExpressionType());
 			ret.add(ptr);
 		}
-		else if (expr.isArrayAllocation() && TypeHelpers.isObjectPtr(expr.getExpressionType()))
+		else if (expr.isArrayAllocation() && TypeHelpers.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
 			MNewArrayExpressionObject ptr = new MNewArrayExpressionObject();
 			
@@ -143,7 +143,7 @@ class ExpressionEvaluator
 			ptr.type = TypeHelpers.cppToJavaType(expr.getExpressionType());
 			ret.add(ptr);
 		}
-		else if (!TypeHelpers.isObjectPtr(expr.getExpressionType()))
+		else if (!TypeHelpers.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
 			MNewExpression ptr = new MNewExpression();
 			ptr.type = TypeHelpers.cppToJavaType(expr.getExpressionType());
@@ -179,7 +179,7 @@ class ExpressionEvaluator
 
 	private void evalExprDelete(ICPPASTDeleteExpression expr, List<MExpression> ret) throws DOMException
 	{
-		if (TypeHelpers.isObjectPtr(expr.getOperand().getExpressionType()))
+		if (TypeHelpers.isOneOf(expr.getOperand().getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
 			if (expr.isVectored())
 			{
@@ -216,13 +216,13 @@ class ExpressionEvaluator
 			ident.ident = TypeHelpers.getSimpleName(expr.getName());
 			ret.add(ident);
 		}
-		else if (TypeHelpers.isEventualPtrBasic(expr.getExpressionType()))
+		else if (TypeHelpers.isPtrOrArrayBasic(expr.getExpressionType()))
 		{
 			MIdentityExpressionPtr ident = new MIdentityExpressionPtr();
 			ident.ident = TypeHelpers.getSimpleName(expr.getName());
 			ret.add(ident);
 		}
-		else if (ExpressionHelpers.isNumberExpression(expr))
+		else if (ExpressionHelpers.isBasicExpression(expr))
 		{
 			MIdentityExpressionNumber ident = new MIdentityExpressionNumber();
 			ident.ident = TypeHelpers.getSimpleName(expr.getName());
@@ -252,14 +252,14 @@ class ExpressionEvaluator
 			field.field = TypeHelpers.getSimpleName(expr.getFieldName());
 			ret.add(field);
 		}
-		else if (ExpressionHelpers.isNumberExpression(expr))
+		else if (ExpressionHelpers.isBasicExpression(expr))
 		{
 			MFieldReferenceExpressionNumber field = new MFieldReferenceExpressionNumber();
 			field.object = eval1Expr(expr.getFieldOwner());
 			field.field = TypeHelpers.getSimpleName(expr.getFieldName());
 			ret.add(field);
 		}
-		else if (TypeHelpers.isEventualPtrBasic(expr.getExpressionType()) && expr.isPointerDereference())
+		else if (TypeHelpers.isPtrOrArrayBasic(expr.getExpressionType()) && expr.isPointerDereference())
 		{
 			MFieldReferenceExpressionPtr field = new MFieldReferenceExpressionPtr();
 			field.object = eval1Expr(expr.getFieldOwner());
@@ -366,7 +366,7 @@ class ExpressionEvaluator
 				add.operand = eval1Expr(expr.getOperand());
 				ret.add(add);
 			}
-			else if (TypeHelpers.getTypeEnum(expr.getOperand().getExpressionType()) == TypeEnum.BASIC_POINTER)
+			else if (TypeHelpers.isOneOf(expr.getOperand().getExpressionType(), TypeEnum.BASIC_POINTER))
 			{
 				MAddressOfExpressionPtr add = new MAddressOfExpressionPtr();
 				add.operand = eval1Expr(expr.getOperand());
@@ -385,7 +385,7 @@ class ExpressionEvaluator
 			pre.operand = eval1Expr(expr.getOperand());
 			ret.add(pre);
 		}
-		else if (TypeHelpers.isEventualPtrBasic(expr.getExpressionType()))
+		else if (TypeHelpers.isPtrOrArrayBasic(expr.getExpressionType()))
 		{
 			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
 			{
@@ -459,7 +459,7 @@ class ExpressionEvaluator
 				ret.add(pre);
 			}
 		}
-		else if (ExpressionHelpers.isNumberExpression(expr.getOperand()))
+		else if (ExpressionHelpers.isBasicExpression(expr.getOperand()))
 		{
 			if (expr.getOperator() == IASTUnaryExpression.op_postFixIncr)
 			{
@@ -586,7 +586,7 @@ class ExpressionEvaluator
 				ret.add(infix);
 			}
 		}
-		else if (ExpressionHelpers.isNumberExpression(expr.getOperand1()))
+		else if (ExpressionHelpers.isBasicExpression(expr.getOperand1()))
 		{
 			MInfixExpression infix = null;
 			
@@ -651,7 +651,7 @@ class ExpressionEvaluator
 			}
 		}
 		else if (expr.getOperator() == IASTBinaryExpression.op_assign &&
-				TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
+				TypeHelpers.isPtrOrArrayBasic(expr.getOperand1().getExpressionType()))
 		{
 			MInfixAssignmentWithPtrOnLeft infix = new MInfixAssignmentWithPtrOnLeft();
 			infix.left = eval1Expr(expr.getOperand1());
@@ -661,7 +661,7 @@ class ExpressionEvaluator
 			ret.add(infix);
 		}
 		else if (ExpressionHelpers.isAssignmentExpression(expr.getOperator()) &&
-				TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
+				TypeHelpers.isPtrOrArrayBasic(expr.getOperand1().getExpressionType()))
 		{
 			MCompoundWithPtrOnLeft infix = new MCompoundWithPtrOnLeft();
 			infix.left = eval1Expr(expr.getOperand1());
@@ -671,7 +671,7 @@ class ExpressionEvaluator
 		}
 		else if ((expr.getOperator() == IASTBinaryExpression.op_minus ||
 				 expr.getOperator() == IASTBinaryExpression.op_plus) &&
-				 TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
+				 TypeHelpers.isPtrOrArrayBasic(expr.getOperand1().getExpressionType()))
 		{
 			MInfixExpressionWithPtrOnLeft infix = new MInfixExpressionWithPtrOnLeft();
 			infix.left = eval1Expr(expr.getOperand1());
@@ -681,7 +681,7 @@ class ExpressionEvaluator
 		}
 		else if ((expr.getOperator() == IASTBinaryExpression.op_minus ||
 				 expr.getOperator() == IASTBinaryExpression.op_plus) &&
-				 TypeHelpers.isEventualPtrBasic(expr.getOperand2().getExpressionType()))
+				 TypeHelpers.isPtrOrArrayBasic(expr.getOperand2().getExpressionType()))
 		{
 			MInfixExpressionWithPtrOnRight infix = new MInfixExpressionWithPtrOnRight();
 			infix.left = eval1Expr(expr.getOperand1());
@@ -689,7 +689,7 @@ class ExpressionEvaluator
 			infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
 			ret.add(infix);
 		}
-		else if (TypeHelpers.isEventualPtrBasic(expr.getOperand1().getExpressionType()))
+		else if (TypeHelpers.isPtrOrArrayBasic(expr.getOperand1().getExpressionType()))
 		{
 			MInfixExpressionPtrComparison infix = new MInfixExpressionPtrComparison();
 			infix.left = eval1Expr(expr.getOperand1());

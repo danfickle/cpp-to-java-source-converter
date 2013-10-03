@@ -111,8 +111,7 @@ public class SourceConverter
 		{
 			frag.isStatic = true;
 			
-			if (TypeHelpers.getTypeEnum(ifield.getType()) == TypeEnum.OBJECT ||
-				TypeHelpers.getTypeEnum(ifield.getType()) == TypeEnum.OBJECT_ARRAY)
+			if (TypeHelpers.isOneOf(ifield.getType(), TypeEnum.OBJECT, TypeEnum.OBJECT_ARRAY))
 			{
 				frag.initExpr = init;
 			}
@@ -178,7 +177,7 @@ public class SourceConverter
 					ICPPParameter[] params  = ctor.getParameters();
 
 					if (params.length != 0 &&
-						TypeHelpers.getTypeEnum(params[0].getType()) == TypeEnum.OBJECT_REFERENCE &&
+						TypeHelpers.isOneOf(params[0].getType(), TypeEnum.OBJECT_REFERENCE) &&
 						TypeHelpers.cppToJavaType(params[0].getType()).toString().equals(ctor.getName()))
 					{
 						// TODO: We should check there are no params or others have default values...
@@ -625,7 +624,7 @@ public class SourceConverter
 //		}
 		else if (declSpecifier instanceof IASTSimpleDeclSpecifier)
 		{
-			IASTSimpleDeclSpecifier simple = (IASTSimpleDeclSpecifier) declSpecifier;
+			//IASTSimpleDeclSpecifier simple = (IASTSimpleDeclSpecifier) declSpecifier;
 			MyLogger.log("simple decl specifier");
 //
 //			if (declSpecifier instanceof ICPPASTSimpleDeclSpecifier)
@@ -634,7 +633,7 @@ public class SourceConverter
 //				print("cpp simple");
 //			}
 
-			return TypeHelpers.evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned());
+			// TODO
 		}
 		else if (declSpecifier instanceof ICASTDeclSpecifier)
 		{
@@ -795,7 +794,7 @@ public class SourceConverter
 		}
 		else if (declSpecifier instanceof IASTSimpleDeclSpecifier)
 		{
-			IASTSimpleDeclSpecifier simple = (IASTSimpleDeclSpecifier) declSpecifier;
+			//IASTSimpleDeclSpecifier simple = (IASTSimpleDeclSpecifier) declSpecifier;
 			MyLogger.log("simple decl specifier");
 
 			if (declSpecifier instanceof ICPPASTSimpleDeclSpecifier)
@@ -804,7 +803,7 @@ public class SourceConverter
 				MyLogger.log("cpp simple");
 			}
 
-			TypeHelpers.evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned());
+			//TypeHelpers.evaluateSimpleType(simple.getType(), simple.isShort(), simple.isLong(), simple.isUnsigned());
 		}
 		else if (declSpecifier instanceof ICASTDeclSpecifier)
 		{
@@ -898,10 +897,9 @@ public class SourceConverter
 	 */
 	MExpression makeInfixFromDecl(String varName, MExpression initExpr, IType tp, boolean makeBoolean) throws DOMException
 	{
-		TypeEnum te = TypeHelpers.getTypeEnum(tp);
 		MInfixExpression infix = null;
 		
-		if (te == TypeEnum.CHAR || te == TypeEnum.BOOLEAN || te == TypeEnum.NUMBER)
+		if (TypeHelpers.isBasicType(tp))
 		{
 			infix = new MInfixAssignmentWithNumberOnLeft();
 			infix.left = ModelCreation.createNumberId(varName);
@@ -916,7 +914,7 @@ public class SourceConverter
 		infix.right = initExpr;
 		infix.operator = "=";
 
-		return makeBoolean ? ExpressionHelpers.makeExpressionBoolean(infix, te) : ExpressionHelpers.bracket(infix);
+		return makeBoolean ? ExpressionHelpers.makeExpressionBoolean(infix, tp) : ExpressionHelpers.bracket(infix);
 	}
 
 

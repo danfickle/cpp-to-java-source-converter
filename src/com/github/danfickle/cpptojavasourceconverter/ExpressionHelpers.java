@@ -258,31 +258,10 @@ class ExpressionHelpers
 			return evaluateBinaryAssignmentOperator(operator);
 		}
 	}
-	
-	static TypeEnum expressionGetType(IASTExpression expr) throws DOMException
-	{
-		if (expr == null)
-		{
-			MyLogger.logImportant("Null expression");
-			MyLogger.exitOnError();
-		}
-		else if (expr.getExpressionType() == null)
-		{
-			MyLogger.logImportant("Null expression type: " + expr.getRawSignature());
-			MyLogger.exitOnError();
-		}
 
-		return TypeHelpers.getTypeEnum(expr.getExpressionType());
-	}
-	
 	static boolean isBooleanExpression(IASTExpression expr) throws DOMException
 	{
-		TypeEnum te = TypeHelpers.getTypeEnum(expr.getExpressionType());
-		
-		if (te == TypeEnum.BOOLEAN)
-			return true;
-		
-		return false;
+		return TypeHelpers.isOneOf(expr.getExpressionType(), TypeEnum.BOOLEAN);
 	}
 	
 	/**
@@ -305,7 +284,7 @@ class ExpressionHelpers
 		
 		// Finally check for the array access operator on a pointer...
 		if (expr instanceof IASTArraySubscriptExpression &&
-			TypeHelpers.isEventualPtrBasic(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
+			TypeHelpers.isPtrOrArrayBasic(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
 			return true;
 		
 		return false;
@@ -314,16 +293,9 @@ class ExpressionHelpers
 	/**
 	 * Returns true if the C++ expression type is a number or boolean.
 	 */
-	static boolean isNumberExpression(IASTExpression expr) throws DOMException
+	static boolean isBasicExpression(IASTExpression expr) throws DOMException
 	{
-		TypeEnum te = TypeHelpers.getTypeEnum(expr.getExpressionType());
-		
-		if (te == TypeEnum.BOOLEAN ||
-			te == TypeEnum.CHAR ||
-			te == TypeEnum.NUMBER)
-			return true;
-		
-		return false;
+		return TypeHelpers.isBasicType(expr.getExpressionType());
 	}
 
 	/**
@@ -331,39 +303,39 @@ class ExpressionHelpers
 	 */
 	static MExpression makeExpressionBoolean(MExpression exp, IASTExpression expcpp) throws DOMException
 	{
-		return makeExpressionBoolean(exp, expressionGetType(expcpp));
+		return makeExpressionBoolean(exp, expcpp.getExpressionType());
 	}
 	
 	/**
 	 * Attempts to make a Java boolean expression. Eg. Adds != null, != 0, etc.
 	 */
-	static MExpression makeExpressionBoolean(MExpression exp, TypeEnum expType) throws DOMException
+	static MExpression makeExpressionBoolean(MExpression exp, IType expType) throws DOMException
 	{
-		if (expType != TypeEnum.BOOLEAN)
+		if (!TypeHelpers.isOneOf(expType, TypeEnum.BOOLEAN) &&
+			!TypeHelpers.isOneOf(TypeHelpers.getReferenceBaseType(expType), TypeEnum.BOOLEAN))
 		{
 			MExpression r = null;
 			
-			if (expType == TypeEnum.OBJECT ||
-				expType == TypeEnum.OBJECT_POINTER ||
-				expType == TypeEnum.BASIC_POINTER)
+			if (TypeHelpers.decaysToPointer(expType))
 			{
 				r = ModelCreation.createLiteral("PtrObjNull.instance()");
 				return bracket(ModelCreation.createInfixExprPtrComparison(bracket(exp), r, "!="));
 			}
-			else if (expType == TypeEnum.NUMBER ||
-					 expType == TypeEnum.BASIC_REFERENCE ||
-					 expType == TypeEnum.CHAR)
+			else if (TypeHelpers.isOneOf(expType, TypeEnum.CHAR, TypeEnum.NUMBER, TypeEnum.BASIC_REFERENCE))
 			{
 				r = ModelCreation.createLiteral("0");
 				return bracket(ModelCreation.createInfixExpr(bracket(exp), r, "!="));
 			}
-
+			else
+			{
+				MyLogger.logImportant("Unexpected expression type in makeExpressionBoolean");
+				MyLogger.exitOnError();
+			}
 		}
+
 		return bracket(exp);
 	}
 
-
-	
 	/**
 	 * Given a type, creates a factory create expression.
 	 * eg. 'int' becomes 'MInteger.valueOf(0)'
@@ -372,7 +344,7 @@ class ExpressionHelpers
 	{
 		String literal = "0";
 		
-		if (TypeHelpers.getTypeEnum(tp) == TypeEnum.BOOLEAN)
+		if (TypeHelpers.isOneOf(tp, TypeEnum.BOOLEAN))
 			literal = "false";
 		
 		MValueOfExpressionNumber expr = new MValueOfExpressionNumber();

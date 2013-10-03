@@ -264,7 +264,7 @@ class StmtEvaluator
 
 			retu.expr = ctx.exprEvaluator.wrapIfNeeded(returnStatement.getReturnValue(), ctx.currentReturnType);
 			
-			if (TypeHelpers.getTypeEnum(ctx.currentReturnType) == TypeEnum.BOOLEAN)
+			if (TypeHelpers.isOneOf(ctx.currentReturnType, TypeEnum.BOOLEAN))
 			{
 				retu.expr = ExpressionHelpers.makeExpressionBoolean(retu.expr, returnStatement.getReturnValue());
 			}

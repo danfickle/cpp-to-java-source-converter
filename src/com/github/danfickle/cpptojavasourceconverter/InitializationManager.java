@@ -28,7 +28,7 @@ class InitializationManager
 				
 				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
 
-				if (TypeHelpers.getTypeEnum(typeRequired) == TypeEnum.BOOLEAN)
+				if (TypeHelpers.isOneOf(typeRequired, TypeEnum.BOOLEAN))
 					expr.operand = ModelCreation.createLiteral("false");
 				else
 					expr.operand = ModelCreation.createLiteral("0");

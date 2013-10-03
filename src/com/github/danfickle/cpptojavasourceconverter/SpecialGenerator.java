@@ -78,13 +78,13 @@ class SpecialGenerator
 
 			if (fields.get(i).isStatic)
 				/* Do nothing. */ ;
-			else if (TypeHelpers.getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OBJECT)
+			else if (TypeHelpers.isOneOf(fields.get(i).field.getType(), TypeEnum.OBJECT))
 			{
 				// Call this.field.destruct()
 				MStmt stmt = ModelCreation.createMethodCall("this", fields.get(i).field.getName(), "destruct");
 				method.statements.add(stmt);
 			}
-			else if (TypeHelpers.getTypeEnum(fields.get(i).field.getType()) == TypeEnum.OBJECT_ARRAY)
+			else if (TypeHelpers.isOneOf(fields.get(i).field.getType(), TypeEnum.OBJECT_ARRAY))
 			{
 				// Call DestructHelper.destruct(this.field)
 				MStmt stmt = ModelCreation.createMethodCall(

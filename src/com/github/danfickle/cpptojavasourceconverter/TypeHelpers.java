@@ -23,7 +23,10 @@ public class TypeHelpers
 		OTHER,
 		ENUMERATION,
 		UNKNOWN,
-		FUNCTION;
+		FUNCTION,
+		FUNCTION_POINTER,
+		FUNCTION_ARRAY,
+		FUNCTION_REFERENCE, VOID_POINTER;
 	}
 	
 	static boolean isOneOf(IType tp, TypeEnum... tps) throws DOMException
@@ -42,14 +45,7 @@ public class TypeHelpers
 	
 	static boolean isBasicType(IType tp) throws DOMException
 	{
-		return getTypeEnum(tp) == TypeEnum.BOOLEAN ||
-			   getTypeEnum(tp) == TypeEnum.CHAR ||
-			   getTypeEnum(tp) == TypeEnum.NUMBER;
-	}
-	
-	static boolean isObjectPtr(IType type) throws DOMException
-	{
-		return getTypeEnum(type) == TypeEnum.OBJECT_POINTER;
+		return isOneOf(tp, TypeEnum.BOOLEAN, TypeEnum.CHAR, TypeEnum.NUMBER);
 	}
 	
 	static IType expand(IType type)
@@ -70,15 +66,9 @@ public class TypeHelpers
 	 * Determines if a type will turn into a pointer.
 	 * @throws DOMException 
 	 */
-	static boolean isEventualPtrBasic(IType type) throws DOMException
+	static boolean isPtrOrArrayBasic(IType type) throws DOMException
 	{
-		return getTypeEnum(type) == TypeEnum.BASIC_POINTER ||
-			   getTypeEnum(type) == TypeEnum.BASIC_ARRAY;
-	}
-	
-	static boolean isEventualRefBasic(IType type) throws DOMException
-	{
-		return getTypeEnum(type) == TypeEnum.BASIC_REFERENCE;
+		return isOneOf(type, TypeEnum.BASIC_POINTER, TypeEnum.BASIC_ARRAY);
 	}
 	
 	enum TypeType
@@ -100,11 +90,11 @@ public class TypeHelpers
 			IBasicType basic = (IBasicType) type;
 			
 			if (tp == TypeType.RAW)
-				return evaluateSimpleType(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
+				return evaluateSimpleType(basic.getKind(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 			else if (tp == TypeType.INTERFACE)
-				return "I" + evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
+				return "I" + evaluateSimpleTypeBoxed(basic.getKind(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 			else
-				return "M" + evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
+				return "M" + evaluateSimpleTypeBoxed(basic.getKind(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 		}
 		else if (type instanceof IArrayType)
 		{
@@ -199,7 +189,7 @@ public class TypeHelpers
 				else
 					basic = (IBasicType) ref.getType();
 
-				String basicStr = evaluateSimpleTypeBoxed(basic.getType(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
+				String basicStr = evaluateSimpleTypeBoxed(basic.getKind(), basic.isShort(), basic.isLongLong(), basic.isUnsigned());
 				String simpleType = "I" + basicStr;
 				return simpleType;
 			}
@@ -234,7 +224,7 @@ public class TypeHelpers
 		}
 		else if (type instanceof IFunctionType)
 		{
-			IFunctionType func = (IFunctionType) type;
+			//IFunctionType func = (IFunctionType) type;
 			return "FunctionPointer";
 		}
 		else if (type instanceof IProblemType)
@@ -268,14 +258,14 @@ public class TypeHelpers
 	 * We need the boxed type to use for Ptr and Ref parametized
 	 * types.
 	 */
-	static String evaluateSimpleTypeBoxed(int type, boolean isShort, boolean isLongLong, boolean isUnsigned)
+	static String evaluateSimpleTypeBoxed(IBasicType.Kind type, boolean isShort, boolean isLongLong, boolean isUnsigned)
 	{
 		switch (type)
 		{
-		case IASTSimpleDeclSpecifier.t_char:
+		case eChar:
 			MyLogger.log("char");
 			return "Byte";
-		case IASTSimpleDeclSpecifier.t_int:
+		case eInt:
 			MyLogger.log("int");
 			if (isShort)
 				return "Short";
@@ -283,25 +273,25 @@ public class TypeHelpers
 				return "Long";
 			else
 				return "Integer";
-		case IASTSimpleDeclSpecifier.t_float:
+		case eFloat:
 			MyLogger.log("float");
 			return "Float";
-		case IASTSimpleDeclSpecifier.t_double:
+		case eDouble:
 			MyLogger.log("double");
 			return "Double";
-		case IASTSimpleDeclSpecifier.t_unspecified:
+		case eUnspecified:
 			MyLogger.log("unspecified");
 			if (isUnsigned)
 				return "Integer";
 			else
 				return "Integer";
-		case IASTSimpleDeclSpecifier.t_void:
+		case eVoid:
 			MyLogger.log("void");
 			return "Void";
-		case ICPPASTSimpleDeclSpecifier.t_bool:
+		case eBoolean:
 			MyLogger.log("bool");
 			return "Boolean";
-		case ICPPASTSimpleDeclSpecifier.t_wchar_t:
+		case eChar16:
 			MyLogger.log("wchar_t");
 			return "Character";
 		default:
@@ -312,14 +302,14 @@ public class TypeHelpers
 	/**
 	 * Returns the Java simple type for the corresponding C++ type. 
 	 */
-	static String evaluateSimpleType(int type, boolean isShort, boolean isLongLong, boolean isUnsigned)
+	static String evaluateSimpleType(IBasicType.Kind type, boolean isShort, boolean isLongLong, boolean isUnsigned)
 	{
 		switch (type)
 		{
-		case IASTSimpleDeclSpecifier.t_char:
+		case eChar:
 			MyLogger.log("char");
 			return "byte";
-		case IASTSimpleDeclSpecifier.t_int:
+		case eInt:
 			MyLogger.log("int");
 			if (isShort)
 				return "short";
@@ -327,25 +317,26 @@ public class TypeHelpers
 				return "long";
 			else
 				return "int";
-		case IASTSimpleDeclSpecifier.t_float:
+		case eFloat:
 			MyLogger.log("float");
 			return "float";
-		case IASTSimpleDeclSpecifier.t_double:
+		case eDouble:
 			MyLogger.log("double");
 			return "double";
-		case IASTSimpleDeclSpecifier.t_unspecified:
+		case eUnspecified:
 			MyLogger.log("unspecified");
 			if (isUnsigned)
 				return "int";
 			else
 				return "int";
-		case IASTSimpleDeclSpecifier.t_void:
+		case eVoid:
 			MyLogger.log("void");
 			return "void";
-		case ICPPASTSimpleDeclSpecifier.t_bool:
+		case eBoolean:
 			MyLogger.log("bool");
 			return "boolean";
-		case ICPPASTSimpleDeclSpecifier.t_wchar_t:
+		case eChar16:
+		case eWChar:
 			MyLogger.log("wchar_t");
 			return "char";
 		default:
@@ -475,88 +466,75 @@ public class TypeHelpers
 	/**
 	 * Gets our enum TypeEnum of an IType.
 	 */
-	static TypeEnum getTypeEnum(IType type) throws DOMException
+	private static TypeEnum getTypeEnum(IType type) throws DOMException
 	{
 		type = expand(type);
 		
-		if (type instanceof IBasicType &&
-			type instanceof ICPPBasicType &&
-			((ICPPBasicType) type).getKind() == IBasicType.Kind.eBoolean)
+		if (type instanceof IBasicType)
 		{
-			return TypeEnum.BOOLEAN;
-		}
+			if (((IBasicType) type).getKind() == IBasicType.Kind.eBoolean)
+			{
+				return TypeEnum.BOOLEAN;
+			}
 
-		if (type instanceof IBasicType &&
-			type instanceof ICPPBasicType &&
-			((ICPPBasicType) type).getKind() == IBasicType.Kind.eChar16)
-		{
-			return TypeEnum.CHAR;
-		}
+			if (((IBasicType) type).getKind() == IBasicType.Kind.eChar16 ||
+				((IBasicType) type).getKind() == IBasicType.Kind.eWChar)
+			{
+				return TypeEnum.CHAR;
+			}
 
-		if (type instanceof IBasicType &&
-			((IBasicType) type).getKind() != IBasicType.Kind.eVoid)
-		{
-			return TypeEnum.NUMBER;
+			if (((IBasicType) type).getKind() != IBasicType.Kind.eVoid)
+			{
+				return TypeEnum.NUMBER;
+			}
+		
+			if (((IBasicType) type).getKind() == IBasicType.Kind.eVoid)
+			{
+				return TypeEnum.VOID;
+			}
 		}
 		
-		if (type instanceof IBasicType &&
-			((IBasicType) type).getKind() == IBasicType.Kind.eVoid)
+		if (type instanceof IFunctionType)
 		{
-			return TypeEnum.VOID;
-		}
-
-		if (type instanceof ICPPFunctionType)
 			return TypeEnum.FUNCTION;
-		
+		}
+
 		if (type instanceof IPointerType)
 		{
-			while (type instanceof IPointerType ||
-				   expand(type) instanceof IPointerType)
-			{
-				if (type instanceof IPointerType)
-					type = ((IPointerType) type).getType();
-				else
-					type = ((IPointerType) expand(type)).getType();
-			}
+			type = getPointerBaseType(type);
 			
-			if (getTypeEnum(type) == TypeEnum.OBJECT)
+			if (isOneOf(type, TypeEnum.OBJECT))
 				return TypeEnum.OBJECT_POINTER;
-			else
+			else if (isOneOf(type, TypeEnum.BOOLEAN, TypeEnum.CHAR, TypeEnum.NUMBER))
 				return TypeEnum.BASIC_POINTER;
+			else if (isOneOf(type, TypeEnum.FUNCTION))
+				return TypeEnum.FUNCTION_POINTER;
+			else if (isOneOf(type, TypeEnum.VOID))
+				return TypeEnum.VOID_POINTER;
 		}
 
 		if (type instanceof IArrayType)
 		{
-			while (type instanceof IArrayType ||
-				   expand(type) instanceof IArrayType)
-			{
-				if (type instanceof IArrayType)
-					type = ((IArrayType) type).getType();
-				else
-					type = ((IArrayType) expand(type)).getType();
-			}
-				
-			if (getTypeEnum(type) == TypeEnum.OBJECT)
+			type = getArrayBaseType(type);
+			
+			if (isOneOf(type, TypeEnum.OBJECT))
 				return TypeEnum.OBJECT_ARRAY;
-			else
+			else if (isOneOf(type, TypeEnum.BOOLEAN, TypeEnum.CHAR, TypeEnum.NUMBER))
 				return TypeEnum.BASIC_ARRAY;
+			else if (isOneOf(type, TypeEnum.FUNCTION))
+				return TypeEnum.FUNCTION_ARRAY;
 		}
 			
 		if (type instanceof ICPPReferenceType)
 		{
-			while (type instanceof ICPPReferenceType ||
-				   expand(type) instanceof ICPPReferenceType)
-			{
-				if (type instanceof ICPPReferenceType)
-					type = ((ICPPReferenceType) type).getType();
-				else
-					type = ((ICPPReferenceType) expand(type)).getType();
-			}
+			type = getReferenceBaseType(type);
 
-			if (getTypeEnum(type) == TypeEnum.OBJECT)
+			if (isOneOf(type, TypeEnum.OBJECT))
 				return TypeEnum.OBJECT_REFERENCE;
-			else
+			else if (isOneOf(type, TypeEnum.BOOLEAN, TypeEnum.CHAR, TypeEnum.NUMBER))
 				return TypeEnum.BASIC_REFERENCE;
+			else if (isOneOf(type, TypeEnum.FUNCTION))
+				return TypeEnum.FUNCTION_REFERENCE;
 		}
 
 		if (type instanceof ICPPClassType)
@@ -590,25 +568,36 @@ public class TypeHelpers
 		return null;
 	}
 
+	static IType getReferenceBaseType(IType type) throws DOMException
+	{
+		while (type instanceof ICPPReferenceType ||
+			   expand(type) instanceof ICPPReferenceType)
+		{
+			if (type instanceof ICPPReferenceType)
+				type = ((ICPPReferenceType) type).getType();
+			else
+				type = ((ICPPReferenceType) expand(type)).getType();
+		}
+		
+		return type;
+	}
+	
 	/**
 	 * Gets the base type of an array.
 	 * @return CDT IType of array.
 	 */
 	static IType getArrayBaseType(IType type) throws DOMException
 	{
-		IType arr = ((IArrayType) type).getType();
-
-		while (arr instanceof IArrayType ||
-			   arr instanceof IQualifierType ||
-			   arr instanceof ITypedef)
+		while (type instanceof IArrayType ||
+			   expand(type) instanceof IArrayType)
 		{
-			if (arr instanceof IArrayType)
-				arr = ((IArrayType) arr).getType();
+			if (type instanceof IArrayType)
+				type = ((IArrayType) type).getType();
 			else
-				arr = expand(arr);
+				type = ((IArrayType) expand(type)).getType();
 		}
 
-		return arr;
+		return type;
 	}
 
 	/**
@@ -617,19 +606,26 @@ public class TypeHelpers
 	 */
 	static IType getPointerBaseType(IType type) throws DOMException
 	{
-		IType arr = ((IPointerType) type).getType();
-
-		while (arr instanceof IPointerType ||
-			   arr instanceof IQualifierType ||
-			   arr instanceof ITypedef)
+		while (type instanceof IPointerType ||
+			   expand(type) instanceof IPointerType)
 		{
-			if (arr instanceof IPointerType)
-				arr = ((IPointerType) arr).getType();
+			if (type instanceof IPointerType)
+				type = ((IPointerType) type).getType();
 			else
-				arr = expand(arr);
+				type = ((IPointerType) expand(type)).getType();
 		}
-
-		return arr;
+		
+		return type;
+	}
+	
+	static boolean decaysToPointer(IType type) throws DOMException
+	{
+		type = getReferenceBaseType(type);
+		
+		return TypeHelpers.isOneOf(type, TypeEnum.OBJECT_POINTER,
+			TypeEnum.BASIC_POINTER, TypeEnum.FUNCTION_POINTER,
+			TypeEnum.VOID_POINTER, TypeEnum.BASIC_ARRAY, TypeEnum.OBJECT_ARRAY,
+			TypeEnum.FUNCTION_ARRAY);
 	}
 	
 	/**
