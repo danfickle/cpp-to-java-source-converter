@@ -20,7 +20,7 @@ class GlobalContext
 	FunctionManager     funcMngr;
 	SpecialGenerator    specialGenerator;
 	InitializationManager initMngr;
-	TypeHelpers           typeMngr;
+	TypeManager           typeMngr;
 	
 	List<CppDeclaration> globalDeclarations = new ArrayList<CppDeclaration>();
 	Map<IType, String>   anonTypes = new HashMap<IType, String>();

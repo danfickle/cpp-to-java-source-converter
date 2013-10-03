@@ -12,7 +12,7 @@ import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
 
 class FunctionManager 
@@ -113,7 +113,7 @@ class FunctionManager
 		IBinding funcBinding = func.getDeclarator().getName().resolveBinding();
 		
 		CppFunction method = new CppFunction();
-		method.name = TypeHelpers.getSimpleName(func.getDeclarator().getName());
+		method.name = TypeManager.getSimpleName(func.getDeclarator().getName());
 		method.isStatic = ((IFunction) funcBinding).isStatic();
 		method.retType = evalReturnType(funcBinding);
 
@@ -276,7 +276,7 @@ class FunctionManager
 			// Create the method declaration.
 			// This will handle void return types.
 			CppFunction methodDef = new CppFunction();
-			methodDef.name = TypeHelpers.getSimpleName(func.getName());
+			methodDef.name = TypeManager.getSimpleName(func.getName());
 			methodDef.retType = evalReturnType(funcBinding);
 			
 			// This gets a parameter variable declaration for each param.
@@ -289,7 +289,7 @@ class FunctionManager
 
 			// This code block simple calls the original method with
 			// passed in arguments plus default arguments.
-			MFunctionCallExpression method = ModelCreation.createFuncCall(TypeHelpers.getSimpleName(func.getName()));
+			MFunctionCallExpression method = ModelCreation.createFuncCall(TypeManager.getSimpleName(func.getName()));
 
 			// Add the passed in params by name.
 			List<String> names = getArgumentNames(funcBinding);

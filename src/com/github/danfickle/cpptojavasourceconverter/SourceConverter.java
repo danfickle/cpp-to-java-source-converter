@@ -18,8 +18,8 @@ import java.util.List;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
@@ -112,7 +112,7 @@ public class SourceConverter
 		{
 			frag.isStatic = true;
 			
-			if (TypeHelpers.isOneOf(ifield.getType(), TypeEnum.OBJECT, TypeEnum.OBJECT_ARRAY))
+			if (TypeManager.isOneOf(ifield.getType(), TypeEnum.OBJECT, TypeEnum.OBJECT_ARRAY))
 			{
 				frag.initExpr = init;
 			}
@@ -178,7 +178,7 @@ public class SourceConverter
 					ICPPParameter[] params  = ctor.getParameters();
 
 					if (params.length != 0 &&
-						TypeHelpers.isOneOf(params[0].getType(), TypeEnum.OBJECT_REFERENCE) &&
+						TypeManager.isOneOf(params[0].getType(), TypeEnum.OBJECT_REFERENCE) &&
 						ctx.typeMngr.cppToJavaType(params[0].getType(), TypeType.IMPLEMENTATION).toString().equals(ctor.getName()))
 					{
 						// TODO: We should check there are no params or others have default values...
@@ -616,7 +616,7 @@ public class SourceConverter
 			IASTNamedTypeSpecifier namedTypeSpecifier = (IASTNamedTypeSpecifier)declSpecifier;
 			MyLogger.log("named type");
 
-			return TypeHelpers.getSimpleName(namedTypeSpecifier.getName());
+			return TypeManager.getSimpleName(namedTypeSpecifier.getName());
 
 			//			if (declSpecifier instanceof ICPPASTNamedTypeSpecifier)
 			//			{
@@ -673,13 +673,13 @@ public class SourceConverter
 			if (compositeTypeSpecifier.getKey() == IASTCompositeTypeSpecifier.k_union)
 				tyd.isUnion = true;
 			
-			if (TypeHelpers.getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
+			if (TypeManager.getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
 			{
 				tyd.name = ctx.typeMngr.getAnonymousClassName(evalBindingReturnType(compositeTypeSpecifier.getName().resolveBinding()));
 			}
 			else
 			{
-				tyd.name = TypeHelpers.getSimpleName(compositeTypeSpecifier.getName());
+				tyd.name = TypeManager.getSimpleName(compositeTypeSpecifier.getName());
 			}
 			
 			info.declSpecifier = declSpecifier;
@@ -695,11 +695,11 @@ public class SourceConverter
 				if (cppCompositeTypeSpecifier.getBaseSpecifiers() != null && cppCompositeTypeSpecifier.getBaseSpecifiers().length != 0)
 				{
 					info.hasSuper = true;
-					info.superClass = tyd.superclass = TypeHelpers.getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName());
+					info.superClass = tyd.superclass = TypeManager.getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName());
 				}
 				
 				for (int i = 0; i < cppCompositeTypeSpecifier.getBaseSpecifiers().length; i++)
-					tyd.additionalSupers.add(TypeHelpers.getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[i].getName()));
+					tyd.additionalSupers.add(TypeManager.getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[i].getName()));
 			}
 
 			for (IASTDeclaration decl : compositeTypeSpecifier.getMembers())
@@ -779,7 +779,7 @@ public class SourceConverter
 			MyLogger.log("elaborated type specifier" + elaboratedTypeSpecifier.getRawSignature());
 
 			//evaluateElaborated(elaboratedTypeSpecifier.getKind());
-			TypeHelpers.getSimpleName(elaboratedTypeSpecifier.getName());
+			TypeManager.getSimpleName(elaboratedTypeSpecifier.getName());
 
 			if (declSpecifier instanceof ICPPASTElaboratedTypeSpecifier)
 			{
@@ -796,7 +796,7 @@ public class SourceConverter
 		{
 			IASTNamedTypeSpecifier namedTypeSpecifier = (IASTNamedTypeSpecifier)declSpecifier;
 			MyLogger.log("named type");
-			TypeHelpers.getSimpleName(namedTypeSpecifier.getName());
+			TypeManager.getSimpleName(namedTypeSpecifier.getName());
 
 			if (declSpecifier instanceof ICPPASTNamedTypeSpecifier)
 			{
@@ -840,7 +840,7 @@ public class SourceConverter
 			MyLogger.log("simple declaration");
 
 			for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
-				ret.add(TypeHelpers.getSimpleName(decl.getName()));
+				ret.add(TypeManager.getSimpleName(decl.getName()));
 		}
 		else if (declaration instanceof ICPPASTExplicitTemplateInstantiation)
 		{
@@ -911,7 +911,7 @@ public class SourceConverter
 	{
 		MInfixExpression infix = null;
 		
-		if (TypeHelpers.isBasicType(tp))
+		if (TypeManager.isBasicType(tp))
 		{
 			infix = new MInfixAssignmentWithNumberOnLeft();
 			infix.left = ModelCreation.createNumberId(varName);

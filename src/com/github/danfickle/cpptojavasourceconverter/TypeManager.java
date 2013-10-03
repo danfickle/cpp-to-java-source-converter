@@ -6,11 +6,11 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
 
-class TypeHelpers 
+class TypeManager 
 {
 	private final GlobalContext ctx;
 	
-	TypeHelpers(GlobalContext con)
+	TypeManager(GlobalContext con)
 	{
 		ctx = con;
 	}
@@ -641,7 +641,7 @@ class TypeHelpers
 	{
 		type = getReferenceBaseType(type);
 		
-		return TypeHelpers.isOneOf(type, TypeEnum.OBJECT_POINTER,
+		return TypeManager.isOneOf(type, TypeEnum.OBJECT_POINTER,
 			TypeEnum.BASIC_POINTER, TypeEnum.FUNCTION_POINTER,
 			TypeEnum.VOID_POINTER, TypeEnum.BASIC_ARRAY, TypeEnum.OBJECT_ARRAY,
 			TypeEnum.FUNCTION_ARRAY);

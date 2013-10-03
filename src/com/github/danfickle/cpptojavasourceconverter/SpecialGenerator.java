@@ -9,9 +9,9 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MStringExpression;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.CompositeInfo;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 
 class SpecialGenerator
@@ -80,13 +80,13 @@ class SpecialGenerator
 			{
 				/* Do nothing. */
 			}
-			else if (TypeHelpers.isOneOf(fields.get(i).field.getType(), TypeEnum.OBJECT))
+			else if (TypeManager.isOneOf(fields.get(i).field.getType(), TypeEnum.OBJECT))
 			{
 				// Call this.field.destruct()
 				MStmt stmt = ModelCreation.createMethodCall("this", fields.get(i).field.getName(), "destruct");
 				method.statements.add(stmt);
 			}
-			else if (TypeHelpers.isOneOf(fields.get(i).field.getType(), TypeEnum.OBJECT_ARRAY))
+			else if (TypeManager.isOneOf(fields.get(i).field.getType(), TypeEnum.OBJECT_ARRAY))
 			{
 				// Call DestructHelper.destruct(this.field)
 				MStmt stmt = ModelCreation.createMethodCall(
@@ -142,21 +142,21 @@ class SpecialGenerator
 			{
 				/* Do nothing. */
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.OBJECT))
+			else if (TypeManager.isOneOf(tp, TypeEnum.OBJECT))
 			{
 				// this.field = right.field.copy();
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + " = right." + nm + ".copy()";
 				meth.body.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.OBJECT_ARRAY))
+			else if (TypeManager.isOneOf(tp, TypeEnum.OBJECT_ARRAY))
 			{
 				// this.field = CPP.copyArray(right.field);
 				MStringExpression expr = new MStringExpression(); 
 				expr.contents = "this." + nm + " = CPP.copyArray(right." + nm + ")";				
 				meth.body.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_ARRAY))
+			else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_ARRAY))
 			{
 				MStringExpression expr = new MStringExpression();
 				
@@ -183,7 +183,7 @@ class SpecialGenerator
 				expr.contents = "this.set__" + nm + "(right.get__" + nm + "())";
 				meth.body.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.isBasicType(tp))
+			else if (TypeManager.isBasicType(tp))
 			{
 				// this.name = MInteger.valueOf(right.name.get());
 				MStringExpression expr = new MStringExpression();
@@ -194,14 +194,14 @@ class SpecialGenerator
 
 				meth.body.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.ENUMERATION))
+			else if (TypeManager.isOneOf(tp, TypeEnum.ENUMERATION))
 			{
 				// this.name = right.name
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + " = right." + nm;
 				meth.body.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
+			else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
 			{
 				// this.name = right.name.ptrCopy()
 				MStringExpression expr = new MStringExpression();
@@ -246,21 +246,21 @@ class SpecialGenerator
 			{
 				/* Do nothing. */
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.OBJECT))
+			else if (TypeManager.isOneOf(tp, TypeEnum.OBJECT))
 			{
 				// this.name.opAssign(right.name);
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + ".opAssign(right." + nm + ")"; 
 				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.OBJECT_ARRAY))
+			else if (TypeManager.isOneOf(tp, TypeEnum.OBJECT_ARRAY))
 			{
 				// TODO
 				MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 				MFieldReferenceExpression left = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
 				ifBlock.statements.add(ModelCreation.createMethodCall("CPP", "assignArray", left, right));
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_ARRAY))
+			else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_ARRAY))
 			{
 				if (ctx.exprEvaluator.getArraySizeExpressions(fieldInfo.field.getType()).size() > 1)
 				{
@@ -283,21 +283,21 @@ class SpecialGenerator
 				expr.contents = "this.set__" + nm + "(right.get__" + nm + "())";
 				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if(TypeHelpers.isBasicType(tp))
+			else if(TypeManager.isBasicType(tp))
 			{
 				// this.name.set(right.name.get())
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + ".set(right." + nm + ".get())";
 				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.ENUMERATION))
+			else if (TypeManager.isOneOf(tp, TypeEnum.ENUMERATION))
 			{
 				// this.name = right.name
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + " = right." + nm;
 				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
 			}
-			else if (TypeHelpers.isOneOf(tp, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
+			else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
 			{
 				// this.name = right.name.ptrCopy()
 				MStringExpression expr = new MStringExpression();

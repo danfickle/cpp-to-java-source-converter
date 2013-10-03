@@ -6,7 +6,7 @@ import java.util.Set;
 import org.eclipse.cdt.core.dom.ast.*;
 
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppBitfield;
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 
 public class BitfieldManager
 {
@@ -21,21 +21,21 @@ public class BitfieldManager
 
 	boolean isBitfield(IASTName name) throws DOMException
 	{
-		String complete = TypeHelpers.getCompleteName(name);
+		String complete = TypeManager.getCompleteName(name);
 		return bitfields.contains(complete);
 	}
 	
 	static String getBitfieldSimpleName(IASTExpression expr) throws DOMException
 	{
 		if (expr instanceof IASTIdExpression)
-			return TypeHelpers.getSimpleName(((IASTIdExpression) expr).getName());
+			return TypeManager.getSimpleName(((IASTIdExpression) expr).getName());
 		else
-			return TypeHelpers.getSimpleName(((IASTFieldReference) expr).getFieldName());
+			return TypeManager.getSimpleName(((IASTFieldReference) expr).getFieldName());
 	}
 	
 	void addBitfield(IASTName name) throws DOMException
 	{
-		String complete = TypeHelpers.getCompleteName(name);
+		String complete = TypeManager.getCompleteName(name);
 		bitfields.add(complete);
 	}
 	

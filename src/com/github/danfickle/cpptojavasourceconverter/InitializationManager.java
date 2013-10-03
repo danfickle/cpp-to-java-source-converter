@@ -4,8 +4,8 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeType;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 
 class InitializationManager
 {
@@ -20,7 +20,7 @@ class InitializationManager
 	{
 		if (initializer == null)
 		{
-			if (TypeHelpers.isBasicType(typeRequired) &&
+			if (TypeManager.isBasicType(typeRequired) &&
 				!ctx.bitfieldMngr.isBitfield(name))
 			{
 				// MInteger.valueOf(0);
@@ -28,14 +28,14 @@ class InitializationManager
 				
 				expr.type = ctx.typeMngr.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
 
-				if (TypeHelpers.isOneOf(typeRequired, TypeEnum.BOOLEAN))
+				if (TypeManager.isOneOf(typeRequired, TypeEnum.BOOLEAN))
 					expr.operand = ModelCreation.createLiteral("false");
 				else
 					expr.operand = ModelCreation.createLiteral("0");
 
 				return expr;
 			}
-			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.BASIC_ARRAY))
+			else if (TypeManager.isOneOf(typeRequired, TypeEnum.BASIC_ARRAY))
 			{
 				// MIntegerMulti.create(4);
 				MValueOfExpressionArray expr = new MValueOfExpressionArray();
@@ -43,7 +43,7 @@ class InitializationManager
 				expr.operands = ctx.exprEvaluator.getArraySizeExpressions(typeRequired);
 				return expr;
 			}
-			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.OBJECT))
+			else if (TypeManager.isOneOf(typeRequired, TypeEnum.OBJECT))
 			{
 				// new FooBar();
 				MNewExpressionObject expr = new MNewExpressionObject();
@@ -63,7 +63,7 @@ class InitializationManager
 					return expr;
 				}
 			}
-			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.OBJECT_ARRAY))
+			else if (TypeManager.isOneOf(typeRequired, TypeEnum.OBJECT_ARRAY))
 			{
 				// TODO
 				return null;
@@ -79,13 +79,13 @@ class InitializationManager
 			{
 				return ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause());
 			}
-			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
+			else if (TypeManager.isOneOf(typeRequired, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
 			{
 				MExpression expr = ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause());
 				ctx.exprEvaluator.modifyLiteralToPtr(expr);
 				return expr;
 			}
-			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.OBJECT))
+			else if (TypeManager.isOneOf(typeRequired, TypeEnum.OBJECT))
 			{
 				// TODO: Is this needed?
 				MExpression expr = ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause());				
@@ -112,7 +112,7 @@ class InitializationManager
 				{
 					create = ctx.exprEvaluator.eval1Expr(expr);
 				}
-				else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
+				else if (TypeManager.isOneOf(typeRequired, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
 				{
 					create = ctx.exprEvaluator.eval1Expr(expr);
 					ctx.exprEvaluator.modifyLiteralToPtr(create);

@@ -2,7 +2,7 @@ package com.github.danfickle.cpptojavasourceconverter;
 
 import org.eclipse.cdt.core.dom.ast.*;
 
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 
 class ExpressionHelpers
@@ -259,7 +259,7 @@ class ExpressionHelpers
 
 	static boolean isBooleanExpression(IASTExpression expr) throws DOMException
 	{
-		return TypeHelpers.isOneOf(expr.getExpressionType(), TypeEnum.BOOLEAN);
+		return TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.BOOLEAN);
 	}
 	
 	/**
@@ -282,7 +282,7 @@ class ExpressionHelpers
 		
 		// Finally check for the array access operator on a pointer...
 		if (expr instanceof IASTArraySubscriptExpression &&
-			TypeHelpers.isPtrOrArrayBasic(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
+			TypeManager.isPtrOrArrayBasic(((IASTArraySubscriptExpression) expr).getArrayExpression().getExpressionType()))
 			return true;
 		
 		return false;
@@ -293,7 +293,7 @@ class ExpressionHelpers
 	 */
 	static boolean isBasicExpression(IASTExpression expr) throws DOMException
 	{
-		return TypeHelpers.isBasicType(expr.getExpressionType());
+		return TypeManager.isBasicType(expr.getExpressionType());
 	}
 
 	/**
@@ -309,17 +309,17 @@ class ExpressionHelpers
 	 */
 	static MExpression makeExpressionBoolean(MExpression exp, IType expType) throws DOMException
 	{
-		if (!TypeHelpers.isOneOf(expType, TypeEnum.BOOLEAN) &&
-			!TypeHelpers.isOneOf(TypeHelpers.getReferenceBaseType(expType), TypeEnum.BOOLEAN))
+		if (!TypeManager.isOneOf(expType, TypeEnum.BOOLEAN) &&
+			!TypeManager.isOneOf(TypeManager.getReferenceBaseType(expType), TypeEnum.BOOLEAN))
 		{
 			MExpression r = null;
 			
-			if (TypeHelpers.decaysToPointer(expType))
+			if (TypeManager.decaysToPointer(expType))
 			{
 				r = ModelCreation.createLiteral("PtrObjNull.instance()");
 				return bracket(ModelCreation.createInfixExprPtrComparison(bracket(exp), r, "!="));
 			}
-			else if (TypeHelpers.isOneOf(expType, TypeEnum.CHAR, TypeEnum.NUMBER, TypeEnum.BASIC_REFERENCE))
+			else if (TypeManager.isOneOf(expType, TypeEnum.CHAR, TypeEnum.NUMBER, TypeEnum.BASIC_REFERENCE))
 			{
 				r = ModelCreation.createLiteral("0");
 				return bracket(ModelCreation.createInfixExpr(bracket(exp), r, "!="));

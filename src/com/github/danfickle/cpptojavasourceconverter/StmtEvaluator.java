@@ -8,7 +8,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.*;
 
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
-import com.github.danfickle.cpptojavasourceconverter.TypeHelpers.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 
 class StmtEvaluator 
@@ -264,14 +264,14 @@ class StmtEvaluator
 
 			retu.expr = ctx.exprEvaluator.wrapIfNeeded(returnStatement.getReturnValue(), ctx.currentReturnType);
 			
-			if (TypeHelpers.isOneOf(ctx.currentReturnType, TypeEnum.BOOLEAN))
+			if (TypeManager.isOneOf(ctx.currentReturnType, TypeEnum.BOOLEAN))
 			{
 				retu.expr = ExpressionHelpers.makeExpressionBoolean(retu.expr, returnStatement.getReturnValue());
 			}
 
 			// Only call cleanup if we have something on the stack.
 			if (ctx.stackMngr.getLocalVariableId() != 0 &&
-				TypeHelpers.isOneOf(ctx.currentReturnType, TypeEnum.VOID))
+				TypeManager.isOneOf(ctx.currentReturnType, TypeEnum.VOID))
 			{
 				retu.cleanup = ctx.stackMngr.createCleanupCall(0);
 			}
