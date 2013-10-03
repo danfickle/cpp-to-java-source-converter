@@ -569,6 +569,11 @@ public class TypeHelpers
 		return null;
 	}
 
+	static void registerType(GlobalContext ctx, IType tp, String name)
+	{
+		ctx.anonTypes.put(tp, name);
+	}
+	
 	static IType getReferenceBaseType(IType type) throws DOMException
 	{
 		while (type instanceof ICPPReferenceType ||

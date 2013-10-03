@@ -1,5 +1,7 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
+import java.util.Map;
+
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 
@@ -47,7 +49,15 @@ class InitializationManager
 			{
 				// new FooBar();
 				MNewExpressionObject expr = new MNewExpressionObject();
-				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
+
+				for (Map.Entry<IType, String> ent : ctx.anonTypes.entrySet())
+				{
+					if (ent.getKey().isSameType(typeRequired))
+						expr.type = ent.getValue();
+				}
+				
+				if (expr.type == null)
+					expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
 
 				if (!(name.resolveBinding() instanceof IField))
 				{
@@ -57,6 +67,8 @@ class InitializationManager
 				}
 				else
 				{
+					// Fields will be destroyed in the dtor so are
+					// not added to the stack.
 					return expr;
 				}
 			}

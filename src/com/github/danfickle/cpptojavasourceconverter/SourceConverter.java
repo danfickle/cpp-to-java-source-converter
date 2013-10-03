@@ -508,9 +508,17 @@ public class SourceConverter
 		{
 			return (((IParameter) binding).getType());
 		}
+		else if (binding instanceof IField)
+		{
+			return (((IField) binding).getType());
+		}
+		else if (binding instanceof ICompositeType)
+		{
+			return ((ICompositeType) binding);
+		}
 		else
 		{
-			MyLogger.logImportant("binding not a variable or function:" + binding.getName());
+			MyLogger.logImportant("binding not a variable, field or function:" + binding.getName());
 			return (null);
 		}
 	}
@@ -665,10 +673,16 @@ public class SourceConverter
 				tyd.isUnion = true;
 			
 			if (TypeHelpers.getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
+			{
 				tyd.name = "AnonClass" + anonClassCount++;
+				IType tp = evalBindingReturnType(compositeTypeSpecifier.getName().resolveBinding());
+				TypeHelpers.registerType(ctx, tp, tyd.name);
+			}
 			else
+			{
 				tyd.name = TypeHelpers.getSimpleName(compositeTypeSpecifier.getName());
-
+			}
+			
 			info.declSpecifier = declSpecifier;
 			findSpecialMethods(declSpecifier, info);
 		

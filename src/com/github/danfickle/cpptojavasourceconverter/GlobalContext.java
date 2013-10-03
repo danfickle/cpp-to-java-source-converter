@@ -1,7 +1,9 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.cdt.core.dom.ast.IType;
 
@@ -20,7 +22,9 @@ class GlobalContext
 	InitializationManager initMngr;
 	
 	List<CppDeclaration> globalDeclarations = new ArrayList<CppDeclaration>();
-	
+	Map<IType, String>   anonTypes = new HashMap<IType, String>();
+
 	String currentFileName;
 	IType currentReturnType;
+	
 }
