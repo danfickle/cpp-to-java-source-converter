@@ -292,6 +292,7 @@ public class TypeHelpers
 			MyLogger.log("bool");
 			return "Boolean";
 		case eChar16:
+		case eWChar:
 			MyLogger.log("wchar_t");
 			return "Character";
 		default:

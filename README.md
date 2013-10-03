@@ -81,6 +81,8 @@ This is an incomplete and fluid list of items that need doing before the initial
 
 + General
   + integer promotion/demotion
+  + Names for anonymous items not stomping on each other.
+  + Object array/pointer interface.
 + test-references
 + test-enums
 + test-bitfield
@@ -89,7 +91,8 @@ This is an incomplete and fluid list of items that need doing before the initial
   + multi dimension arrays.
 + test-class
   + top level class being marked as nested and nested inside Global.
-  + super constructor not being called as specified by ctor chain initializer.
+  + Anonymous inner class being added to a stack.
+  + Anonymous inner classes not being cleaned up in destruct.
 + test-operator-overloading
   + operator overloads being generated but not being used.
 + test-pointers
