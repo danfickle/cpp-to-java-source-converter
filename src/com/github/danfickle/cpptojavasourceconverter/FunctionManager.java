@@ -119,10 +119,13 @@ class FunctionManager
 
 		if (funcBinding instanceof ICPPConstructor)
 		{
-			if (((ICPPConstructor) funcBinding).isDestructor())
-				method.isDtor = true;
-			else
+			if (!((ICPPConstructor) funcBinding).isDestructor())
 				method.isCtor = true;
+		}
+		else if (funcBinding instanceof ICPPMethod)
+		{
+			if (((ICPPMethod) funcBinding).isDestructor())
+				method.isDtor = true;
 		}
 		
 		method.args.addAll(evalParameters(funcBinding));

@@ -77,7 +77,9 @@ class SpecialGenerator
 			MyLogger.log(fields.get(i).field.getName());
 
 			if (fields.get(i).isStatic)
-				/* Do nothing. */ ;
+			{
+				/* Do nothing. */
+			}
 			else if (TypeHelpers.isOneOf(fields.get(i).field.getType(), TypeEnum.OBJECT))
 			{
 				// Call this.field.destruct()
@@ -96,7 +98,6 @@ class SpecialGenerator
 			}
 		}
 		
-		// Last, we call destruct on the super object.
 		if (hasSuper)
 		{
 			// Call super.destruct()

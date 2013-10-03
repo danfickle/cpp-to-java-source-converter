@@ -48,8 +48,17 @@ class InitializationManager
 				// new FooBar();
 				MNewExpressionObject expr = new MNewExpressionObject();
 				expr.type = TypeHelpers.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
-				// A plain object must be added to the stack so we can call its destructor.
-				return ctx.stackMngr.createAddItemCall(expr);
+
+				if (!(name.resolveBinding() instanceof IField))
+				{
+					// A plain object must be added to the stack
+					// so we can call its destructor.
+					return ctx.stackMngr.createAddItemCall(expr);
+				}
+				else
+				{
+					return expr;
+				}
 			}
 			else if (TypeHelpers.isOneOf(typeRequired, TypeEnum.OBJECT_ARRAY))
 			{

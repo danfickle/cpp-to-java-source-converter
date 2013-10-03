@@ -91,8 +91,6 @@ This is an incomplete and fluid list of items that need doing before the initial
   + multi dimension arrays.
 + test-class
   + top level class being marked as nested and nested inside Global.
-  + Anonymous inner class being added to a stack.
-  + Anonymous inner classes not being cleaned up in destruct.
 + test-operator-overloading
   + operator overloads being generated but not being used.
 + test-pointers
