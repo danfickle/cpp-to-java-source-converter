@@ -1,10 +1,10 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
-import java.util.Map;
-
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
+
+import com.github.danfickle.cpptojavasourceconverter.GlobalCtx.ITypeName;
 
 class TypeManager 
 {
@@ -93,11 +93,11 @@ class TypeManager
 	 */
 	String cppToJavaType(IType type, TypeType tp) throws DOMException
 	{
-		// Check that it is not an anonymous type.
-		for (Map.Entry<IType, String> ent : ctx.anonTypes.entrySet())
+		// Check that it is not in our type list.
+		for (ITypeName ent : ctx.global.types)
 		{
-			if (ent.getKey().isSameType(type))
-				return ent.getValue();
+			if (ent.tp.isSameType(type))
+				return ent.nm;
 		}
 		
 		if (type instanceof IBasicType)
@@ -369,10 +369,7 @@ class TypeManager
 		else
 			ret = qualifiedType;
 
-		if (ret.isEmpty())
-			return "MISSING";
-		else
-			return ret;
+		return ret;
 	}
 
 	/**
@@ -454,9 +451,6 @@ class TypeManager
 			.replace('<', '_')
 			.replace('>', '_')
 			.replace(',', '_');
-
-		if (replace.isEmpty())
-			replace = "MISSING";
 		
 		return replace;
 	}
@@ -578,13 +572,6 @@ class TypeManager
 		return null;
 	}
 
-	String getAnonymousClassName(IType tp)
-	{
-		String name = "AnonClass" + ctx.global.anonClassCount++;
-		ctx.anonTypes.put(tp, name);
-		return name;
-	}
-	
 	static IType getReferenceBaseType(IType type) throws DOMException
 	{
 		while (type instanceof ICPPReferenceType ||
@@ -662,7 +649,32 @@ class TypeManager
 			TypeEnum.VOID_POINTER, TypeEnum.BASIC_ARRAY, TypeEnum.OBJECT_ARRAY,
 			TypeEnum.FUNCTION_ARRAY);
 	}
-	
+
+	/**
+	 * Gets the complete C++ qualified name.
+	 */
+	static String getCompleteName(IBinding binding) throws DOMException
+	{
+		if (binding instanceof ICPPBinding)
+		{
+			ICPPBinding cpp = (ICPPBinding) binding;
+			String names[] = cpp.getQualifiedName();
+			StringBuilder ret = new StringBuilder(); 
+
+			for (int i = 0; i < names.length; i++)
+			{
+				ret.append(names[i]);
+				if (i != names.length - 1) 
+					ret.append("::");
+			}
+
+			MyLogger.log("Complete Name: " + ret);
+			return ret.toString();
+		}
+
+		return binding.getName();
+	}
+
 	/**
 	 * Gets the complete C++ qualified name.
 	 */
@@ -715,5 +727,19 @@ class TypeManager
 		}
 
 		return "";
+	}
+	
+	enum NameType
+	{
+		CAPITALIZED,
+		CAMEL_CASE,
+		ALL_CAPS;
+	}
+	
+	static String cppNameToJavaName(String simple, NameType tp)
+	{
+		// TODO: Capitalization, camel case.
+		String nm = normalizeName(simple);
+		return nm;
 	}
 }

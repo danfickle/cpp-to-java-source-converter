@@ -11,7 +11,7 @@ class DeclarationModels
 {
 	abstract static class CppDeclaration
 	{ 
-		public List<CppDeclaration> declarations = new ArrayList<CppDeclaration>();
+		public String completeCppName;
 	}
 	
 	static class CppDtor extends CppDeclaration
@@ -61,6 +61,7 @@ class DeclarationModels
 		public boolean isUnion;
 		public String superclass;
 		public List<String> additionalSupers = new ArrayList<String>(0);
+		public List<CppDeclaration> declarations = new ArrayList<CppDeclaration>();
 	}
 	
 	static class CppEnumerator
@@ -74,7 +75,6 @@ class DeclarationModels
 	{
 		public boolean isEnum = true;
 		public String simpleName;
-		public String qualified;
 		public List<CppEnumerator> enumerators = new ArrayList<CppEnumerator>();
 	}
 	

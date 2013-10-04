@@ -157,12 +157,13 @@ class FunctionManager
 			method.body.statements.add(0, ModelCreation.createExprStmt(expr));
 		}
 
-		CompositeInfo info = ctx.converter.getCurrentCompositeInfo();
-		List<FieldInfo> fields = ctx.converter.collectFieldsForClass(info.declSpecifier);
-		MExpression superInit = null;
-		
-		if (func instanceof ICPPASTFunctionDefinition)
+		CompositeInfo info = ctx.converter.currentInfoStack.peekFirst();
+
+		if (func instanceof ICPPASTFunctionDefinition && info != null)
 		{
+			List<FieldInfo> fields = ctx.converter.collectFieldsForClass(info.declSpecifier);
+			MExpression superInit = null;
+			
 			// Now check for C++ constructor initializers...
 			ICPPASTFunctionDefinition funcCpp = (ICPPASTFunctionDefinition) func;
 			ICPPASTConstructorChainInitializer[] chains = funcCpp.getMemberInitializers();
@@ -219,33 +220,35 @@ class FunctionManager
 					}
 				}
 			}
-		}
-		
-		if (method.isCtor)
-		{
-			MyLogger.log("ctor");
 			
-			// This function generates an initializer for all fields that need initializing.
-			ctx.specialGenerator.generateCtorStatements(fields, method.body);
-			
-			// If we have a super class, call super constructor.
-			if (info.hasSuper)
+			if (method.isCtor)
 			{
-				MFunctionCallExpression expr = ModelCreation.createFuncCall("super");
+				MyLogger.log("ctor");
 				
-				if (superInit != null)
-					expr.args.add(superInit);
+				// This function generates an initializer for all fields that need initializing.
+				ctx.specialGenerator.generateCtorStatements(fields, method.body);
 				
-				method.body.statements.add(0, ModelCreation.createExprStmt(expr));
+				// If we have a super class, call super constructor.
+				if (info.hasSuper)
+				{
+					MFunctionCallExpression expr = ModelCreation.createFuncCall("super");
+					
+					if (superInit != null)
+						expr.args.add(superInit);
+					
+					method.body.statements.add(0, ModelCreation.createExprStmt(expr));
+				}
 			}
+			else if (method.isDtor)
+			{
+				// This will destruct all fields that need destructing.
+				ctx.specialGenerator.generateDtorStatements(fields, method.body, info.hasSuper);
+			}
+
+			info.tyd.declarations.add(method);
 		}
-		else if (method.isDtor)
-		{
-			// This will destruct all fields that need destructing.
-			ctx.specialGenerator.generateDtorStatements(fields, method.body, info.hasSuper);
-		}
-		
-		info.tyd.declarations.add(method);		
+		else
+			; // TODO: Add method somewhere.
 		
 		// Generates functions for default arguments.
 		makeDefaultCalls(func.getDeclarator(), funcBinding);
@@ -319,9 +322,10 @@ class FunctionManager
 			}
 
 			methodDef.body = block;
-			
-			ctx.converter.addDeclaration(methodDef);
-			ctx.converter.popDeclaration();
+			if (ctx.converter.currentInfoStack.peekFirst() != null)
+				ctx.converter.currentInfoStack.peekFirst().tyd.declarations.add(methodDef);
+			else
+				; // TODO: Add function some where.
 		}
 	}
 	

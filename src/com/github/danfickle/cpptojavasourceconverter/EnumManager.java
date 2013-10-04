@@ -3,6 +3,8 @@ package com.github.danfickle.cpptojavasourceconverter;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 
+import com.github.danfickle.cpptojavasourceconverter.GlobalCtx.ITypeName;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 
@@ -14,6 +16,33 @@ class EnumManager
 		ctx = con;
 	}
 	
+	String findEnumCompleteCppName(IType type)
+	{
+		// Iterate the types list to find the complete name
+		// we have given this enum.
+		for (ITypeName ent : ctx.global.types)
+		{
+			if (ent.tp.isSameType(type))
+			{
+				return ent.nm;
+			}
+		}
+
+		// Not found.
+		return null;
+	}
+	
+	boolean alreadyExists(IASTName enumeration) throws DOMException
+	{
+		IType type = ctx.converter.evalBindingReturnType(enumeration.resolveBinding());
+
+		// Try to find this enum in the types list.
+		String find = findEnumCompleteCppName(type);
+			
+		// We found it, so return.
+		return (find != null);
+	}
+	
 	void evalDeclEnum(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
 	{
 		IASTEnumerator[] enumerators = enumerationSpecifier.getEnumerators();
@@ -21,18 +50,29 @@ class EnumManager
 		if (enumerators == null || enumerators.length == 0)
 			return;
 
-		CppEnum enumModel = new CppEnum();
-		enumModel.simpleName = TypeManager.getSimpleName(enumerationSpecifier.getName());
-
-		if (enumModel.simpleName.equals("MISSING"))
-		{
-			enumModel.simpleName = "AnonEnum" + ctx.global.anonEnumCount++;
-		}
+		if (alreadyExists(enumerationSpecifier.getName()))
+			return;
 		
-		enumModel.qualified = TypeManager.getQualifiedPart(enumerationSpecifier.getName()); 
+		// Not found, so create a name, if needed, and register it.
+		
+		String complete = TypeManager.getCompleteName(enumerationSpecifier.getName());
+		String simple = TypeManager.getSimpleType(complete);
 
-		String first = enumerators[0].getName().toString();		
-		ctx.global.anonEnumMap.put(first, enumModel.simpleName);
+		IType type = ctx.converter.evalBindingReturnType(enumerationSpecifier.getName().resolveBinding());
+		
+		if (simple == null || simple.isEmpty())
+		{
+			simple = "AnonEnum" + ctx.global.anonEnumCount++;
+			complete = complete + simple;
+		}
+
+		CppEnum enumModel = new CppEnum();
+
+		enumModel.simpleName = TypeManager.cppNameToJavaName(simple, NameType.CAPITALIZED);
+		enumModel.completeCppName = complete;
+		
+		ctx.global.declarations.put(complete, enumModel);
+		ctx.global.types.add(new ITypeName(type, complete));
 		
 		int nextValue = 0;
 		int sinceLastValue = 1;
@@ -41,7 +81,7 @@ class EnumManager
 		for (IASTEnumerator e : enumerators)
 		{
 			CppEnumerator enumerator = new CppEnumerator();
-			enumerator.name = TypeManager.getSimpleName(e.getName());
+			enumerator.name = TypeManager.cppNameToJavaName(e.getName().toString(), NameType.ALL_CAPS);
 
 			if (e.getValue() != null)
 			{
@@ -63,27 +103,14 @@ class EnumManager
 			
 			enumModel.enumerators.add(enumerator);
 		}
-		
-		ctx.converter.addDeclaration(enumModel);
-		ctx.converter.popDeclaration();
 	}
 	
-	String getEnumerationName(IEnumerator enumerator) throws DOMException
+	CppEnum getEnumerationDeclModel(IEnumerator enumerator) throws DOMException
 	{
-		String enumeration = TypeManager.getSimpleType(((IEnumeration) enumerator.getType()).getName());
-
-		if (enumeration.equals("MISSING"))
-		{
-			String first = ((IEnumeration) enumerator.getOwner()).getEnumerators()[0].getName();
-			String enumName = ctx.global.anonEnumMap.get(first);
-			
-			if (enumName == null)
-				MyLogger.exitOnError();
-			
-			return enumName;
-		}
-		
-		return enumeration;
+		IType parentType = (enumerator.getType());
+		// Lookup the name in the type to cpp name table.
+		String nm = findEnumCompleteCppName(parentType);
+		// Lookup the declaration model in the name to model table.
+		return (CppEnum) ctx.global.declarations.get(nm);
 	}
-	
 }

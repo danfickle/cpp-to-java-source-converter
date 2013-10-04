@@ -203,7 +203,7 @@ class ExpressionEvaluator
 		else if (expr.getName().resolveBinding() instanceof IEnumerator)
 		{
 			MIdentityExpressionEnumerator ident = new MIdentityExpressionEnumerator();
-			ident.enumName = ctx.enumMngr.getEnumerationName((IEnumerator) expr.getName().resolveBinding());
+			ident.enumName = ctx.enumMngr.getEnumerationDeclModel((IEnumerator) expr.getName().resolveBinding()).simpleName;
 			ident.ident = TypeManager.getSimpleName(expr.getName());
 			ret.add(ident);
 		}

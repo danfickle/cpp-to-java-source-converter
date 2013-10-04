@@ -1,13 +1,6 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.eclipse.cdt.core.dom.ast.IType;
-
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
 
 class TranslationUnitContext 
 {
@@ -22,10 +15,6 @@ class TranslationUnitContext
 	InitializationManager initMngr;
 	TypeManager           typeMngr;
 	GlobalCtx             global;
-	
-	List<CppDeclaration> globalDeclarations = new ArrayList<CppDeclaration>();
-	Map<IType, String>   anonTypes = new HashMap<IType, String>();
-
 	
 	String currentFileName;
 	IType currentReturnType;

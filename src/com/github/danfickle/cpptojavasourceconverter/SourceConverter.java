@@ -15,9 +15,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
+
+import com.github.danfickle.cpptojavasourceconverter.GlobalCtx.ITypeName;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
@@ -44,12 +48,12 @@ public class SourceConverter
 	 */
 	static class CompositeInfo
 	{
-		CompositeInfo(CppDeclaration tydArg)
+		CompositeInfo(CppClass tydArg)
 		{
 			tyd = tydArg;
 		}
 		
-		CppDeclaration tyd;
+		CppClass tyd;
 		IASTDeclSpecifier declSpecifier;
 		String superClass;
 		boolean hasCtor;
@@ -60,43 +64,9 @@ public class SourceConverter
 	}
 	
 	/**
-	 * The info for the current class/struct.
-	 */
-	private CompositeInfo currentInfo = null;
-	
-	/**
 	 * The stack of classes/structs.
 	 */
-	private Deque<CompositeInfo> currentInfoStack = new ArrayDeque<CompositeInfo>();
-	
-	boolean addDeclaration(CppDeclaration decl)
-	{
-		boolean nested = true;
-
-		if (currentInfo == null)
-		{
-			ctx.globalDeclarations.add(decl);
-			nested = false;
-		}
-		else
-		{
-			currentInfo.tyd.declarations.add(decl);
-		}
-		currentInfo = new CompositeInfo(decl);
-		currentInfoStack.push(currentInfo);
-		return nested;
-	}
-	
-	void popDeclaration()
-	{
-		currentInfoStack.pop();
-		currentInfo = currentInfoStack.peekFirst();
-	}
-
-	CompositeInfo getCurrentCompositeInfo()
-	{
-		return currentInfo;
-	}
+	Deque<CompositeInfo> currentInfoStack = new ArrayDeque<CompositeInfo>();
 	
 	/**
 	 * Generates a Java field, given a C++ field.
@@ -121,8 +91,7 @@ public class SourceConverter
 		frag.type = ctx.typeMngr.cppToJavaType(ifield.getType(), TypeType.INTERFACE);
 		frag.isPublic = true;
 		
-		addDeclaration(frag);
-		popDeclaration();
+		currentInfoStack.peekFirst().tyd.declarations.add(frag);
 	}
 	
 	/**
@@ -140,8 +109,7 @@ public class SourceConverter
 		frag.type = ctx.typeMngr.cppToJavaType(ifield.getType(), TypeType.INTERFACE);
 		frag.isPublic = true;
 		
-		addDeclaration(frag);
-		popDeclaration();
+		// TODO: Add somewhere.
 	}
 	
 	/**
@@ -505,6 +473,10 @@ public class SourceConverter
 		{
 			return ((ICompositeType) binding);
 		}
+		else if (binding instanceof IEnumeration)
+		{
+			return (((IEnumeration) binding));
+		}
 		else
 		{
 			MyLogger.logImportant("binding not a variable, field or function:" + binding.getName());
@@ -550,29 +522,43 @@ public class SourceConverter
 	/**
 	 * Attempts to evaluate the given declaration specifier
 	 */
-	private CppDeclaration evalDeclSpecifier(IASTDeclSpecifier declSpecifier) throws DOMException
+	private void evalDeclSpecifier(IASTDeclSpecifier declSpecifier) throws DOMException
 	{
 		if (declSpecifier instanceof IASTCompositeTypeSpecifier)
 		{
 			IASTCompositeTypeSpecifier compositeTypeSpecifier = (IASTCompositeTypeSpecifier)declSpecifier;
 			MyLogger.log("composite type specifier");
 
-			CppClass tyd = new CppClass();
-			tyd.isNested = addDeclaration(tyd);
+			IType myType = evalBindingReturnType(compositeTypeSpecifier.getName().resolveBinding());
 			
-			CompositeInfo info = getCurrentCompositeInfo();
+			for (ITypeName ent : ctx.global.types)
+			{
+				// Check that this decl specifier has not
+				// already been registered.
+				if (ent.tp.isSameType(myType))
+					return;
+			}
 
+			String complete = TypeManager.getCompleteName(compositeTypeSpecifier.getName());
+			String simple = TypeManager.getSimpleType(complete);
+			
+			if (simple == null || simple.isEmpty())
+			{
+				// Must be anonymous, so create a new name.
+				simple = "AnonClass" + ctx.global.anonClassCount++;
+				complete = complete + simple;
+			}
+
+			CppClass tyd = new CppClass();			
+
+			ctx.global.declarations.put(complete, tyd);
+			CompositeInfo info = new CompositeInfo(tyd);
+			currentInfoStack.addFirst(info);
+
+			tyd.name = TypeManager.cppNameToJavaName(simple, NameType.CAPITALIZED);
+			
 			if (compositeTypeSpecifier.getKey() == IASTCompositeTypeSpecifier.k_union)
 				tyd.isUnion = true;
-			
-			if (TypeManager.getSimpleName(compositeTypeSpecifier.getName()).equals("MISSING"))
-			{
-				tyd.name = ctx.typeMngr.getAnonymousClassName(evalBindingReturnType(compositeTypeSpecifier.getName().resolveBinding()));
-			}
-			else
-			{
-				tyd.name = TypeManager.getSimpleName(compositeTypeSpecifier.getName());
-			}
 			
 			info.declSpecifier = declSpecifier;
 			findSpecialMethods(declSpecifier, info);
@@ -663,7 +649,7 @@ public class SourceConverter
 			meth.body = blk;
 
 			tyd.declarations.add(meth);	
-			popDeclaration();
+			currentInfoStack.removeFirst();
 		}
 		else if (declSpecifier instanceof IASTElaboratedTypeSpecifier)
 		{
@@ -714,8 +700,6 @@ public class SourceConverter
 			//			ICASTDeclSpecifier spec = (ICASTDeclSpecifier) declSpecifier;
 			MyLogger.log("C declaration specifier (unimplemented)");
 		}
-
-		return null;
 	}
 
 	/**

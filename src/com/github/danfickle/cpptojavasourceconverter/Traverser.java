@@ -35,11 +35,6 @@ class Traverser
 
 		MyLogger.ctx = con;
 
-		//compositeMap.put("", new CompositeInfo(global));
-		CppClass global = new CppClass();
-		global.name = "Global";
-		con.converter.addDeclaration(global);
-	
 		for (IASTProblem prob : translationUnit.getPreprocessorProblems())
 		{
 			MyLogger.logImportant(prob.getRawSignature());
@@ -58,16 +53,19 @@ class Traverser
 			MyLogger.logImportant(e.getMessage());
 			e.printStackTrace();
 		}
-		con.converter.popDeclaration();
 		StringBuilder output = new StringBuilder();
 		STGroup group = new STGroupDir("/home/daniel/workspace/cpp-to-java-source-converter/templates");
 		
-		for (CppDeclaration decl : con.globalDeclarations)
+		for (CppDeclaration decl : con.global.declarations.values())
 		{
 			ST test3 = group.getInstanceOf("declaration_tp");
 			test3.add("decl", decl);
 			output.append(test3.render());
 		}
+		
+		// TODO: Match up declarations with files.
+		con.global.declarations.clear();
+		
 		
 		// Replace 2 or more (greedy) newlines with 2 newlines.
 		return output.toString().replaceAll("(\\n){2,}", "\n\n");

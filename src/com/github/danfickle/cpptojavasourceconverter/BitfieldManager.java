@@ -61,8 +61,7 @@ public class BitfieldManager
 		bitfield.name = field.getName();
 		bitfield.bits = ctx.exprEvaluator.eval1Expr(((IASTFieldDeclarator) declarator).getBitFieldSize());
 		bitfield.type = ctx.typeMngr.cppToJavaType(field.getType(), TypeType.RAW);
-		ctx.converter.addDeclaration(bitfield);
-		ctx.converter.popDeclaration();
+		ctx.converter.currentInfoStack.peekFirst().tyd.declarations.add(bitfield);
 	}
 
 	void addBitfield(String nm)
