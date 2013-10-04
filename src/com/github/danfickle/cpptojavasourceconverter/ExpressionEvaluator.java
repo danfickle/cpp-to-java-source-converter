@@ -747,14 +747,29 @@ class ExpressionEvaluator
 		}
 		else if (TypeManager.isBasicType(tpRequired))
 		{
-			 MValueOfExpressionNumber valOfExpr = new MValueOfExpressionNumber();
-			 valOfExpr.type = ctx.typeMngr.cppToJavaType(tpRequired, TypeType.IMPLEMENTATION);
-			 valOfExpr.operand = eval1Expr(cppExpr);
-			 return valOfExpr;
+			return makeSimpleCreationExpression(tpRequired, cppExpr);
 		}
 		else
 		{
 			return eval1Expr(cppExpr);
+		}
+	}
+
+	MExpression makeSimpleCreationExpression(IType tp, IASTExpression expr2) throws DOMException
+	{
+		if (expr2 == null)
+			return makeSimpleCreationExpression(tp);
+
+		if (TypeManager.isBasicType(tp))
+		{
+			MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
+			expr.type = ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION);
+			expr.operand = eval1Expr(expr2);
+			return expr;
+		}
+		else
+		{
+			return null;
 		}
 	}
 	
@@ -764,14 +779,30 @@ class ExpressionEvaluator
 	 */
 	MExpression makeSimpleCreationExpression(IType tp) throws DOMException
 	{
-		String literal = "0";
+		if (TypeManager.isBasicType(tp))
+		{
+			// MInteger.valueOf(0)
+			String literal = "0";
 		
-		if (TypeManager.isOneOf(tp, TypeEnum.BOOLEAN))
-			literal = "false";
+			if (TypeManager.isOneOf(tp, TypeEnum.BOOLEAN))
+				literal = "false";
 		
-		MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
-		expr.operand = ModelCreation.createLiteral(literal);
-		expr.type = ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION);
-		return expr;
+			MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
+			expr.operand = ModelCreation.createLiteral(literal);
+			expr.type = ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION);
+			return expr;
+		}
+		else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_ARRAY))
+		{
+			// MIntegerMulti.create(4);
+			MValueOfExpressionArray expr = new MValueOfExpressionArray();
+			expr.type = ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION);
+			expr.operands = ctx.exprEvaluator.getArraySizeExpressions(tp);
+			return expr;
+		}
+		else
+		{
+			return null;
+		}
 	}
 }

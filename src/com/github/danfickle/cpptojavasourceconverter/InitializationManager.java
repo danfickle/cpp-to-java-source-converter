@@ -24,24 +24,12 @@ class InitializationManager
 				!ctx.bitfieldMngr.isBitfield(name))
 			{
 				// MInteger.valueOf(0);
-				MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
-				
-				expr.type = ctx.typeMngr.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
-
-				if (TypeManager.isOneOf(typeRequired, TypeEnum.BOOLEAN))
-					expr.operand = ModelCreation.createLiteral("false");
-				else
-					expr.operand = ModelCreation.createLiteral("0");
-
-				return expr;
+				return ctx.exprEvaluator.makeSimpleCreationExpression(typeRequired);
 			}
 			else if (TypeManager.isOneOf(typeRequired, TypeEnum.BASIC_ARRAY))
 			{
 				// MIntegerMulti.create(4);
-				MValueOfExpressionArray expr = new MValueOfExpressionArray();
-				expr.type = ctx.typeMngr.cppToJavaType(typeRequired, TypeType.IMPLEMENTATION);
-				expr.operands = ctx.exprEvaluator.getArraySizeExpressions(typeRequired);
-				return expr;
+				return ctx.exprEvaluator.makeSimpleCreationExpression(typeRequired);
 			}
 			else if (TypeManager.isOneOf(typeRequired, TypeEnum.OBJECT))
 			{
