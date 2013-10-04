@@ -19,9 +19,9 @@ public class MInteger implements IInteger
 	}
 	
 	@Override
-	public MInteger ptrAddressOf()
+	public IPtrObject<IInteger> ptrAddressOf()
 	{
-		return this;
+		return PtrObject.valueOf((IInteger) this);
 	}
 	
 	/**
@@ -118,7 +118,8 @@ public class MInteger implements IInteger
 	}
 
 	@Override
-	public int[] deep() {
+	public int[] deep()
+	{
 		throw new IllegalStateException();
 	}
 }

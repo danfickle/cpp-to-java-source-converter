@@ -93,9 +93,9 @@ public class MIntegerMulti implements IInteger
 	}
 
 	@Override
-	public IInteger ptrAddressOf() 
+	public IPtrObject<IInteger> ptrAddressOf() 
 	{
-		return this;
+		return PtrObject.valueOf((IInteger) this);
 	}
 
 	@Override

@@ -13,7 +13,7 @@ public interface IInteger
 	public IInteger ptrAdjust(int cnt);
 	public IInteger ptrPostInc();
 	public IInteger ptrPostDec();
-	public IInteger ptrAddressOf();
+	public IPtrObject<IInteger> ptrAddressOf();
 	public IInteger addressOf();
 	public int ptrCompare();
 	public int get();
