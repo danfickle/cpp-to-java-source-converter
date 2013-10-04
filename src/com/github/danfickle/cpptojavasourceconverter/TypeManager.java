@@ -149,40 +149,34 @@ class TypeManager
 		}
 		else if (type instanceof IPointerType)
 		{
-			IPointerType pointer = (IPointerType) type;
-			int ptrCount = 1;
+			IType baseType = getPointerBaseType(type);
+			int ptrCount = getPointerIndirectionCount(type);
 
-			for (IType ptr = pointer.getType();
-				ptr instanceof IPointerType; 
-				ptr = ((IPointerType) ptr).getType())
+			if (isBasicType(baseType) && ptrCount == 1)
 			{
-				ptrCount++;
-			}
-
-			if (ptrCount == 2)
-			{
-				return "Ptr" + cppToJavaType(pointer.getType(), TypeType.INTERFACE);
-			}
-			else if (pointer.getType() instanceof IBasicType ||
-					 (pointer.getType() instanceof ITypedef && 
-					 ((ITypedef)(pointer.getType())).getType() instanceof IBasicType))
-			{
-				IBasicType basic;
-				if (pointer.getType() instanceof ITypedef)
-					basic = ((IBasicType)((ITypedef) pointer.getType()).getType());
-				else
-					basic = (IBasicType) pointer.getType();
-
-				return cppToJavaType(basic, tp); 
-			}
-			else if (ptrCount == 1)
-			{
-				return cppToJavaType(pointer.getType(), TypeType.INTERFACE);
+				return cppToJavaType(baseType, tp);
 			}
 			else
 			{
-				MyLogger.logImportant("Too many pointer indirections");
-				MyLogger.exitOnError();
+				// One level of indirection becomes:
+				//   IPtrObject<BASE_TYPE>
+				// Two levels of indirection become:
+				//   IPtrObject<IPtrObject<BASE_TYPE>>
+				// and so on.
+				String wrap = cppToJavaType(baseType, tp);
+				
+				if (isBasicType(baseType))
+					ptrCount--;
+				
+				while (ptrCount-- > 0)
+				{
+					if (tp == TypeType.INTERFACE)
+						wrap = "IPtrObject<" + wrap + ">";
+					else
+						wrap = "PtrObject<" + wrap + ">";
+				}
+
+				return wrap;
 			}
 		}
 		else if (type instanceof ICPPReferenceType)
@@ -635,6 +629,24 @@ class TypeManager
 		}
 		
 		return type;
+	}
+	
+	static int getPointerIndirectionCount(IType type) throws DOMException
+	{
+		int cnt = 0;
+		
+		while (type instanceof IPointerType ||
+			   expand(type) instanceof IPointerType)
+		{
+			cnt++;
+			
+			if (type instanceof IPointerType)
+				type = ((IPointerType) type).getType();
+			else
+				type = ((IPointerType) expand(type)).getType();
+		}
+
+		return cnt;
 	}
 	
 	static boolean decaysToPointer(IType type) throws DOMException
