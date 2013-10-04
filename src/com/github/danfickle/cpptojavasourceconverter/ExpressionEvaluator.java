@@ -779,7 +779,9 @@ class ExpressionEvaluator
 	 */
 	MExpression makeSimpleCreationExpression(IType tp) throws DOMException
 	{
-		if (TypeManager.isBasicType(tp))
+		if (TypeManager.isBasicType(tp) || 
+			(TypeManager.isOneOf(tp, TypeEnum.BASIC_POINTER) &&
+			 TypeManager.getPointerIndirectionCount(tp) == 1))
 		{
 			// MInteger.valueOf(0)
 			String literal = "0";
@@ -799,6 +801,40 @@ class ExpressionEvaluator
 			expr.type = ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION);
 			expr.operands = ctx.exprEvaluator.getArraySizeExpressions(tp);
 			return expr;
+		}
+		else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_POINTER))
+		{
+			// int ** a; becomes:
+			// IPtrObject<IInteger> a = PtrObject.valueOf(null);
+			// short *** b; becomes:
+			// IPtrObject<IPtrObject<IInteger>> b = PtrObject.valueOf(PtrObject.valueOf(null));
+			int cnt = TypeManager.getPointerIndirectionCount(tp) - 1;
+
+			MExpression wrap = ModelCreation.createLiteral("null");
+			
+			while (cnt-- > 0)
+			{
+				wrap = ModelCreation.createFuncCall("PtrObject.valueOf", wrap);
+			}
+
+			return wrap;
+		}
+		else if (TypeManager.isOneOf(tp, TypeEnum.OBJECT_POINTER))
+		{
+			// foo * a; becomes:
+			// IPtrObject<foo> a = PtrObject.valueOf(null);
+			// foo ** b; becomes:
+			// IPtrObject<IPtrObject<foo>> b = PtrObject.valueOf(PtrObject.valueOf(null));
+			int cnt = TypeManager.getPointerIndirectionCount(tp);
+
+			MExpression wrap = ModelCreation.createLiteral("null");
+			
+			while (cnt-- > 0)
+			{
+				wrap = ModelCreation.createFuncCall("PtrObject.valueOf", wrap);
+			}
+			
+			return wrap;
 		}
 		else
 		{

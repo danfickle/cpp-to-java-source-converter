@@ -23,12 +23,10 @@ class InitializationManager
 			if (TypeManager.isBasicType(typeRequired) &&
 				!ctx.bitfieldMngr.isBitfield(name))
 			{
-				// MInteger.valueOf(0);
 				return ctx.exprEvaluator.makeSimpleCreationExpression(typeRequired);
 			}
-			else if (TypeManager.isOneOf(typeRequired, TypeEnum.BASIC_ARRAY))
+			else if (TypeManager.isOneOf(typeRequired, TypeEnum.BASIC_ARRAY, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
 			{
-				// MIntegerMulti.create(4);
 				return ctx.exprEvaluator.makeSimpleCreationExpression(typeRequired);
 			}
 			else if (TypeManager.isOneOf(typeRequired, TypeEnum.OBJECT))
