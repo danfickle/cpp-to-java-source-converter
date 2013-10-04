@@ -156,6 +156,10 @@ class TypeManager
 			{
 				return cppToJavaType(baseType, tp);
 			}
+			else if (tp == TypeType.RAW)
+			{
+				return cppToJavaType(baseType, tp);
+			}
 			else
 			{
 				// One level of indirection becomes:
@@ -172,7 +176,7 @@ class TypeManager
 				{
 					if (tp == TypeType.INTERFACE)
 						wrap = "IPtrObject<" + wrap + ">";
-					else
+					else if (tp == TypeType.IMPLEMENTATION)
 						wrap = "PtrObject<" + wrap + ">";
 				}
 

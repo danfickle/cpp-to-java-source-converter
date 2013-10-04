@@ -109,6 +109,13 @@ class ExpressionModels
 		public String type;
 	}
 	
+	static class MValueOfExpressionPtr extends MExpression
+	{
+		public boolean isValueOfPtr = true;
+		public MExpression operand;
+		public String type;
+	}
+	
 	static class MInfixExpressionWithPtrOnLeft extends MInfixExpression
 	{
 		public boolean isInfixWithPtrOnLeft = true;

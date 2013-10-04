@@ -21,7 +21,7 @@ class InitializationManager
 		if (initializer == null)
 		{
 			if (TypeManager.isBasicType(typeRequired) &&
-				!ctx.bitfieldMngr.isBitfield(name))
+				(name == null ||	!ctx.bitfieldMngr.isBitfield(name)))
 			{
 				return ctx.exprEvaluator.makeSimpleCreationExpression(typeRequired);
 			}
@@ -94,7 +94,7 @@ class InitializationManager
 				IASTExpression expr = (IASTExpression) cls;
 				MExpression create;
 
-				if (ctx.bitfieldMngr.isBitfield(name))
+				if (name != null && ctx.bitfieldMngr.isBitfield(name))
 				{
 					create = ctx.exprEvaluator.eval1Expr(expr);
 				}

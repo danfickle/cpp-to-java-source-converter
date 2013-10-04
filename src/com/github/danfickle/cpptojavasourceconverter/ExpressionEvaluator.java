@@ -143,37 +143,28 @@ class ExpressionEvaluator
 			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.IMPLEMENTATION);
 			ret.add(ptr);
 		}
-		else if (!TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
+		else if (TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
-			MNewExpression ptr = new MNewExpression();
-			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.IMPLEMENTATION);
-			
-			if (expr.getNewInitializer() != null)
-				ptr.argument = eval1Expr(expr.getNewInitializer());
-			else
-			{
-				MLiteralExpression lit = new MLiteralExpression();
-				lit.literal = "0";
-				ptr.argument = lit;
-			}
-			ret.add(ptr);
-		}
-		else
-		{
+			// PtrObject.valueOf(new object())
 			MNewExpressionObject ptr = new MNewExpressionObject();
-			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.IMPLEMENTATION);
+			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.RAW);
+			// TODO: expr.getExpressionType is not good enough here.
+			// ptr.arguments.add(ctx.initMngr.eval1Init(expr.getInitializer(), expr.getExpressionType(), null));
 
-			if (expr.getNewInitializer() instanceof IASTExpressionList)
-			{
-				for (IASTExpression arg : ((IASTExpressionList) expr.getNewInitializer()).getExpressions())
-					ptr.arguments.addAll(evalExpr(arg));
-			}
-			else if (expr.getNewInitializer() instanceof IASTExpression)
-			{
-				ptr.arguments.addAll(evalExpr((IASTExpression) expr.getNewInitializer()));
-			}
-			
-			ret.add(ptr);
+			MValueOfExpressionPtr ptrExpr = new MValueOfExpressionPtr();
+			ptrExpr.type = "PtrObject";
+			ptrExpr.operand = ptr;
+			ret.add(ptrExpr);
+		}
+		else if (TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.BASIC_POINTER) &&
+				 TypeManager.getPointerIndirectionCount(expr.getExpressionType()) == 1)
+		{
+			// MInteger.valueOf(101)
+			ret.add(ctx.initMngr.eval1Init(expr.getInitializer(), TypeManager.getPointerBaseType(expr.getExpressionType()), null));
+		}
+		else if (TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.BASIC_POINTER))
+		{
+			// TODO: Multiple indirection to basic type.
 		}
 	}
 
@@ -741,13 +732,18 @@ class ExpressionEvaluator
 	{
 		if (TypeManager.isOneOf(tpRequired, TypeEnum.BASIC_REFERENCE))
 		{
+			// Prevents operand being copied
 			MRefWrapper wrap = new MRefWrapper();
 			wrap.operand = eval1Expr(cppExpr);
 			return wrap;
 		}
 		else if (TypeManager.isBasicType(tpRequired))
 		{
-			return makeSimpleCreationExpression(tpRequired, cppExpr);
+			// MInteger.valueOf(101)
+			MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
+			expr.type = ctx.typeMngr.cppToJavaType(tpRequired, TypeType.IMPLEMENTATION);
+			expr.operand = eval1Expr(cppExpr);
+			return expr;
 		}
 		else
 		{
@@ -755,24 +751,6 @@ class ExpressionEvaluator
 		}
 	}
 
-	MExpression makeSimpleCreationExpression(IType tp, IASTExpression expr2) throws DOMException
-	{
-		if (expr2 == null)
-			return makeSimpleCreationExpression(tp);
-
-		if (TypeManager.isBasicType(tp))
-		{
-			MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
-			expr.type = ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION);
-			expr.operand = eval1Expr(expr2);
-			return expr;
-		}
-		else
-		{
-			return null;
-		}
-	}
-	
 	/**
 	 * Given a type, creates a factory create expression.
 	 * eg. 'int' becomes 'MInteger.valueOf(0)'
@@ -786,6 +764,7 @@ class ExpressionEvaluator
 			// MInteger.valueOf(0)
 			String literal = "0";
 		
+			// MBoolean.valueOf(false)
 			if (TypeManager.isOneOf(tp, TypeEnum.BOOLEAN))
 				literal = "false";
 		
