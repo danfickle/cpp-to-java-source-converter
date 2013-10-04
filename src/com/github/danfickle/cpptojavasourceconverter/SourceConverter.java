@@ -167,9 +167,7 @@ public class SourceConverter
 					ICPPConstructor ctor = (ICPPConstructor) ((IASTFunctionDefinition)decl).getDeclarator().getName().resolveBinding(); 
 					ICPPParameter[] params  = ctor.getParameters();
 
-					if (params.length != 0 &&
-						TypeManager.isOneOf(params[0].getType(), TypeEnum.OBJECT_REFERENCE) &&
-						ctx.typeMngr.cppToJavaType(params[0].getType(), TypeType.IMPLEMENTATION).toString().equals(ctor.getName()))
+					if (params.length == 1 && TypeManager.isOneOf(params[0].getType(), TypeEnum.OBJECT_REFERENCE))
 					{
 						// TODO: We should check there are no params or others have default values...
 						info.hasCopy = true;
@@ -549,102 +547,6 @@ public class SourceConverter
 		return evaluateDeclarationReturnCppTypes(decl).get(0);
 	}
 
-	private String evaluateDeclSpecifierReturnType(IASTDeclSpecifier declSpecifier) throws DOMException
-	{
-//		evaluateStorageClass(declSpecifier.getStorageClass());
-//
-//		if (declSpecifier instanceof IASTCompositeTypeSpecifier)
-//		{
-//			IASTCompositeTypeSpecifier compositeTypeSpecifier = (IASTCompositeTypeSpecifier)declSpecifier;
-//			print("composite type specifier");
-//
-//			getSimpleName(compositeTypeSpecifier.getName());
-//
-//			for (IASTDeclaration decl : compositeTypeSpecifier.getMembers())
-//			{
-//				evaluate(decl);
-//			}
-//
-//			if (compositeTypeSpecifier instanceof ICPPASTCompositeTypeSpecifier)
-//			{
-//				ICPPASTCompositeTypeSpecifier cppCompositeTypeSpecifier = (ICPPASTCompositeTypeSpecifier)compositeTypeSpecifier;
-//
-//				for (ICPPASTBaseSpecifier base : cppCompositeTypeSpecifier.getBaseSpecifiers())
-//					getSimpleName(base.getName());
-//			}
-//		}
-//		else if (declSpecifier instanceof IASTElaboratedTypeSpecifier)
-//		{
-//			IASTElaboratedTypeSpecifier elaboratedTypeSpecifier = (IASTElaboratedTypeSpecifier)declSpecifier;
-//			print("elaborated type specifier" + elaboratedTypeSpecifier.getRawSignature());
-//
-//			evaluateElaborated(elaboratedTypeSpecifier.getKind());
-//			getSimpleName(elaboratedTypeSpecifier.getName());
-//
-//			if (declSpecifier instanceof ICPPASTElaboratedTypeSpecifier)
-//			{
-//				//				ICPPASTElaboratedTypeSpecifier elaborated = (ICPPASTElaboratedTypeSpecifier) declSpecifier;
-//				print("cpp elaborated");
-//			}
-//		}
-//		else if (declSpecifier instanceof IASTEnumerationSpecifier)
-//		{
-//			IASTEnumerationSpecifier enumerationSpecifier = (IASTEnumerationSpecifier)declSpecifier;
-//			IASTEnumerator[] enumerators = enumerationSpecifier.getEnumerators();
-//
-//			getSimpleName(enumerationSpecifier.getName());
-//			//db.insertEnum(enumerationSpecifier.getName().getRawSignature(), "", enumerationSpecifier.getContainingFilename());
-//
-//			for (IASTEnumerator enumerator : enumerators)
-//			{
-//				getSimpleName(enumerator.getName());
-//				evalExpr(enumerator.getValue());
-//			}
-//		}
-		if (declSpecifier instanceof IASTNamedTypeSpecifier)
-		{
-			IASTNamedTypeSpecifier namedTypeSpecifier = (IASTNamedTypeSpecifier)declSpecifier;
-			MyLogger.log("named type");
-
-			return TypeManager.getSimpleName(namedTypeSpecifier.getName());
-
-			//			if (declSpecifier instanceof ICPPASTNamedTypeSpecifier)
-			//			{
-			//				//				ICPPASTNamedTypeSpecifier named = (ICPPASTNamedTypeSpecifier) declSpecifier;
-			//				print("cpp named");
-			//			}
-		}
-//		else if (declSpecifier instanceof IGPPASTSimpleDeclSpecifier)
-//		{
-//			IGPPASTSimpleDeclSpecifier simpleTypeSpecifier = (IGPPASTSimpleDeclSpecifier)declSpecifier;
-//			print("gpp simple decl specifier");
-//			if (simpleTypeSpecifier.isLongLong())
-//				return ast.newPrimitiveType(PrimitiveType.LONG);
-//		}
-		else if (declSpecifier instanceof IASTSimpleDeclSpecifier)
-		{
-			//IASTSimpleDeclSpecifier simple = (IASTSimpleDeclSpecifier) declSpecifier;
-			MyLogger.log("simple decl specifier");
-//
-//			if (declSpecifier instanceof ICPPASTSimpleDeclSpecifier)
-//			{
-//				//				ICPPASTSimpleDeclSpecifier simple2 = (ICPPASTSimpleDeclSpecifier) declSpecifier;
-//				print("cpp simple");
-//			}
-
-			// TODO
-		}
-		else if (declSpecifier instanceof ICASTDeclSpecifier)
-		{
-			//			ICASTDeclSpecifier spec = (ICASTDeclSpecifier) declSpecifier;
-			MyLogger.log("C declaration specifier (unimplemented)");
-		}
-
-		return null;
-	}
-
-	
-	
 	/**
 	 * Attempts to evaluate the given declaration specifier
 	 */
@@ -878,9 +780,10 @@ public class SourceConverter
 	 */
 	String evalTypeId(IASTTypeId typeId) throws DOMException
 	{
+		//typeId.getAbstractDeclarator().getName().resolveBinding();
 		if (typeId != null)
 		{
-			return evaluateDeclSpecifierReturnType(typeId.getDeclSpecifier());
+			//return evaluateDeclSpecifierReturnType(typeId.getDeclSpecifier());
 		}
 		return null;
 	}
@@ -912,6 +815,7 @@ public class SourceConverter
 			infix.left = ModelCreation.createLiteral(varName);
 		}
 		// TODO pointers.
+		// TODO: Boolean in wrong place.
 		
 		infix.right = initExpr;
 		infix.operator = "=";
