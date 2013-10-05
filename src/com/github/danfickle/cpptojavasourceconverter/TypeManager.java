@@ -4,6 +4,7 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
 
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
 import com.github.danfickle.cpptojavasourceconverter.GlobalCtx.ITypeName;
 
 class TypeManager 
@@ -87,18 +88,52 @@ class TypeManager
 		RAW;
 	}
 	
+	CppDeclaration getDeclaration(IType type, IASTName name) throws DOMException
+	{
+		if (type != null)
+		{
+			for (ITypeName ent : ctx.global.types)
+			{
+				if (ent.tp.isSameType(type))
+					return ctx.global.declarations.get(ent.nm);
+			}
+		}
+		else if (name != null)
+		{
+			return ctx.global.declarations.get(TypeManager.getCompleteName(name));
+		}
+
+		return null;
+	}
+	
+	void registerDeclaration(IType type, IASTName name, CppDeclaration decl) throws DOMException
+	{
+		String simple = name.resolveBinding().getName();
+		String complete = getCompleteName(name);
+		
+		if (simple == null || simple.trim().isEmpty())
+		{
+			simple = "Anon" + ctx.global.anonCount++;
+			complete = complete + simple;
+		}
+		
+		decl.completeCppName = complete;
+		decl.simpleJavaName = TypeManager.cppNameToJavaName(simple, NameType.CAPITALIZED);
+		
+		ctx.global.declarations.put(complete, decl);
+		ctx.global.types.add(new ITypeName(type, complete));
+	}
+	
 	/**
 	 * Attempts to convert a CDT type to the approriate Java
 	 * type.
 	 */
 	String cppToJavaType(IType type, TypeType tp) throws DOMException
 	{
-		// Check that it is not in our type list.
-		for (ITypeName ent : ctx.global.types)
-		{
-			if (ent.tp.isSameType(type))
-				return ent.nm;
-		}
+		CppDeclaration myDecl = getDeclaration(type, null);
+		
+		if (myDecl != null)
+			return getSimpleType(myDecl.completeCppName);
 		
 		if (type instanceof IBasicType)
 		{
@@ -360,16 +395,10 @@ class TypeManager
 	 */
 	static String getSimpleType(String qualifiedType)
 	{
-		String ret;
-
 		if (qualifiedType.contains("::"))
-		{
-			ret = qualifiedType.substring(qualifiedType.lastIndexOf("::"));
-		}
+			return qualifiedType.substring(qualifiedType.lastIndexOf("::") + "::".length());
 		else
-			ret = qualifiedType;
-
-		return ret;
+			return qualifiedType;
 	}
 
 	/**
@@ -461,9 +490,10 @@ class TypeManager
 	static String getSimpleName(IASTName name) throws DOMException
 	{
 		String nm = name.resolveBinding().getName();
-		nm = normalizeName(nm);
+		nm = cppNameToJavaName(nm, NameType.CAMEL_CASE);
 
 		MyLogger.log("name: " + name.resolveBinding().getName() + ":" + nm);
+
 		return nm;
 	}
 	

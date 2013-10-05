@@ -113,7 +113,8 @@ class FunctionManager
 		IBinding funcBinding = func.getDeclarator().getName().resolveBinding();
 		
 		CppFunction method = new CppFunction();
-		method.name = TypeManager.getSimpleName(func.getDeclarator().getName());
+
+		method.simpleJavaName = TypeManager.getSimpleName(func.getDeclarator().getName());
 		method.isStatic = ((IFunction) funcBinding).isStatic();
 		method.retType = evalReturnType(funcBinding);
 
@@ -279,7 +280,8 @@ class FunctionManager
 			// Create the method declaration.
 			// This will handle void return types.
 			CppFunction methodDef = new CppFunction();
-			methodDef.name = TypeManager.getSimpleName(func.getName());
+	
+			methodDef.simpleJavaName = TypeManager.getSimpleName(func.getName());
 			methodDef.retType = evalReturnType(funcBinding);
 			
 			// This gets a parameter variable declaration for each param.

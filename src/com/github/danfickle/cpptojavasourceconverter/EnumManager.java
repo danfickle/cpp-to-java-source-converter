@@ -3,7 +3,6 @@ package com.github.danfickle.cpptojavasourceconverter;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 
-import com.github.danfickle.cpptojavasourceconverter.GlobalCtx.ITypeName;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
@@ -16,31 +15,11 @@ class EnumManager
 		ctx = con;
 	}
 	
-	String findEnumCompleteCppName(IType type)
-	{
-		// Iterate the types list to find the complete name
-		// we have given this enum.
-		for (ITypeName ent : ctx.global.types)
-		{
-			if (ent.tp.isSameType(type))
-			{
-				return ent.nm;
-			}
-		}
-
-		// Not found.
-		return null;
-	}
-	
 	boolean alreadyExists(IASTName enumeration) throws DOMException
 	{
 		IType type = ctx.converter.evalBindingReturnType(enumeration.resolveBinding());
-
-		// Try to find this enum in the types list.
-		String find = findEnumCompleteCppName(type);
-			
-		// We found it, so return.
-		return (find != null);
+		CppDeclaration decl = ctx.typeMngr.getDeclaration(type, enumeration);
+		return (decl != null);
 	}
 	
 	void evalDeclEnum(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
@@ -53,27 +32,12 @@ class EnumManager
 		if (alreadyExists(enumerationSpecifier.getName()))
 			return;
 		
-		// Not found, so create a name, if needed, and register it.
-		
-		String complete = TypeManager.getCompleteName(enumerationSpecifier.getName());
-		String simple = TypeManager.getSimpleType(complete);
-
 		IType type = ctx.converter.evalBindingReturnType(enumerationSpecifier.getName().resolveBinding());
 		
-		if (simple == null || simple.isEmpty())
-		{
-			simple = "AnonEnum" + ctx.global.anonEnumCount++;
-			complete = complete + simple;
-		}
-
 		CppEnum enumModel = new CppEnum();
 
-		enumModel.simpleName = TypeManager.cppNameToJavaName(simple, NameType.CAPITALIZED);
-		enumModel.completeCppName = complete;
-		
-		ctx.global.declarations.put(complete, enumModel);
-		ctx.global.types.add(new ITypeName(type, complete));
-		
+		ctx.typeMngr.registerDeclaration(type, enumerationSpecifier.getName(), enumModel);
+
 		int nextValue = 0;
 		int sinceLastValue = 1;
 		MExpression lastValue = null;
@@ -81,7 +45,7 @@ class EnumManager
 		for (IASTEnumerator e : enumerators)
 		{
 			CppEnumerator enumerator = new CppEnumerator();
-			enumerator.name = TypeManager.cppNameToJavaName(e.getName().toString(), NameType.ALL_CAPS);
+			enumerator.simpleJavaName = TypeManager.cppNameToJavaName(e.getName().toString(), NameType.ALL_CAPS);
 
 			if (e.getValue() != null)
 			{
@@ -108,9 +72,6 @@ class EnumManager
 	CppEnum getEnumerationDeclModel(IEnumerator enumerator) throws DOMException
 	{
 		IType parentType = (enumerator.getType());
-		// Lookup the name in the type to cpp name table.
-		String nm = findEnumCompleteCppName(parentType);
-		// Lookup the declaration model in the name to model table.
-		return (CppEnum) ctx.global.declarations.get(nm);
+		return (CppEnum) ctx.typeMngr.getDeclaration(parentType, null);
 	}
 }

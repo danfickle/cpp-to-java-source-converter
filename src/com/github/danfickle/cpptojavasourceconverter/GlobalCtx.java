@@ -2,8 +2,10 @@ package com.github.danfickle.cpptojavasourceconverter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.cdt.core.dom.ast.IType;
 
@@ -14,8 +16,10 @@ class GlobalCtx
 	// Items which need to be persisted accross translation
 	// units should go here.
 	
-	int anonClassCount = 0;
-	int anonEnumCount  = 0;
+	int anonCount = 0;
+	
+	// A set of qualified names containing the bitfields...
+	Set<String> bitfields = new HashSet<String>();
 	
 	// Maps the complete C++ name (which may have been partially generated)
 	// to a CppDeclaration model.

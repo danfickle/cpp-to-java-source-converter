@@ -12,6 +12,7 @@ class DeclarationModels
 	abstract static class CppDeclaration
 	{ 
 		public String completeCppName;
+		public String simpleJavaName;
 	}
 	
 	static class CppDtor extends CppDeclaration
@@ -37,12 +38,9 @@ class DeclarationModels
 		public boolean hasSuper;
 	}
 	
-	
 	static class CppFunction extends CppDeclaration
 	{
 		public boolean isFunctionDeclaration = true;
-		
-		public String name;
 		public String retType;
 		public List<MSimpleDecl> args = new ArrayList<MSimpleDecl>();
 		public MCompoundStmt body;
@@ -55,8 +53,6 @@ class DeclarationModels
 	static class CppClass extends CppDeclaration
 	{
 		public boolean isClassDeclaration = true;
-		
-		public String name;
 		public boolean isNested;
 		public boolean isUnion;
 		public String superclass;
@@ -64,24 +60,21 @@ class DeclarationModels
 		public List<CppDeclaration> declarations = new ArrayList<CppDeclaration>();
 	}
 	
-	static class CppEnumerator
+	static class CppEnumerator extends CppDeclaration
 	{
 		public boolean isEnumerator = true;
-		public String name;
 		public MExpression value;
 	}
 	
 	static class CppEnum extends CppDeclaration
 	{
 		public boolean isEnum = true;
-		public String simpleName;
 		public List<CppEnumerator> enumerators = new ArrayList<CppEnumerator>();
 	}
 	
 	static class CppBitfield extends CppDeclaration
 	{
 		public boolean isBitfield = true;
-		public String name;
 		public String qualified;
 		public String type;
 		public MExpression bits;

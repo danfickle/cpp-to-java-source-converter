@@ -20,7 +20,6 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 
-import com.github.danfickle.cpptojavasourceconverter.GlobalCtx.ITypeName;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
@@ -531,32 +530,19 @@ public class SourceConverter
 
 			IType myType = evalBindingReturnType(compositeTypeSpecifier.getName().resolveBinding());
 			
-			for (ITypeName ent : ctx.global.types)
-			{
-				// Check that this decl specifier has not
-				// already been registered.
-				if (ent.tp.isSameType(myType))
-					return;
-			}
+			// Check that this decl specifier has not
+			// already been registered.
+			CppDeclaration myDecl = ctx.typeMngr.getDeclaration(myType, compositeTypeSpecifier.getName());
+			if (myDecl != null)
+				return;
 
-			String complete = TypeManager.getCompleteName(compositeTypeSpecifier.getName());
-			String simple = TypeManager.getSimpleType(complete);
+			CppClass tyd = new CppClass();
 			
-			if (simple == null || simple.isEmpty())
-			{
-				// Must be anonymous, so create a new name.
-				simple = "AnonClass" + ctx.global.anonClassCount++;
-				complete = complete + simple;
-			}
-
-			CppClass tyd = new CppClass();			
-
-			ctx.global.declarations.put(complete, tyd);
+			ctx.typeMngr.registerDeclaration(myType, compositeTypeSpecifier.getName(), tyd);
+			
 			CompositeInfo info = new CompositeInfo(tyd);
 			currentInfoStack.addFirst(info);
 
-			tyd.name = TypeManager.cppNameToJavaName(simple, NameType.CAPITALIZED);
-			
 			if (compositeTypeSpecifier.getKey() == IASTCompositeTypeSpecifier.k_union)
 				tyd.isUnion = true;
 			
@@ -573,7 +559,7 @@ public class SourceConverter
 				if (cppCompositeTypeSpecifier.getBaseSpecifiers() != null && cppCompositeTypeSpecifier.getBaseSpecifiers().length != 0)
 				{
 					info.hasSuper = true;
-					info.superClass = tyd.superclass = TypeManager.getSimpleName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName());
+					info.superClass = tyd.superclass = TypeManager.cppNameToJavaName(cppCompositeTypeSpecifier.getBaseSpecifiers()[0].getName().resolveBinding().getName(), NameType.CAPITALIZED);
 				}
 				
 				for (int i = 0; i < cppCompositeTypeSpecifier.getBaseSpecifiers().length; i++)
@@ -589,7 +575,7 @@ public class SourceConverter
 			{
 				// Generate a constructor.
 				CppCtor ctor = new CppCtor();
-				ctor.type = tyd.name;
+				ctor.type = tyd.simpleJavaName;
 				
 				MCompoundStmt blk = new MCompoundStmt();
 				ctor.body = blk;
@@ -633,12 +619,12 @@ public class SourceConverter
 			
 			// Add a copy method that calls the copy constructor.
 			CppFunction meth = new CppFunction();
-			meth.retType = tyd.name;
-			meth.name = "copy";
+			meth.retType = tyd.simpleJavaName;
+			meth.simpleJavaName = "copy";
 			meth.isOverride = true;
 
 			MClassInstanceCreation create = new MClassInstanceCreation();
-			create.name = ModelCreation.createLiteral(tyd.name);
+			create.name = ModelCreation.createLiteral(tyd.simpleJavaName);
 			create.args.add(ModelCreation.createLiteral("this"));
 			
 			MReturnStmt stmt = new MReturnStmt();

@@ -1,18 +1,13 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.eclipse.cdt.core.dom.ast.*;
 
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppBitfield;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 
 public class BitfieldManager
 {
-	// A set of qualified names containing the bitfields...
-	private Set<String> bitfields = new HashSet<String>();
-
 	private TranslationUnitContext ctx;
 	
 	BitfieldManager(TranslationUnitContext con) {
@@ -22,21 +17,13 @@ public class BitfieldManager
 	boolean isBitfield(IASTName name) throws DOMException
 	{
 		String complete = TypeManager.getCompleteName(name);
-		return bitfields.contains(complete);
-	}
-	
-	static String getBitfieldSimpleName(IASTExpression expr) throws DOMException
-	{
-		if (expr instanceof IASTIdExpression)
-			return TypeManager.getSimpleName(((IASTIdExpression) expr).getName());
-		else
-			return TypeManager.getSimpleName(((IASTFieldReference) expr).getFieldName());
+		return ctx.global.bitfields.contains(complete);
 	}
 	
 	void addBitfield(IASTName name) throws DOMException
 	{
 		String complete = TypeManager.getCompleteName(name);
-		bitfields.add(complete);
+		ctx.global.bitfields.add(complete);
 	}
 	
 	boolean isBitfield(IASTExpression expr) throws DOMException
@@ -58,7 +45,7 @@ public class BitfieldManager
 	{
 		CppBitfield bitfield = new CppBitfield();
 		addBitfield(declarator.getName());
-		bitfield.name = field.getName();
+		bitfield.simpleJavaName = TypeManager.cppNameToJavaName(field.getName(), NameType.CAMEL_CASE);
 		bitfield.bits = ctx.exprEvaluator.eval1Expr(((IASTFieldDeclarator) declarator).getBitFieldSize());
 		bitfield.type = ctx.typeMngr.cppToJavaType(field.getType(), TypeType.RAW);
 		ctx.converter.currentInfoStack.peekFirst().tyd.declarations.add(bitfield);
@@ -66,6 +53,6 @@ public class BitfieldManager
 
 	void addBitfield(String nm)
 	{
-		bitfields.add(nm);
+		ctx.global.bitfields.add(nm);
 	}
 }
