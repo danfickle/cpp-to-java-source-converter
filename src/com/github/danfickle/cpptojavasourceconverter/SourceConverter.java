@@ -127,7 +127,7 @@ public class SourceConverter
 		IVariable ifield = (IVariable) binding;
 
 		MSimpleDecl frag = new MSimpleDecl();
-		frag.name = ifield.getName();
+		frag.name = TypeManager.cppNameToJavaName(ifield.getName(), NameType.CAMEL_CASE);
 		frag.initExpr = init;
 		frag.isStatic = true;
 		
@@ -135,6 +135,7 @@ public class SourceConverter
 		frag.isPublic = true;
 		
 		// TODO: Add somewhere.
+		// TODO: Global variables can be seen multiple times.
 	}
 	
 	/**
@@ -153,12 +154,13 @@ public class SourceConverter
 		{
 			if (decl instanceof IASTFunctionDefinition)
 			{
+				// We've found a function definition (ie. includes a body).
 				if (((IASTFunctionDefinition)decl).getDeclarator().getName().resolveBinding() instanceof ICPPConstructor)
 				{
 					info.hasCtor = true;
 
 					ICPPConstructor ctor = (ICPPConstructor) ((IASTFunctionDefinition)decl).getDeclarator().getName().resolveBinding(); 
-					ICPPParameter[] params  = ctor.getParameters();
+					ICPPParameter[] params = ctor.getParameters();
 
 					if (params.length == 1 && TypeManager.isOneOf(params[0].getType(), TypeEnum.OBJECT_REFERENCE))
 					{
@@ -180,12 +182,32 @@ public class SourceConverter
 			{
 				IASTSimpleDeclaration simple = (IASTSimpleDeclaration) decl;
 				
-				if (simple.getDeclarators().length != 0 && simple.getDeclarators()[0].getName().resolveBinding() instanceof ICPPConstructor)
+				// We've found a declarator, which maybe a function declarator.
+				if (simple.getDeclarators().length != 0)
 				{
-					info.hasCtor = true;
+					if (simple.getDeclarators()[0].getName().resolveBinding() instanceof ICPPConstructor)
+					{
+						info.hasCtor = true;
+						
+						ICPPConstructor ctor = (ICPPConstructor) simple.getDeclarators()[0].getName().resolveBinding();
+						ICPPParameter[] params = ctor.getParameters();
+
+						if (params.length == 1 && TypeManager.isOneOf(params[0].getType(), TypeEnum.OBJECT_REFERENCE))
+						{
+							// TODO: We should check there are no params or others have default values...
+							info.hasCopy = true;
+						}
+					}
+					else if (simple.getDeclarators()[0].getName().resolveBinding() instanceof ICPPMethod)
+					{
+						ICPPMethod meth = (ICPPMethod) simple.getDeclarators()[0].getName().resolveBinding();
+						
+						if (meth.isDestructor())
+							info.hasDtor = true;
+						else if (meth.getName().equals("operator ="))
+							info.hasAssign = true;
+					}
 				}
-				
-				// TODO: Rest of function declaration checks.
 			}
 		}
 	}
