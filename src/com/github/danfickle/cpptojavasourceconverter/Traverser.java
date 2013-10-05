@@ -1,7 +1,6 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
-import org.eclipse.cdt.core.dom.ast.IASTPreprocessorIncludeStatement;
 import org.eclipse.cdt.core.dom.ast.IASTProblem;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.stringtemplate.v4.ST;
@@ -57,11 +56,14 @@ class Traverser
 		StringBuilder output = new StringBuilder();
 		STGroup group = new STGroupDir("/home/daniel/workspace/cpp-to-java-source-converter/templates");
 		
-		for (CppDeclaration decl : con.global.declarations.values())
+		for (CppDeclaration decl : con.global.decls)
 		{
-			ST test3 = group.getInstanceOf("declaration_tp");
-			test3.add("decl", decl);
-			output.append(test3.render());
+			if (decl.parent == null)
+			{
+				ST test3 = group.getInstanceOf("declaration_tp");
+				test3.add("decl", decl);
+				output.append(test3.render());
+			}
 		}
 		
 		for (CppDeclaration decl : con.global.fileClasses.values())
@@ -72,7 +74,7 @@ class Traverser
 		}
 		
 		// TODO: Match up declarations with files.
-		con.global.declarations.clear();
+		con.global.decls.clear();
 		con.global.fileClasses.clear();
 		
 		// Replace 2 or more (greedy) newlines with 2 newlines.

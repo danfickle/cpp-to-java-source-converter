@@ -525,6 +525,8 @@ class ExpressionEvaluator
 	
 	private void evalExprFuncCall(IASTFunctionCallExpression expr, List<MExpression> ret) throws DOMException
 	{
+		// TODO: Redirect function call to correct location.
+		
 		if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
 			((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
 		{

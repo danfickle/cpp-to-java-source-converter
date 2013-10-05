@@ -12,6 +12,7 @@ import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
+import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
 
@@ -112,21 +113,33 @@ class FunctionManager
 		IASTFunctionDefinition func = (IASTFunctionDefinition) declaration;
 		IBinding funcBinding = func.getDeclarator().getName().resolveBinding();
 		
-		CppFunction method = new CppFunction();
+		CppFunction method = (CppFunction) ctx.typeMngr.getDeclFromType(ctx.converter.evalBindingReturnType(funcBinding)); 
+				
+		if (method == null)
+		{
+			method = new CppFunction();
+			
+			ctx.typeMngr.registerDecl(method, ctx.converter.evalBindingReturnType(funcBinding),
+					func.getDeclarator().getName(), NameType.CAMEL_CASE,
+					func.getDeclarator().getContainingFilename(), 
+					func.getDeclarator().getFileLocation().getStartingLineNumber());
+		}
 
-		method.name = TypeManager.getSimpleName(func.getDeclarator().getName());
 		method.isStatic = ((IFunction) funcBinding).isStatic();
 		method.retType = evalReturnType(funcBinding);
 
 		if (funcBinding instanceof ICPPConstructor)
 		{
-			if (!((ICPPConstructor) funcBinding).isDestructor())
-				method.isCtor = true;
+			method.isCtor = true;
+			method.retType = null;
 		}
 		else if (funcBinding instanceof ICPPMethod)
 		{
 			if (((ICPPMethod) funcBinding).isDestructor())
+			{
 				method.isDtor = true;
+				method.retType = null;
+			}
 		}
 		
 		method.args.addAll(evalParameters(funcBinding));
@@ -245,18 +258,6 @@ class FunctionManager
 				// This will destruct all fields that need destructing.
 				ctx.specialGenerator.generateDtorStatements(fields, method.body, info.hasSuper);
 			}
-
-			
-		}
-
-		if (info != null)
-		{
-			info.tyd.declarations.add(method);
-		}
-		else
-		{
-			CppClass cls = ctx.typeMngr.getClassToHouseGlobalDecls(func.getContainingFilename());
-			cls.declarations.add(method);
 		}
 			
 		// Generates functions for default arguments.

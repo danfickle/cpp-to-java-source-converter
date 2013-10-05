@@ -15,13 +15,6 @@ class EnumManager
 		ctx = con;
 	}
 	
-	boolean alreadyExists(IASTName enumeration) throws DOMException
-	{
-		IType type = ctx.converter.evalBindingReturnType(enumeration.resolveBinding());
-		CppDeclaration decl = ctx.typeMngr.getDeclaration(type, enumeration);
-		return (decl != null);
-	}
-	
 	void evalDeclEnum(IASTEnumerationSpecifier enumerationSpecifier) throws DOMException
 	{
 		IASTEnumerator[] enumerators = enumerationSpecifier.getEnumerators();
@@ -29,15 +22,19 @@ class EnumManager
 		if (enumerators == null || enumerators.length == 0)
 			return;
 
-		if (alreadyExists(enumerationSpecifier.getName()))
+		IType type = ctx.converter.evalBindingReturnType(enumerationSpecifier.getName().resolveBinding());
+
+		CppEnum enumModel = (CppEnum) ctx.typeMngr.getDeclFromType(type);
+		
+		if (enumModel != null)
 			return;
 		
-		IType type = ctx.converter.evalBindingReturnType(enumerationSpecifier.getName().resolveBinding());
-		
-		CppEnum enumModel = new CppEnum();
+		enumModel = new CppEnum();
 
-		ctx.typeMngr.registerDeclaration(type, enumerationSpecifier.getName(), enumModel);
-
+		ctx.typeMngr.registerDecl(enumModel, type, enumerationSpecifier.getName(),
+				NameType.CAPITALIZED, enumerationSpecifier.getContainingFilename(),
+				enumerationSpecifier.getFileLocation().getStartingLineNumber());
+	
 		int nextValue = 0;
 		int sinceLastValue = 1;
 		MExpression lastValue = null;
@@ -72,6 +69,6 @@ class EnumManager
 	CppEnum getEnumerationDeclModel(IEnumerator enumerator) throws DOMException
 	{
 		IType parentType = (enumerator.getType());
-		return (CppEnum) ctx.typeMngr.getDeclaration(parentType, null);
+		return (CppEnum) ctx.typeMngr.getDeclFromType(parentType);
 	}
 }

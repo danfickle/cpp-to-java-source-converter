@@ -3,6 +3,8 @@ package com.github.danfickle.cpptojavasourceconverter;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.cdt.core.dom.ast.IType;
+
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MCompoundStmt;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
@@ -11,8 +13,16 @@ class DeclarationModels
 {
 	abstract static class CppDeclaration
 	{ 
+		// The raw qualified (if needed) C++ name.
 		public String completeCppName;
+
+		// The simple Java name.
 		public String name;
+		
+		public CppDeclaration parent;
+		public IType cppType;
+		public String file;
+		public int line;
 	}
 	
 	static class CppDtor extends CppDeclaration
@@ -69,6 +79,7 @@ class DeclarationModels
 	static class CppEnum extends CppDeclaration
 	{
 		public boolean isEnum = true;
+		public boolean isNested;
 		public List<CppEnumerator> enumerators = new ArrayList<CppEnumerator>();
 	}
 	

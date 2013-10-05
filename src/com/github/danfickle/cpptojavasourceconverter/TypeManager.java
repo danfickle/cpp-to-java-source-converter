@@ -4,9 +4,7 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
 
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppClass;
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
-import com.github.danfickle.cpptojavasourceconverter.GlobalCtx.ITypeName;
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 
 class TypeManager 
 {
@@ -90,49 +88,88 @@ class TypeManager
 	}
 	
 	/**
-	 * Look up a registered struct, class, union or enum.
+	 * Look up a registered struct, class, union, method, etc.
 	 */
-	CppDeclaration getDeclaration(IType type, IASTName name) throws DOMException
+	CppDeclaration getDeclFromType(IType type) throws DOMException
 	{
 		if (type != null)
 		{
-			for (ITypeName ent : ctx.global.types)
+			for (CppDeclaration ent : ctx.global.decls)
 			{
-				if (ent.tp.isSameType(type))
-					return ctx.global.declarations.get(ent.nm);
+				if (ent.cppType.isSameType(type))
+					return ent;
 			}
 		}
-		else if (name != null)
-		{
-			return ctx.global.declarations.get(TypeManager.getCompleteName(name));
-		}
-
 		return null;
 	}
-	
-	/**
-	 * Register a class, struct, union or enum. All of which can be
-	 * anonymous.
-	 */
-	void registerDeclaration(IType type, IASTName name, CppDeclaration decl) throws DOMException
+
+	private void makeName(IASTName nm, CppDeclaration decl, NameType nt) throws DOMException
 	{
-		String simple = name.resolveBinding().getName();
-		String complete = getCompleteName(name);
+		String complete = getCompleteName(nm);
+		String simple = getSimpleType(complete);
 		
 		if (simple == null || simple.trim().isEmpty())
 		{
-			simple = "Anon" + ctx.global.anonCount++;
-			complete = complete + simple;
+			simple = "Anon" + (decl instanceof CppClass ? "Class" : "Enum") + ctx.global.anonCount++;
+			complete += simple;
 		}
 		
 		decl.completeCppName = complete;
-		decl.name = TypeManager.cppNameToJavaName(simple, NameType.CAPITALIZED);
-		
-		ctx.global.declarations.put(complete, decl);
-		ctx.global.types.add(new ITypeName(type, complete));
+		decl.name = cppNameToJavaName(simple, nt);
 	}
 	
-	CppClass getClassToHouseGlobalDecls(String filename)
+	/**
+	 * Register a class, struct, union (which all end up
+	 * as Java classes). Also, all can be anonymous.
+	 */
+	void registerDecl(CppDeclaration decl, IType type,
+			IASTName nm, NameType nt, String filename, int lineno) throws DOMException
+	{
+		decl.cppType = type;
+
+		// First we check if we are actually in a class declaration.
+		if (ctx.converter.currentInfoStack.peekFirst() != null)
+			decl.parent = ctx.converter.currentInfoStack.peekFirst().tyd;
+		// Second we test if we can get an owner type.
+		else if (nm.resolveBinding().getOwner() != null)
+			decl.parent = getDeclFromType(ctx.converter.evalBindingReturnType(nm.resolveBinding().getOwner()));
+		
+		// Third, we check the filename has no associated class.
+		if (decl.parent == null)
+			decl.parent = ctx.global.fileClasses.get(filename);
+		
+		if (decl.parent == null &&
+			!(decl instanceof CppEnum) && 
+			!(decl instanceof CppClass))
+		{
+			// If we must create a class to house declarations we do it here.
+			decl.parent = getClassToHouseGlobalDecls(filename);
+		}
+		
+		if (decl.parent != null)
+		{
+			((CppClass) decl.parent).declarations.add(decl);
+		}
+
+		decl.file = filename;
+		decl.line = lineno;
+
+		if (nm != null)
+			makeName(nm, decl, nt);
+		
+		if (decl instanceof CppClass && decl.parent != null)
+		{
+			((CppClass) decl).isNested = true;
+		}
+		else if (decl instanceof CppEnum && decl.parent != null)
+		{
+			((CppEnum) decl).isNested = true;
+		}
+		
+		ctx.global.decls.add(decl);
+	}
+	
+	private CppClass getClassToHouseGlobalDecls(String filename)
 	{
 		CppClass cls = ctx.global.fileClasses.get(filename);
 		
@@ -152,11 +189,6 @@ class TypeManager
 	 */
 	String cppToJavaType(IType type, TypeType tp) throws DOMException
 	{
-		CppDeclaration myDecl = getDeclaration(type, null);
-		
-		if (myDecl != null)
-			return myDecl.name;
-		
 		if (type instanceof IBasicType)
 		{
 			// Primitive type - int, bool, char, etc...

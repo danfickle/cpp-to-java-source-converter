@@ -150,6 +150,17 @@ public class SourceConverter
 						info.hasAssign = true;
 				}
 			}
+			else if (decl instanceof IASTSimpleDeclaration)
+			{
+				IASTSimpleDeclaration simple = (IASTSimpleDeclaration) decl;
+				
+				if (simple.getDeclarators().length != 0 && simple.getDeclarators()[0].getName().resolveBinding() instanceof ICPPConstructor)
+				{
+					info.hasCtor = true;
+				}
+				
+				// TODO: Rest of function declaration checks.
+			}
 		}
 	}
 	
@@ -264,6 +275,16 @@ public class SourceConverter
 				else if (binding instanceof IFunction &&
 						declarator instanceof IASTFunctionDeclarator)
 				{
+					CppFunction func = (CppFunction) ctx.typeMngr.getDeclFromType(evalBindingReturnType(binding)); 
+							
+					if (func == null)
+					{
+						func = new CppFunction();
+						ctx.typeMngr.registerDecl(func, evalBindingReturnType(binding), 
+								declarator.getName(), NameType.CAMEL_CASE, declarator.getContainingFilename(),
+								declarator.getFileLocation().getStartingLineNumber());
+					}
+					
 					ctx.funcMngr.makeDefaultCalls((IASTFunctionDeclarator) declarator, binding);
 				}
 				else if (binding instanceof IVariable)
@@ -476,6 +497,10 @@ public class SourceConverter
 		{
 			return (((IEnumeration) binding));
 		}
+		else if (binding == null)
+		{
+			return null;
+		}
 		else
 		{
 			MyLogger.logImportant("binding not a variable, field or function:" + binding.getName());
@@ -532,13 +557,13 @@ public class SourceConverter
 			
 			// Check that this decl specifier has not
 			// already been registered.
-			CppDeclaration myDecl = ctx.typeMngr.getDeclaration(myType, compositeTypeSpecifier.getName());
+			CppDeclaration myDecl = ctx.typeMngr.getDeclFromType(myType);
 			if (myDecl != null)
 				return;
 
 			CppClass tyd = new CppClass();
 			
-			ctx.typeMngr.registerDeclaration(myType, compositeTypeSpecifier.getName(), tyd);
+			ctx.typeMngr.registerDecl(tyd, myType, compositeTypeSpecifier.getName(), NameType.CAPITALIZED, compositeTypeSpecifier.getContainingFilename(), compositeTypeSpecifier.getFileLocation().getStartingLineNumber());
 			
 			CompositeInfo info = new CompositeInfo(tyd);
 			currentInfoStack.addFirst(info);
