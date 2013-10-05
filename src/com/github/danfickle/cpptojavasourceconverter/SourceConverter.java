@@ -29,7 +29,6 @@ import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
 
 /**
- * Second stage of the C++ to Java source converter.
  * @author DanFickle
  * http://github.com/danfickle/cpp-to-java-source-converter/
  */
@@ -42,8 +41,8 @@ public class SourceConverter
 	}
 	
 	/**
-	 * This class keeps track of all the info on a C++ class
-	 * or struct.
+	 * This class keeps track of all the info on a C++ class,
+	 * struct or union.
 	 */
 	static class CompositeInfo
 	{
@@ -75,22 +74,49 @@ public class SourceConverter
 		IField ifield = (IField) binding;
 
 		MSimpleDecl frag = new MSimpleDecl();
-		frag.name = ifield.getName();
+		frag.name = TypeManager.cppNameToJavaName(ifield.getName(), NameType.CAMEL_CASE);
 
 		if (ifield.isStatic())
 		{
 			frag.isStatic = true;
-			
-			if (TypeManager.isOneOf(ifield.getType(), TypeEnum.OBJECT, TypeEnum.OBJECT_ARRAY))
-			{
-				frag.initExpr = init;
-			}
+			frag.initExpr = init;
 		}
 
 		frag.type = ctx.typeMngr.cppToJavaType(ifield.getType(), TypeType.INTERFACE);
 		frag.isPublic = true;
 		
-		currentInfoStack.peekFirst().tyd.declarations.add(frag);
+		if (currentInfoStack.peekFirst() != null)
+		{
+			// We are inside a class decl so add it directly.
+			currentInfoStack.peekFirst().tyd.declarations.add(frag);
+		}
+		else
+		{
+			// We are outside the class decl, so we need to find the previous
+			// declaration of this field and update it.
+			// This can only happen for static fields being
+			// initialized outside the class decl.
+			CppClass cls = (CppClass) ctx.typeMngr.getDeclFromType(evalBindingReturnType(ifield.getOwner()));
+
+			boolean found = false;
+			
+			for (CppDeclaration decl : cls.declarations)
+			{
+				MyLogger.logImportant("###" + decl.name);
+				if (decl instanceof MSimpleDecl &&
+					frag.name.equals(decl.name))
+				{
+					((MSimpleDecl) decl).initExpr = init;
+					found = true;
+					break;
+				}
+			}
+			
+			if (!found)
+			{
+				MyLogger.logImportant("Field not found: " + ifield.getName());
+			}
+		}
 	}
 	
 	/**

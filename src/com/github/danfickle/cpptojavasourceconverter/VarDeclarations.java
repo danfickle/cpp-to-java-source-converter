@@ -11,7 +11,6 @@ public class VarDeclarations
 
 		public boolean isStatic;
 		public String type;
-		public String name;
 		public MExpression initExpr;
 		public boolean isPublic;
 	}

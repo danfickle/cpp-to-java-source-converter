@@ -15,3 +15,4 @@ int global_cls::meth(int i) {
   return 54;
 }
 
+int global_cls::static_var = 5;
