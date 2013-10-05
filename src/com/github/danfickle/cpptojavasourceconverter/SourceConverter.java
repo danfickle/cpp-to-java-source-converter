@@ -19,6 +19,7 @@ import java.util.List;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
+import org.eclipse.cdt.core.model.INamespace;
 
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
@@ -102,7 +103,6 @@ public class SourceConverter
 			
 			for (CppDeclaration decl : cls.declarations)
 			{
-				MyLogger.logImportant("###" + decl.name);
 				if (decl instanceof MSimpleDecl &&
 					frag.name.equals(decl.name))
 				{
@@ -214,6 +214,8 @@ public class SourceConverter
 	
 	/**
 	 * This method creates a list of fields present in the class.
+	 * This is used to generate ctor, dtor, assign and copy statements.
+	 * Note: Includes static fields.
 	 */
 	List<FieldInfo> collectFieldsForClass(IASTDeclSpecifier declSpec) throws DOMException
 	{
@@ -260,6 +262,16 @@ public class SourceConverter
 		return fields;
 	}
 	
+	/**
+	 * Returns one initializer for each declarator.
+	 * This can be the provided C++ initializer or it can be a generated
+	 * initializer for objects.
+	 * 
+	 * Example:
+	 *   int i, j = 5, * p;
+	 * returns:
+	 *   [MInteger.valueOf(0), MInteger.valueOf(5), MInteger.valueOf(0)]
+	 */
 	List<MExpression> evaluateDeclarationReturnInitializers(IASTSimpleDeclaration simple) throws DOMException 
 	{
 		List<MExpression> exprs = new ArrayList<MExpression>();
@@ -498,11 +510,7 @@ public class SourceConverter
 			for (IASTDeclarator decl : simpleDeclaration.getDeclarators())
 			{
 				IBinding binding = decl.getName().resolveBinding();
-
-				if (binding instanceof IVariable)
-				{
-					ret.add(ctx.typeMngr.cppToJavaType(((IVariable) binding).getType(), TypeType.INTERFACE));
-				}
+				ret.add(ctx.typeMngr.cppToJavaType(evalBindingReturnType(binding), TypeType.INTERFACE));
 			}
 		}
 		else if (declaration instanceof IASTProblemDeclaration)
@@ -519,6 +527,10 @@ public class SourceConverter
 		return ret;
 	}
 
+	/**
+	 * Given a semantic binding returns the C++ IType.
+	 * Note: Not all cases are handled, so add as needed.
+	 */
 	IType evalBindingReturnType(IBinding binding)
 	{
 		if (binding instanceof IVariable)
@@ -545,6 +557,10 @@ public class SourceConverter
 		{
 			return (((IEnumeration) binding));
 		}
+		else if (binding instanceof ICPPNamespace)
+		{
+			return null;
+		}
 		else if (binding == null)
 		{
 			return null;
@@ -556,6 +572,10 @@ public class SourceConverter
 		}
 	}
 	
+	/**
+	 * Given a declaration, returns a IType for each declarator.
+	 * For example int * i, j; would return [int *, int].
+	 */
 	private List<IType> evaluateDeclarationReturnCppTypes(IASTDeclaration declaration) throws DOMException
 	{
 		List<IType> ret = new ArrayList<IType>();
@@ -586,8 +606,13 @@ public class SourceConverter
 		return ret;
 	}
 
+	/**
+	 * Convenience method for when only one declarator is supported
+	 * such as inside while, if, for and switch.
+	 */
 	IType eval1DeclReturnCppType(IASTDeclaration decl) throws DOMException
 	{
+		assert(evaluateDeclarationReturnCppTypes(decl).size() == 1);
 		return evaluateDeclarationReturnCppTypes(decl).get(0);
 	}
 
@@ -792,12 +817,9 @@ public class SourceConverter
 		}
 		return ret;
 	}
-	
 
 	/**
-	 * Given a C++ initializer, returns a list of Java expressions.
-	 * 
-	 * @param iastDeclaration Initializer
+	 * Given a declaration creates one Java declaration.
 	 */
 	MSimpleDecl eval1Decl(IASTDeclaration decla) throws DOMException
 	{
@@ -858,12 +880,17 @@ public class SourceConverter
 			infix.left = ModelCreation.createLiteral(varName);
 		}
 		// TODO pointers.
-		// TODO: Boolean in wrong place.
 		
 		infix.right = initExpr;
+
+		if (makeBoolean)
+			infix.right = ExpressionHelpers.makeExpressionBoolean(infix.right, tp);
+		else
+			infix.right = ExpressionHelpers.bracket(infix.right);
+
 		infix.operator = "=";
 
-		return makeBoolean ? ExpressionHelpers.makeExpressionBoolean(infix, tp) : ExpressionHelpers.bracket(infix);
+		return infix; 
 	}
 
 
