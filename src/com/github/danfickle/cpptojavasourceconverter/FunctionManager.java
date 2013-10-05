@@ -114,7 +114,7 @@ class FunctionManager
 		
 		CppFunction method = new CppFunction();
 
-		method.simpleJavaName = TypeManager.getSimpleName(func.getDeclarator().getName());
+		method.name = TypeManager.getSimpleName(func.getDeclarator().getName());
 		method.isStatic = ((IFunction) funcBinding).isStatic();
 		method.retType = evalReturnType(funcBinding);
 
@@ -246,11 +246,19 @@ class FunctionManager
 				ctx.specialGenerator.generateDtorStatements(fields, method.body, info.hasSuper);
 			}
 
+			
+		}
+
+		if (info != null)
+		{
 			info.tyd.declarations.add(method);
 		}
 		else
-			; // TODO: Add method somewhere.
-		
+		{
+			CppClass cls = ctx.typeMngr.getClassToHouseGlobalDecls(func.getContainingFilename());
+			cls.declarations.add(method);
+		}
+			
 		// Generates functions for default arguments.
 		makeDefaultCalls(func.getDeclarator(), funcBinding);
 	}
@@ -281,7 +289,7 @@ class FunctionManager
 			// This will handle void return types.
 			CppFunction methodDef = new CppFunction();
 	
-			methodDef.simpleJavaName = TypeManager.getSimpleName(func.getName());
+			methodDef.name = TypeManager.getSimpleName(func.getName());
 			methodDef.retType = evalReturnType(funcBinding);
 			
 			// This gets a parameter variable declaration for each param.

@@ -12,7 +12,7 @@ class DeclarationModels
 	abstract static class CppDeclaration
 	{ 
 		public String completeCppName;
-		public String simpleJavaName;
+		public String name;
 	}
 	
 	static class CppDtor extends CppDeclaration

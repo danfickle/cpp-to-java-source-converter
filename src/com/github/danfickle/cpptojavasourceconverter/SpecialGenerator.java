@@ -110,11 +110,11 @@ class SpecialGenerator
 	{
 		CppFunction meth = new CppFunction();
 		meth.retType = "";
-		meth.simpleJavaName = tyd.simpleJavaName;
+		meth.name = tyd.name;
 		meth.isCtor = true;
 		
 		MSimpleDecl var = new MSimpleDecl();
-		var.type = tyd.simpleJavaName;
+		var.type = tyd.name;
 		var.name = "right";
 
 		meth.args.add(var);
@@ -222,7 +222,7 @@ class SpecialGenerator
 	{
 		CppAssign ass = new CppAssign();
 		
-		ass.type = tyd.simpleJavaName;
+		ass.type = tyd.name;
 		ass.body = new MCompoundStmt();
 		
 		List<FieldInfo> fields = ctx.converter.collectFieldsForClass(declSpecifier);

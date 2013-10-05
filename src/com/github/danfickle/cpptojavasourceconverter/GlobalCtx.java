@@ -9,7 +9,7 @@ import java.util.Set;
 
 import org.eclipse.cdt.core.dom.ast.IType;
 
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 
 class GlobalCtx
 {
@@ -42,4 +42,9 @@ class GlobalCtx
 	// not implement hash method. Therefore it must
 	// be iterated and checked with IType::isSameType method.
 	List<ITypeName> types = new ArrayList<ITypeName>();
+
+	// This contains a mapping from filenames to a generated global
+	// declaration for that file which will house global items such
+	// as variables and functions.
+	Map<String, CppClass> fileClasses = new HashMap<String, CppClass>();
 }

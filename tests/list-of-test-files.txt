@@ -17,3 +17,4 @@ test-numbers
 test-references
 test-arg-overloading
 test-init-lists
+test-include

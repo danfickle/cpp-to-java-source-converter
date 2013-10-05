@@ -45,7 +45,7 @@ class EnumManager
 		for (IASTEnumerator e : enumerators)
 		{
 			CppEnumerator enumerator = new CppEnumerator();
-			enumerator.simpleJavaName = TypeManager.cppNameToJavaName(e.getName().toString(), NameType.ALL_CAPS);
+			enumerator.name = TypeManager.cppNameToJavaName(e.getName().toString(), NameType.ALL_CAPS);
 
 			if (e.getValue() != null)
 			{

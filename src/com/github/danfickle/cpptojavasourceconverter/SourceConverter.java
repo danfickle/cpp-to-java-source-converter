@@ -233,7 +233,7 @@ public class SourceConverter
 			IBinding bind = ((IASTFunctionDefinition) declaration).getDeclarator().getName().resolveBinding();
 			
 			if (bind instanceof IProblemBinding)
-				MyLogger.logImportant("Problem function: " + ((IProblemBinding) bind).getMessage() + ((IProblemBinding) bind).getLineNumber());
+				MyLogger.logImportant("Problem function: " + ((IProblemBinding) bind).getFileName() + ((IProblemBinding) bind).getLineNumber());
 			else
 				MyLogger.logImportant("Function with unknown binding: " + bind.getClass().getCanonicalName());
 		}
@@ -575,7 +575,7 @@ public class SourceConverter
 			{
 				// Generate a constructor.
 				CppCtor ctor = new CppCtor();
-				ctor.type = tyd.simpleJavaName;
+				ctor.type = tyd.name;
 				
 				MCompoundStmt blk = new MCompoundStmt();
 				ctor.body = blk;
@@ -619,12 +619,12 @@ public class SourceConverter
 			
 			// Add a copy method that calls the copy constructor.
 			CppFunction meth = new CppFunction();
-			meth.retType = tyd.simpleJavaName;
-			meth.simpleJavaName = "copy";
+			meth.retType = tyd.name;
+			meth.name = "copy";
 			meth.isOverride = true;
 
 			MClassInstanceCreation create = new MClassInstanceCreation();
-			create.name = ModelCreation.createLiteral(tyd.simpleJavaName);
+			create.name = ModelCreation.createLiteral(tyd.name);
 			create.args.add(ModelCreation.createLiteral("this"));
 			
 			MReturnStmt stmt = new MReturnStmt();

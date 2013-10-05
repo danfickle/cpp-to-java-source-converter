@@ -45,7 +45,7 @@ public class BitfieldManager
 	{
 		CppBitfield bitfield = new CppBitfield();
 		addBitfield(declarator.getName());
-		bitfield.simpleJavaName = TypeManager.cppNameToJavaName(field.getName(), NameType.CAMEL_CASE);
+		bitfield.name = TypeManager.cppNameToJavaName(field.getName(), NameType.CAMEL_CASE);
 		bitfield.bits = ctx.exprEvaluator.eval1Expr(((IASTFieldDeclarator) declarator).getBitFieldSize());
 		bitfield.type = ctx.typeMngr.cppToJavaType(field.getType(), TypeType.RAW);
 		ctx.converter.currentInfoStack.peekFirst().tyd.declarations.add(bitfield);

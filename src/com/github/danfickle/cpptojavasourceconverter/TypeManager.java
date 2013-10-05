@@ -4,6 +4,7 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
 
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppClass;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
 import com.github.danfickle.cpptojavasourceconverter.GlobalCtx.ITypeName;
 
@@ -88,6 +89,9 @@ class TypeManager
 		RAW;
 	}
 	
+	/**
+	 * Look up a registered struct, class, union or enum.
+	 */
 	CppDeclaration getDeclaration(IType type, IASTName name) throws DOMException
 	{
 		if (type != null)
@@ -106,6 +110,10 @@ class TypeManager
 		return null;
 	}
 	
+	/**
+	 * Register a class, struct, union or enum. All of which can be
+	 * anonymous.
+	 */
 	void registerDeclaration(IType type, IASTName name, CppDeclaration decl) throws DOMException
 	{
 		String simple = name.resolveBinding().getName();
@@ -118,10 +126,24 @@ class TypeManager
 		}
 		
 		decl.completeCppName = complete;
-		decl.simpleJavaName = TypeManager.cppNameToJavaName(simple, NameType.CAPITALIZED);
+		decl.name = TypeManager.cppNameToJavaName(simple, NameType.CAPITALIZED);
 		
 		ctx.global.declarations.put(complete, decl);
 		ctx.global.types.add(new ITypeName(type, complete));
+	}
+	
+	CppClass getClassToHouseGlobalDecls(String filename)
+	{
+		CppClass cls = ctx.global.fileClasses.get(filename);
+		
+		if (cls == null)
+		{
+			cls = new CppClass();
+			cls.name = filename;
+			ctx.global.fileClasses.put(filename, cls);
+		}
+
+		return cls;
 	}
 	
 	/**
@@ -133,7 +155,7 @@ class TypeManager
 		CppDeclaration myDecl = getDeclaration(type, null);
 		
 		if (myDecl != null)
-			return getSimpleType(myDecl.completeCppName);
+			return myDecl.name;
 		
 		if (type instanceof IBasicType)
 		{
