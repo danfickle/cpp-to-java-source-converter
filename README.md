@@ -82,7 +82,6 @@ This is an incomplete and fluid list of items that need doing before the initial
 + General
   + integer promotion/demotion
   + cleanup cpptojavatype method.
-  + wrong order of booleanization in booleanized expression.
   + putting global declarations other than classes and enums into a class.
   + function pointers.
   + typed malloc.

@@ -745,6 +745,10 @@ class ExpressionEvaluator
 			MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
 			expr.type = ctx.typeMngr.cppToJavaType(tpRequired, TypeType.IMPLEMENTATION);
 			expr.operand = eval1Expr(cppExpr);
+			
+			if (TypeManager.isOneOf(tpRequired, TypeEnum.BOOLEAN))
+				expr.operand = ExpressionHelpers.makeExpressionBoolean(expr.operand, cppExpr);
+
 			return expr;
 		}
 		else

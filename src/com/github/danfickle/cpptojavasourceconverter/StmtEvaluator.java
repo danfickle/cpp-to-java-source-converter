@@ -264,11 +264,6 @@ class StmtEvaluator
 
 			retu.expr = ctx.exprEvaluator.wrapIfNeeded(returnStatement.getReturnValue(), ctx.currentReturnType);
 			
-			if (TypeManager.isOneOf(ctx.currentReturnType, TypeEnum.BOOLEAN))
-			{
-				retu.expr = ExpressionHelpers.makeExpressionBoolean(retu.expr, returnStatement.getReturnValue());
-			}
-
 			// Only call cleanup if we have something on the stack.
 			if (ctx.stackMngr.getLocalVariableId() != 0 &&
 				TypeManager.isOneOf(ctx.currentReturnType, TypeEnum.VOID))
