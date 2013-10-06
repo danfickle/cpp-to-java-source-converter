@@ -91,6 +91,7 @@ This is an incomplete and fluid list of items that need doing before the initial
   + make lists.
   + correct names (camel case, capitalized classes etc.)
   + Always initialize pointer objects (pointing to nothing if needed).
+  + Output function declarations with missing definitions with a TODO as the body.
 + test-references
 + test-enums
 + test-bitfield

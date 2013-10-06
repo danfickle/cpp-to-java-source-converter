@@ -24,7 +24,7 @@ class EnumManager
 
 		IType type = ctx.converter.evalBindingReturnType(enumerationSpecifier.getName().resolveBinding());
 
-		CppEnum enumModel = (CppEnum) ctx.typeMngr.getDeclFromType(type);
+		CppEnum enumModel = (CppEnum) ctx.typeMngr.getDeclFromTypeName(type, enumerationSpecifier.getName());
 		
 		if (enumModel != null)
 			return;

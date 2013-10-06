@@ -3,7 +3,7 @@ package com.github.danfickle.cpptojavasourceconverter;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.cdt.core.dom.ast.IType;
+import org.eclipse.cdt.core.dom.ast.*;
 
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.MCompoundStmt;
@@ -19,8 +19,9 @@ class DeclarationModels
 		// The simple Java name.
 		public String name;
 		
-		public CppDeclaration parent;
+		public CppClass parent;
 		public IType cppType;
+		public IASTName nm;
 		public String file;
 		public int line;
 	}

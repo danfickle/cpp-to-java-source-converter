@@ -114,7 +114,7 @@ class FunctionManager
 		IASTFunctionDefinition func = (IASTFunctionDefinition) declaration;
 		IBinding funcBinding = func.getDeclarator().getName().resolveBinding();
 		
-		CppFunction method = (CppFunction) ctx.typeMngr.getDeclFromType(ctx.converter.evalBindingReturnType(funcBinding)); 
+		CppFunction method = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(funcBinding), func.getDeclarator().getName()); 
 				
 		if (method == null)
 		{
@@ -262,7 +262,7 @@ class FunctionManager
 		}
 			
 		// Generates functions for default arguments.
-		makeDefaultCalls(func.getDeclarator(), funcBinding);
+		makeDefaultCalls(func.getDeclarator(), funcBinding, method.parent);
 	}
 	
 	/**
@@ -274,7 +274,7 @@ class FunctionManager
 	 *	     return func_with_defaults(one, 5);
 	 *   }
 	 */
-	void makeDefaultCalls(IASTFunctionDeclarator func, IBinding funcBinding) throws DOMException
+	void makeDefaultCalls(IASTFunctionDeclarator func, IBinding funcBinding, CppClass parent) throws DOMException
 	{
 		// getDefaultValues will return an item for every parameter.
 		// ie. null for params without a default value.
@@ -334,10 +334,7 @@ class FunctionManager
 			}
 
 			methodDef.body = block;
-			if (ctx.converter.currentInfoStack.peekFirst() != null)
-				ctx.converter.currentInfoStack.peekFirst().tyd.declarations.add(methodDef);
-			else
-				; // TODO: Add function some where.
+			parent.declarations.add(methodDef);
 		}
 	}
 	

@@ -90,6 +90,24 @@ class TypeManager
 	/**
 	 * Look up a registered struct, class, union, method, etc.
 	 */
+	CppDeclaration getDeclFromTypeName(IType type, IASTName nm) throws DOMException
+	{
+		if (type != null)
+		{
+			for (CppDeclaration ent : ctx.global.decls)
+			{
+				if (ent.cppType.isSameType(type) && ent.nm.equals(nm))
+					return ent;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * IMPORTANT: This can only be used for classes, structs, unions
+	 * and enums. If used for functions, methods, fields, etc
+	 * it will return false positives.
+	 */
 	CppDeclaration getDeclFromType(IType type) throws DOMException
 	{
 		if (type != null)
@@ -102,7 +120,7 @@ class TypeManager
 		}
 		return null;
 	}
-
+	
 	private void makeName(IASTName nm, CppDeclaration decl, NameType nt) throws DOMException
 	{
 		String complete = getCompleteName(nm);
@@ -126,13 +144,14 @@ class TypeManager
 			IASTName nm, NameType nt, String filename, int lineno) throws DOMException
 	{
 		decl.cppType = type;
+		decl.nm = nm;
 
 		// First we check if we are actually in a class declaration.
 		if (ctx.converter.currentInfoStack.peekFirst() != null)
 			decl.parent = ctx.converter.currentInfoStack.peekFirst().tyd;
 		// Second we test if we can get an owner type.
 		else if (nm.resolveBinding().getOwner() != null)
-			decl.parent = getDeclFromType(ctx.converter.evalBindingReturnType(nm.resolveBinding().getOwner()));
+			decl.parent = (CppClass) getDeclFromType(ctx.converter.evalBindingReturnType(nm.resolveBinding().getOwner()));
 		
 		// Third, we check the filename has no associated class.
 		if (decl.parent == null)

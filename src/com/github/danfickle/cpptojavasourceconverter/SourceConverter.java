@@ -335,7 +335,7 @@ public class SourceConverter
 				else if (binding instanceof IFunction &&
 						declarator instanceof IASTFunctionDeclarator)
 				{
-					CppFunction func = (CppFunction) ctx.typeMngr.getDeclFromType(evalBindingReturnType(binding)); 
+					CppFunction func = (CppFunction) ctx.typeMngr.getDeclFromTypeName(evalBindingReturnType(binding), declarator.getName()); 
 							
 					if (func == null)
 					{
@@ -345,7 +345,7 @@ public class SourceConverter
 								declarator.getFileLocation().getStartingLineNumber());
 					}
 					
-					ctx.funcMngr.makeDefaultCalls((IASTFunctionDeclarator) declarator, binding);
+					ctx.funcMngr.makeDefaultCalls((IASTFunctionDeclarator) declarator, binding, func.parent);
 				}
 				else if (binding instanceof IVariable)
 				{
@@ -630,7 +630,7 @@ public class SourceConverter
 			
 			// Check that this decl specifier has not
 			// already been registered.
-			CppDeclaration myDecl = ctx.typeMngr.getDeclFromType(myType);
+			CppDeclaration myDecl = ctx.typeMngr.getDeclFromTypeName(myType, compositeTypeSpecifier.getName());
 			if (myDecl != null)
 				return;
 
