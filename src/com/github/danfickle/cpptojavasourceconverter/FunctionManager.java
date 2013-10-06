@@ -7,6 +7,7 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MStringExpression;
+import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.CompositeInfo;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
@@ -94,7 +95,7 @@ class FunctionManager
 			
 			if (paramDeclarator.getInitializer() != null)
 			{
-				exprs.add(ctx.initMngr.eval1Init(paramDeclarator.getInitializer(), tp, paramDeclarator.getName()));
+				exprs.add(ctx.initMngr.eval1Init(paramDeclarator.getInitializer(), tp, paramDeclarator.getName(), InitType.WRAPPED));
 			}
 			else
 			{
@@ -196,7 +197,7 @@ class FunctionManager
 						
 						MClassInstanceCreation create = new MClassInstanceCreation();
 						create.name = lit;
-						create.args.add(ctx.initMngr.eval1Init(chain.getInitializer(), ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding()), chain.getMemberInitializerId()));
+						create.args.add(ctx.initMngr.eval1Init(chain.getInitializer(), ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding()), chain.getMemberInitializerId(), InitType.WRAPPED));
 						
 						// Match this initializer with the correct field.
 						for (FieldInfo fieldInfo : fields)
@@ -214,18 +215,18 @@ class FunctionManager
 								ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
 							{
 								IType tp = ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding());
-								fieldInfo.init = ctx.initMngr.eval1Init(chain.getInitializer(), tp, fieldInfo.declarator.getName());
+								fieldInfo.init = ctx.initMngr.eval1Init(chain.getInitializer(), tp, fieldInfo.declarator.getName(), InitType.WRAPPED);
 							}
 							else if (chain.getMemberInitializerId().resolveBinding().getName().equals(fieldInfo.field.getName()))
 							{
 								IType tp = ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding());
-								fieldInfo.init = ctx.initMngr.eval1Init(chain.getInitializer(), tp , fieldInfo.declarator.getName());
+								fieldInfo.init = ctx.initMngr.eval1Init(chain.getInitializer(), tp , fieldInfo.declarator.getName(), InitType.WRAPPED);
 							}
 						}
 						
 						if (info.hasSuper && chain.getMemberInitializerId().resolveBinding().getName().equals(info.superClass))
 						{
-							superInit = ctx.initMngr.eval1Init(chain.getInitializer(), ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding()), chain.getMemberInitializerId());
+							superInit = ctx.initMngr.eval1Init(chain.getInitializer(), ctx.converter.evalBindingReturnType(chain.getMemberInitializerId().resolveBinding()), chain.getMemberInitializerId(), InitType.WRAPPED);
 						}
 					}
 					else

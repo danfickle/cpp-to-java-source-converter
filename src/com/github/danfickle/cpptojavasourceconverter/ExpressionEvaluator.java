@@ -9,6 +9,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
 
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 
@@ -160,7 +161,7 @@ class ExpressionEvaluator
 				 TypeManager.getPointerIndirectionCount(expr.getExpressionType()) == 1)
 		{
 			// MInteger.valueOf(101)
-			ret.add(ctx.initMngr.eval1Init(expr.getInitializer(), TypeManager.getPointerBaseType(expr.getExpressionType()), null));
+			ret.add(ctx.initMngr.eval1Init(expr.getInitializer(), TypeManager.getPointerBaseType(expr.getExpressionType()), null, InitType.WRAPPED));
 		}
 		else if (TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.BASIC_POINTER))
 		{

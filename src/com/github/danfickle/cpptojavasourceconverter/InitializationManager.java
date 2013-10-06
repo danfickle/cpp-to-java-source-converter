@@ -16,12 +16,18 @@ class InitializationManager
 		ctx = con;
 	}
 	
-	MExpression eval1Init(IASTInitializer initializer, IType typeRequired, IASTName name) throws DOMException 
+	enum InitType
+	{
+		RAW,
+		WRAPPED;
+	}
+	
+	MExpression eval1Init(IASTInitializer initializer, IType typeRequired, IASTName name, InitType initType) throws DOMException 
 	{
 		if (initializer == null)
 		{
 			if (TypeManager.isBasicType(typeRequired) &&
-				(name == null ||	!ctx.bitfieldMngr.isBitfield(name)))
+				(name == null || !ctx.bitfieldMngr.isBitfield(name)))
 			{
 				return ctx.exprEvaluator.makeSimpleCreationExpression(typeRequired);
 			}
@@ -80,7 +86,10 @@ class InitializationManager
 			}
 			else
 			{
-				return ctx.exprEvaluator.wrapIfNeeded((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause(), typeRequired);
+				if (initType == InitType.WRAPPED)
+					return ctx.exprEvaluator.wrapIfNeeded((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause(), typeRequired);
+				else
+					return ctx.exprEvaluator.eval1Expr((IASTExpression) ((IASTEqualsInitializer) initializer).getInitializerClause());
 			}
 		}
 		else if (initializer instanceof ICPPASTConstructorInitializer)

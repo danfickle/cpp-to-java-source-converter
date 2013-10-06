@@ -19,8 +19,8 @@ import java.util.List;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
-import org.eclipse.cdt.core.model.INamespace;
 
+import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
@@ -232,7 +232,7 @@ public class SourceConverter
 			{
 				IASTSimpleDeclaration simple = (IASTSimpleDeclaration) decl;
 
-				List<MExpression> exprs = evaluateDeclarationReturnInitializers(simple);				
+				List<MExpression> exprs = evaluateDeclarationReturnInitializers(simple, InitType.WRAPPED);				
 				
 				int i = 0;
 				for (IASTDeclarator declarator : simple.getDeclarators())
@@ -272,7 +272,7 @@ public class SourceConverter
 	 * returns:
 	 *   [MInteger.valueOf(0), MInteger.valueOf(5), MInteger.valueOf(0)]
 	 */
-	List<MExpression> evaluateDeclarationReturnInitializers(IASTSimpleDeclaration simple) throws DOMException 
+	List<MExpression> evaluateDeclarationReturnInitializers(IASTSimpleDeclaration simple, InitType initType) throws DOMException 
 	{
 		List<MExpression> exprs = new ArrayList<MExpression>();
 		List<IType> types = evaluateDeclarationReturnCppTypes(simple);
@@ -280,7 +280,7 @@ public class SourceConverter
 		int i = 0;
 		for (IASTDeclarator decl : simple.getDeclarators())
 		{
-			exprs.add(ctx.initMngr.eval1Init(decl.getInitializer(), types.get(i), decl.getName()));
+			exprs.add(ctx.initMngr.eval1Init(decl.getInitializer(), types.get(i), decl.getName(), initType));
 			i++;
 		}
 
@@ -313,7 +313,7 @@ public class SourceConverter
 			IASTSimpleDeclaration simple = (IASTSimpleDeclaration) declaration;
 			evalDeclSpecifier(simple.getDeclSpecifier());
 
-			List<MExpression> exprs = evaluateDeclarationReturnInitializers(simple);
+			List<MExpression> exprs = evaluateDeclarationReturnInitializers(simple, InitType.WRAPPED);
 			int i = 0;
 
 			for (IASTDeclarator declarator : simple.getDeclarators())
@@ -821,14 +821,14 @@ public class SourceConverter
 	/**
 	 * Given a declaration creates one Java declaration.
 	 */
-	MSimpleDecl eval1Decl(IASTDeclaration decla) throws DOMException
+	MSimpleDecl eval1Decl(IASTDeclaration decla, InitType initType) throws DOMException
 	{
 		MyLogger.log("simple declaration");
 		
 		IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) decla;
 		assert(simpleDeclaration.getDeclarators().length == 1);
 		
-		List<MExpression> inits = evaluateDeclarationReturnInitializers(simpleDeclaration);
+		List<MExpression> inits = evaluateDeclarationReturnInitializers(simpleDeclaration, initType);
 		List<String> names = evaluateDeclarationReturnNames(simpleDeclaration);
 		List<String> types = evaluateDeclarationReturnTypes(simpleDeclaration);
 
@@ -883,14 +883,16 @@ public class SourceConverter
 		
 		infix.right = initExpr;
 
-		if (makeBoolean)
+		if (TypeManager.isOneOf(tp, TypeEnum.BOOLEAN))
 			infix.right = ExpressionHelpers.makeExpressionBoolean(infix.right, tp);
 		else
 			infix.right = ExpressionHelpers.bracket(infix.right);
 
 		infix.operator = "=";
 
-		return infix; 
+		return (makeBoolean && !TypeManager.isOneOf(tp, TypeEnum.BOOLEAN)) ?
+				ExpressionHelpers.makeExpressionBoolean(infix, tp) :
+				ExpressionHelpers.bracket(infix);
 	}
 
 

@@ -8,6 +8,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.*;
 
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
+import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 
@@ -137,7 +138,7 @@ class StmtEvaluator
 
 			List<String> types = ctx.converter.evaluateDeclarationReturnTypes(declarationStatement.getDeclaration());
 			List<String> names = ctx.converter.evaluateDeclarationReturnNames(declarationStatement.getDeclaration());
-			List<MExpression> exprs = ctx.converter.evaluateDeclarationReturnInitializers((IASTSimpleDeclaration) declarationStatement.getDeclaration());
+			List<MExpression> exprs = ctx.converter.evaluateDeclarationReturnInitializers((IASTSimpleDeclaration) declarationStatement.getDeclaration(), InitType.WRAPPED);
 			
 			for (int i = 0; i < types.size(); i++)
 			{
@@ -206,7 +207,7 @@ class StmtEvaluator
 				// eg. for (int a = 1; int b = 3; a++)
 				IType tp = ctx.converter.eval1DeclReturnCppType(((ICPPASTForStatement) forStatement).getConditionDeclaration());
 				
-				fs.decl = ctx.converter.eval1Decl( ((ICPPASTForStatement) forStatement).getConditionDeclaration() );
+				fs.decl = ctx.converter.eval1Decl(((ICPPASTForStatement) forStatement).getConditionDeclaration(), InitType.RAW);
 				fs.condition = ctx.converter.makeInfixFromDecl(fs.decl.name, fs.decl.initExpr, tp, true);
 				fs.decl.initExpr = ctx.exprEvaluator.makeSimpleCreationExpression(tp);
 			}
@@ -236,7 +237,7 @@ class StmtEvaluator
 			{
 				IType tp = ctx.converter.eval1DeclReturnCppType(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
 
-				ifs.decl = ctx.converter.eval1Decl(((ICPPASTIfStatement) ifStatement).getConditionDeclaration());
+				ifs.decl = ctx.converter.eval1Decl(((ICPPASTIfStatement) ifStatement).getConditionDeclaration(), InitType.RAW);
 				ifs.condition = ctx.converter.makeInfixFromDecl(ifs.decl.name, ifs.decl.initExpr, tp, true);
 				ifs.decl.initExpr = ctx.exprEvaluator.makeSimpleCreationExpression(tp);
 			}
@@ -296,7 +297,7 @@ class StmtEvaluator
 			{
 				IType tp = ctx.converter.eval1DeclReturnCppType(((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration());
 
-				swi.decl = ctx.converter.eval1Decl(((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration());
+				swi.decl = ctx.converter.eval1Decl(((ICPPASTSwitchStatement) switchStatement).getControllerDeclaration(), InitType.RAW);
 				swi.expr = ctx.converter.makeInfixFromDecl(swi.decl.name, swi.decl.initExpr, tp, false);
 				swi.decl.initExpr = ctx.exprEvaluator.makeSimpleCreationExpression(tp);
 			}
@@ -323,7 +324,7 @@ class StmtEvaluator
 			{
 				IType tp = ctx.converter.eval1DeclReturnCppType(((ICPPASTWhileStatement) whileStatement).getConditionDeclaration());
 				
-				whi.decl = ctx.converter.eval1Decl(((ICPPASTWhileStatement)whileStatement).getConditionDeclaration());
+				whi.decl = ctx.converter.eval1Decl(((ICPPASTWhileStatement) whileStatement).getConditionDeclaration(), InitType.RAW);
 				whi.expr = ctx.converter.makeInfixFromDecl(whi.decl.name, whi.decl.initExpr, tp, true);
 				whi.decl.initExpr = ctx.exprEvaluator.makeSimpleCreationExpression(tp);
 			}
