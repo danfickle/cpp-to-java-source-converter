@@ -7,7 +7,9 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.EvalBinding;
 
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppFunction;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
@@ -502,19 +504,21 @@ class ExpressionEvaluator
 		}
 	}
 
-	private void evalExprFuncCallArgs(IASTFunctionCallExpression expr, List<MExpression> args) throws DOMException
+	private IASTName getIFunctionFromFuncCallExpr(IASTFunctionCallExpression expr)
 	{
-		IFunction funcb;
-
 		if (expr.getFunctionNameExpression() instanceof IASTIdExpression)
 		{
-			funcb = (IFunction) ((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding();;
+			return ((IASTIdExpression) expr.getFunctionNameExpression()).getName();
 		}
 		else // if (expr.getFunctionNameExpression() instanceof IASTFieldReference)
 		{
-			funcb = (IFunction) ((IASTFieldReference) expr.getFunctionNameExpression()).getFieldName().resolveBinding();
-		}
-		
+			return ((IASTFieldReference) expr.getFunctionNameExpression()).getFieldName();
+		}		
+	}
+	
+	private void evalExprFuncCallArgs(IASTFunctionCallExpression expr, List<MExpression> args) throws DOMException
+	{
+		IFunction funcb = (IFunction) getIFunctionFromFuncCallExpr(expr).resolveBinding();
 		IParameter[] params = funcb.getParameters();
 		
 		for (int i = 0; i < params.length; i++)
@@ -526,11 +530,11 @@ class ExpressionEvaluator
 	
 	private void evalExprFuncCall(IASTFunctionCallExpression expr, List<MExpression> ret) throws DOMException
 	{
-		// TODO: Redirect function call to correct location.
-		
 		if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
 			((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
 		{
+			// TODO: Redirect function call to correct location.
+			
 			MClassInstanceCreation func = new MClassInstanceCreation();
 			func.name = eval1Expr(expr.getFunctionNameExpression());
 			
@@ -545,8 +549,27 @@ class ExpressionEvaluator
 		}
 		else
 		{
+			IASTName funcNm = getIFunctionFromFuncCallExpr(expr);
+			IFunction funcb = (IFunction) funcNm.resolveBinding();
+
+			CppFunction funcDecl = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(funcb), funcNm);
+			funcDecl.isUsed = true;
+
 			MFunctionCallExpression func = new MFunctionCallExpression();
 			func.name = eval1Expr(expr.getFunctionNameExpression());
+			
+			if (func.name instanceof MIdentityExpression)
+			{
+				if (funcDecl.isOriginallyGlobal)
+					((MIdentityExpression) func.name).ident = funcDecl.parent.name + '.' + funcDecl.name;
+				else
+					((MIdentityExpression) func.name).ident = funcDecl.name;
+			}
+			else if (func.name instanceof MFieldReferenceExpression)
+			{
+				((MFieldReferenceExpression) func.name).field = funcDecl.name;
+			}
+
 			evalExprFuncCallArgs(expr, func.args);
 			ret.add(func);
 		}

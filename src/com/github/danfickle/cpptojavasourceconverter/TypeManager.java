@@ -98,6 +98,8 @@ class TypeManager
 			{
 				if (ent.cppType.isSameType(type) && ent.nm.equals(nm))
 					return ent;
+				else if (ent.cppType.isSameType(type) && ent.nm.toString().equals(nm.toString()))
+					return ent;
 			}
 		}
 		return null;
@@ -153,6 +155,11 @@ class TypeManager
 		else if (nm.resolveBinding().getOwner() != null)
 			decl.parent = (CppClass) getDeclFromType(ctx.converter.evalBindingReturnType(nm.resolveBinding().getOwner()));
 		
+		if (decl instanceof CppFunction && decl.parent == null)
+		{
+			((CppFunction) decl).isOriginallyGlobal = true;
+		}
+		
 		// Third, we check the filename has no associated class.
 		if (decl.parent == null)
 			decl.parent = ctx.global.fileClasses.get(filename);
@@ -184,7 +191,7 @@ class TypeManager
 		{
 			((CppEnum) decl).isNested = true;
 		}
-		
+
 		ctx.global.decls.add(decl);
 	}
 	

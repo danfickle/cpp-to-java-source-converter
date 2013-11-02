@@ -59,6 +59,8 @@ class DeclarationModels
 		public boolean isCtor;
 		public boolean isDtor;
 		public boolean isOverride;
+		public boolean isUsed;
+		public boolean isOriginallyGlobal;
 	}
 	
 	static class CppClass extends CppDeclaration

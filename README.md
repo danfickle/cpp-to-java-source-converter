@@ -82,7 +82,6 @@ This is an incomplete and fluid list of items that need doing before the initial
 + General
   + integer promotion/demotion
   + cleanup cpptojavatype method.
-  + putting global declarations other than classes and enums into a class.
   + function pointers.
   + typed malloc.
   + testing cleanup.
@@ -91,7 +90,8 @@ This is an incomplete and fluid list of items that need doing before the initial
   + make lists.
   + correct names (camel case, capitalized classes etc.)
   + Always initialize pointer objects (pointing to nothing if needed).
-  + Output function declarations with missing definitions with a TODO as the body.
+  + Output function declarations with missing definitions for default args function with a TODO as the body.
+  + Varargs.
 + test-references
 + test-enums
 + test-bitfield

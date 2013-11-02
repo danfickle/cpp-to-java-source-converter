@@ -23,7 +23,7 @@ declaration_tp(decl) ::= <%
  <elseif(decl.isFunctionDeclaration)>
   <if(decl.isOverride)><\n>@Override<endif>
   <\n>public <decl.retType> <decl.name>(<decl.args:{a | <a.type> <a.name>}; separator=", ">)
-  <\n><statement_tp(decl.body)>
+  <\n><if(decl.body)><statement_tp(decl.body)><elseif(decl.isUsed)>{ /* TODO FUNCTION BODY */ }<else>{ /* NOT USED */ }<endif>
 
  <elseif(decl.isClassDeclaration)>
   <\n><if(decl.isUnion)>@CppUnion<endif>
