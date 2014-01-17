@@ -8,7 +8,7 @@ class cls
   int _a;
   int _b : 8;
   int * _c;
-  //bb _d;
+  bb _d;
 
   cls() { }
   cls(int a, int b) {}
@@ -36,7 +36,7 @@ int func(int a)
   this->_a;  // 12 -> Field reference
   this->_b;  // 13 -> Field reference bitfield
   this->_c; // 14 -> Field reference dereference pointer
-  //this._d;  // 15 -> Field reference enum
+  this._d;  // 15 -> Field reference enum
 
   10;     // 17 -> Literal
   ++_a;   // 18 -> Prefix plain
@@ -114,31 +114,13 @@ int func(int a)
   this->mymethod(105, cls(100));   // -> Field reference pointer function call
   myclass.mymethod(107, cls(200)); // -> Field reference object function call
 
-  // TODO: Cast expressions, overloaded operators, comma expression, bracketed expressions.
-  //int zz = (int) _b;
+  _d = (bb) 1;       // Cast to enum
+  _b = (short) 5;    // Cast to bitfield
+  short shrt = (short) _a;  // Cast to number
 
 
-/*
-  a + a - a;
-  a++;
-  --a;
-  a + ii;
-
-  a ? a : ii;
-
-  int * b = &a;
-  b;
-  _a;
-  this._a;
-  *b;
-  _b;
-  _b++;
-  _b--;
-  
-  this._b++;
-  this._b--;
-*/
-
+  // TODO: Overloaded operators, comma expression, bracketed expressions.
 }
 
 };
+

@@ -1235,7 +1235,25 @@ class ExpressionModels
 	static class MCastExpression extends MExpression
 	{
 		public MExpression operand;
-		public String type = "int"; // TODO
+		public String type;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("(%s) %s", this.type, this.operand);
+		}
+	}
+
+	static class MCastExpressionToEnum extends MExpression
+	{
+		public MExpression operand;
+		public String type;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.fromValue(%s)", this.type, this.operand);
+		}
 	}
 	
 	static class MDeleteObjectSingle extends MDeleteExpression

@@ -282,9 +282,24 @@ class ExpressionEvaluator
 
 	private void evalCastExpression(IASTCastExpression expr, List<MExpression> ret) throws DOMException
 	{
-		MCastExpression cast = new MCastExpression();
-		cast.operand = eval1Expr(expr.getOperand());
-		// TODO cast.setType(evalTypeId(castExpression.getTypeId()));
+		if (ExpressionHelpers.isBasicExpression(expr))
+		{
+			MCastExpression cast = new MCastExpression();
+			cast.operand = eval1Expr(expr.getOperand());
+			cast.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.RAW);
+			ret.add(cast);
+		}
+		else if (TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.ENUMERATION))
+		{
+			MCastExpressionToEnum cast = new MCastExpressionToEnum();
+			cast.operand = eval1Expr(expr.getOperand());
+			cast.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.INTERFACE);
+			ret.add(cast);
+		}
+		else
+		{
+			MyLogger.logImportant("No cast available: " + expr.getRawSignature());
+		}
 	}
 
 	private void evalExprArraySubscript(IASTArraySubscriptExpression expr, List<MExpression> ret) throws DOMException
