@@ -202,6 +202,11 @@ class ExpressionEvaluator
 	
 	private MExpression evalExprId(IASTIdExpression expr) throws DOMException
 	{
+		/*
+		 * IASTIdExpression => Methods
+		 *   getName
+		 */
+		
 		if (ctx.bitfieldMngr.isBitfield(expr.getName()))
 		{
 			MIdentityExpressionBitfield ident = new MIdentityExpressionBitfield();
@@ -237,6 +242,16 @@ class ExpressionEvaluator
 
 	private MExpression evalExprFieldReference(IASTFieldReference expr) throws DOMException
 	{
+		/*
+		 * IASTFieldReference => Methods
+		 *   getFieldName
+		 *   getFieldOwner
+		 *   isPointerDereference
+		 *   
+		 * IASTNameOwner => Methods
+		 *   getRoleForName
+		 */
+		
 		if (ctx.bitfieldMngr.isBitfield(expr.getFieldName()))
 		{
 			MFieldReferenceExpressionBitfield field = new MFieldReferenceExpressionBitfield();
@@ -277,6 +292,13 @@ class ExpressionEvaluator
 
 	private MExpression evalExprConditional(IASTConditionalExpression expr) throws DOMException 
 	{
+		/*
+		 * IASTConditionalExpression => Methods
+		 *   getLogicalConditionExpression
+		 *   getNegativeResultExpression
+		 *   getPositiveResultExpression
+		 */
+
 		MTernaryExpression ternary = new MTernaryExpression();
 		
 		ternary.condition = eval1Expr(expr.getLogicalConditionExpression());
@@ -367,6 +389,42 @@ class ExpressionEvaluator
 	
 	private MExpression evalExprUnary(IASTUnaryExpression expr) throws DOMException
 	{
+		/*
+		 * IASTUnaryExpression => Methods
+		 *   getOperand
+		 *   getOperator
+		 *
+		 * IASTUnaryExpression => Operators 
+		 *   op_alignOf
+		 *   op_amper
+		 *   op_bracketedPrimary
+		 *   op_minus
+		 *   op_noexcept
+		 *   op_not
+		 *   op_plus
+		 *   op_postFixDecr
+		 *   op_postFixIncr
+		 *   op_prefixDecr
+		 *   op_prefixIncr
+		 *   op_sizeof
+		 *   op_sizeofParameterPack
+		 *   op_star
+		 *   op_throw
+		 *   op_tilde
+		 *   op_typeid
+		 *   op_typeof
+		 * 
+		 * ICPPASTUnaryExpression => Operators
+		 *   op_typeid
+		 *   op_throw
+		 * 
+		 * ICPPASTUnaryExpression => Methods
+		 *   getOverload
+		 * 
+		 * IASTImplicitNameOwner => Methods
+		 *   getImplicitNames
+		 */
+		
 		if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
 		{
 			MBracketExpression bra = new MBracketExpression();
