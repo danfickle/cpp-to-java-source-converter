@@ -7,8 +7,6 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.semantics.EvalBinding;
-
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppFunction;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
@@ -255,7 +253,7 @@ class ExpressionEvaluator
 		}
 		else if (TypeManager.isPtrOrArrayBasic(expr.getExpressionType()) && expr.isPointerDereference())
 		{
-			MFieldReferenceExpressionPtr field = new MFieldReferenceExpressionPtr();
+			MFieldReferenceExpressionDeref field = new MFieldReferenceExpressionDeref();
 			field.object = eval1Expr(expr.getFieldOwner());
 			field.field = TypeManager.getSimpleName(expr.getFieldName());
 			ret.add(field);
@@ -377,6 +375,25 @@ class ExpressionEvaluator
 		{
 			MPrefixExpressionPointerStar pre = new MPrefixExpressionPointerStar();
 			pre.operand = eval1Expr(expr.getOperand());
+
+			if (pre.operand instanceof MIdentityExpression)
+			{
+				MIdentityExpression e = (MIdentityExpression) pre.operand;
+				MIdentityExpressionDeref deref = new MIdentityExpressionDeref();
+				
+				deref.ident = e.ident;
+				pre.operand = deref;
+			}
+			else if (pre.operand instanceof MFieldReferenceExpression)
+			{
+				MFieldReferenceExpression fr = (MFieldReferenceExpression) pre.operand;
+				MFieldReferenceExpressionDeref deref = new MFieldReferenceExpressionDeref();
+				
+				deref.field = fr.field;
+				deref.object = fr.object;
+				pre.operand = deref;
+			}
+			
 			ret.add(pre);
 		}
 		else if (TypeManager.isPtrOrArrayBasic(expr.getExpressionType()))
@@ -407,6 +424,7 @@ class ExpressionEvaluator
 			}
 			else if (ExpressionHelpers.isPrefixExpression(expr.getOperator()))
 			{
+				// TODO: Shouldn't get here!
 				MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
 				pre.operand = eval1Expr(expr.getOperand());
 				pre.operator = ExpressionHelpers.evalUnaryPrefixOperator(expr.getOperator());

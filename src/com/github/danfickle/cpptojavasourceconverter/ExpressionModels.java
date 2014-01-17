@@ -5,6 +5,11 @@ import java.util.List;
 
 class ExpressionModels
 {
+	interface PlainString
+	{
+		public String toStringPlain();
+	}
+	
 	abstract static class MExpression
 	{}
 
@@ -18,6 +23,8 @@ class ExpressionModels
 	{
 		public MExpression object;
 		public String field;
+		abstract String toStringLhOnly();
+		abstract String toStringRhOnly();
 	}
 	
 	abstract static class MInfixExpression extends MExpression
@@ -39,7 +46,7 @@ class ExpressionModels
 		public String operator;
 	}
 	
-	abstract static class MIdentityExpression extends MExpression
+	abstract static class MIdentityExpression extends MExpression implements PlainString
 	{
 		public String ident;
 	}
@@ -54,400 +61,1297 @@ class ExpressionModels
 		public MExpression name;
 		public List<MExpression> args = new ArrayList<MExpression>();
 	}
+
+	static String getStringLhs(MExpression model)
+	{
+		if (model instanceof MFieldReferenceExpression)
+		{
+			return ((MFieldReferenceExpression) model).object.toString();
+		}
+		else if (model instanceof MBracketExpression)
+		{
+			return getStringLhs(((MBracketExpression) model).operand); 
+		}
+		else
+		{
+			MyLogger.logImportant(model.getClass().getCanonicalName());
+			return null;
+		}
+	}
+	
+	static String getStringRhs(MExpression model)
+	{
+		if (model instanceof MFieldReferenceExpression)
+		{
+			return ((MFieldReferenceExpression) model).field;
+		}
+		else if (model instanceof MBracketExpression)
+		{
+			return getStringRhs(((MBracketExpression) model).operand); 
+		}
+		else
+		{
+			MyLogger.logImportant(model.getClass().getCanonicalName());
+			throw new RuntimeException();
+		}
+	}
+	
+	static String getPlainString(MExpression model)
+	{
+		if (model instanceof PlainString)
+		{
+			return ((PlainString) model).toStringPlain();
+		}
+		else if (model instanceof MLiteralExpression)
+		{
+			return ((MLiteralExpression) model).literal;
+		}
+		else if (model instanceof MBracketExpression)
+		{
+			return "(" + getPlainString(((MBracketExpression) model).operand) + ")";
+		}
+		else if (!(model instanceof MFieldReferenceExpression))
+		{
+			return model.toString();
+		}
+		else 
+		{
+			return null;
+		}
+	}
 	
 	/**
 	 * Note: MStringExpression breaks the MVC architecture.
 	 */
 	static class MStringExpression extends MExpression
 	{
-		public boolean isStringExpression = true;
 		public String contents;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s", this.contents);
+		}
 	}
 	
 	static class MMultiExpression extends MExpression
 	{
-		public boolean isMultiExpression = true;
 		public List<MExpression> exprs = new ArrayList<MExpression>();
+		
+		@Override
+		public String toString() 
+		{
+			String start = "";
+			
+			for (int i = 0; i < exprs.size(); i++)
+			{
+				start += exprs.get(i).toString();
+				
+				if (i != exprs.size() - 1)
+					start +=  ", ";
+			}
+			
+			return start;
+		}
 	}
 	
 	static class MAddressOfExpressionArrayItem extends MArrayExpression
 	{
-		public boolean isArrayAccessWithAddressOf = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.addressOf()", this.operand);
+		}
 	}
 	
 	static class MPostfixExpressionNumberInc extends MPostfixExpression
 	{
-		public boolean isPostfixNumberInc = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+
+			if (plain != null)
+			{
+				return String.format("%s.postInc()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.%s.postInc()", lhs, rhs);
+			}
+		}
 	}
 
 	static class MPostfixExpressionNumberDec extends MPostfixExpression
 	{
-		public boolean isPostfixNumberDec = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+
+			if (plain != null)
+			{
+				return String.format("%s.postDec()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.%s.postDec()", lhs, rhs);
+			}
+		}
 	}
 
 	static class MPrefixExpressionNumberInc extends MPrefixExpression
 	{
-		public boolean isPrefixNumberInc = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s.set(%s + 1)", plain, this.operand);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+				
+				return String.format("%s.%s.set(%s + 1)", lhs, rhs, this.operand);
+			}
+		}
 	}
 
 	static class MPrefixExpressionNumberDec extends MPrefixExpression
 	{
-		public boolean isPrefixNumberDec = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s.set(%s - 1)", plain, this.operand);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+				
+				return String.format("%s.%s.set(%s - 1)", lhs, rhs, this.operand);
+			}
+		}
 	}
 
 	static class MValueOfExpressionNumber extends MExpression
 	{
-		public boolean isValueOfNumber = true;
 		public MExpression operand;
 		public String type;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.valueOf(%s)", this.type, this.operand);
+		}
 	}
 	
 	static class MValueOfExpressionArray extends MExpression
 	{
-		public boolean isValueOfArray = true;
 		public List<MExpression> operands;
 		public String type;
+		
+		@Override
+		public String toString() 
+		{
+			String start = String.format("%s.create(", this.type);
+
+			for (int i = 0; i < this.operands.size(); i++)
+			{
+				start += this.operands.get(i).toString();
+				
+				if (i != this.operands.size() - 1)
+					start += ", ";
+			}
+
+			return start + ')';
+		}
 	}
 	
 	static class MValueOfExpressionPtr extends MExpression
 	{
-		public boolean isValueOfPtr = true;
 		public MExpression operand;
 		public String type;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.valueOf(%s)", this.type, this.operand);
+		}
 	}
 	
 	static class MInfixExpressionWithPtrOnLeft extends MInfixExpression
 	{
-		public boolean isInfixWithPtrOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.left);
+			
+			if (plain != null)
+			{
+				return String.format("%s.ptrOffset(%s%s)", plain, this.operator, this.right);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+				
+				return String.format("%s.%s.ptrOffset(%s%s)", lhs, rhs, this.operator, this.right);
+			}
+		}
 	}
 
 	static class MInfixExpressionWithPtrOnRight extends MInfixExpression
 	{
-		public boolean isInfixWithPtrOnRight = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.right);
+			
+			if (plain != null)
+			{
+				return String.format("%s.ptrOffset(%s%s)", plain, this.operator, this.left);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.right);
+				String rhs = getStringRhs(this.right);
+				
+				return String.format("%s.%s.ptrOffset(%s%s)", lhs, rhs, this.operator, this.left);
+			}
+		}
 	}
 	
 	static class MInfixExpressionPtrComparison extends MInfixExpression
 	{
-		public boolean isInfixWithPtrComparison = true;
+		@Override
+		public String toString() 
+		{
+			String right2 = getPlainString(this.right);
+			String left2 = getPlainString(this.left);
+			
+			if (right2 != null)
+			{
+				right2 = String.format("%s.ptrCompare()", right2);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.right);
+				String rhs = getStringRhs(this.right);
+				
+				right2 = String.format("%s.%s.ptrCompare()", lhs, rhs);				
+			}
+			
+			if (left2 != null)
+			{
+				left2 = String.format("%s.ptrCompare()", left2);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+				
+				left2 = String.format("%s.%s.ptrCompare()", lhs, rhs);				
+			}
+			
+			return String.format("%s %s %s", left2, this.operator, right2);
+		}		
 	}
 	
 	static class MCompoundWithPtrOnLeft extends MInfixExpression
 	{
-		public boolean isCompoundWithPtrOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.left);
+			
+			if (plain != null)
+			{
+				return String.format("%s.ptrAdjust(%s%s)", plain, this.operator, this.right);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+				
+				return String.format("%s.%s.ptrAdjust(%s%s)", lhs, rhs, this.operator, this.right);
+			}
+		}
 	}
 	
 	static class MPtrCreateNull
 	{
-		public boolean isNullPtrCreate = true;
+		// TODO: Not currently used.
 	}
 	
 	static class MPostfixWithDeref extends MPostfixExpression
 	{
-		public boolean isPostfixDeref = true;
+		// TODO: Not currently used
 	}
 
 	static class MPrefixWithDeref extends MPrefixExpression
 	{
-		public boolean isPrefixDeref = true;
+		// TODO: Not currently used
 	}
 	
 	static class MPtrCopy extends MExpression
 	{
-		public boolean isPtrCopy = true;
 		public MExpression operand;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s", this.operand);
+		}
 	}
 	
 	static class MInfixAssignmentWithPtrOnLeft extends MInfixExpression
 	{
-		public boolean isAssignmentWithPtrOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.left);
+			
+			if (plain != null)
+			{
+				return String.format("%s = %s", plain, this.right);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+				
+				return String.format("%s.%s = %s", lhs, rhs, this.right);
+			}
+		}
 	}
 	
 	static class MRefWrapper extends MExpression
 	{
-		public boolean isRefWrapper = true;
 		public MExpression operand;
+		
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return plain;
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+				
+				return String.format("%s.%s", lhs, rhs);
+			}
+		}
 	}
 	
 	static class MAddressOfExpressionPtr extends MExpression
 	{
-		public boolean isAddressOfPtr = true;
 		public MExpression operand;
+		
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s.ptrAddressOf()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.%s.ptrAddressOf()", lhs, rhs);
+			}
+		}
 	}
 	
 	static class MBracketExpression extends MExpression
 	{
-		public boolean isBrackets = true;
 		public MExpression operand;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("(%s)", this.operand);
+		}
 	}
 	
-	static class MArrayExpressionPtr extends MArrayExpression
+	static class MArrayExpressionPtr extends MArrayExpression implements PlainString
 	{
-		public boolean isPtrArray = true;
+		@Override
+		public String toString() 
+		{
+			return this.toStringPlain() + ".get()";
+		}
+		
+		
+		@Override
+		public String toStringPlain() 
+		{
+			String operand;
+			
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				operand = String.format("%s", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				operand = String.format("%s.%s", lhs, rhs);
+			}
+			
+			operand += ".ptrOffset(";
+			
+			for (int i = 0; i < this.subscript.size(); i++)
+			{
+				operand += this.subscript.get(i).toString();
+				
+				if (i != this.subscript.size() - 1)
+					operand += ", ";
+			}
+			
+			return operand + ")";
+		}
 	}
 	
 	static class MInfixExpressionWithBitfieldOnLeft extends MInfixExpression
 	{
-		public boolean isInfixWithBitfieldOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s %s %s", this.left, this.operator, this.right);
+		}
 	}
 
 	static class MInfixAssignmentWithNumberOnLeft extends MInfixExpression
 	{
-		public boolean isAssignmentWithNumberOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.left);
+			
+			if (plain != null)
+			{
+				return String.format("%s.set(%s)", plain, this.right);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+				
+				return String.format("%s.%s.set(%s)", lhs, rhs, this.right);
+			}
+		}
 	}
 	
 	static class MInfixWithNumberOnLeft extends MInfixExpression
 	{
-		public boolean isInfix = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s %s %s", this.left, this.operator, this.right);
+		}
 	}
 
 	static class MCompoundWithNumberOnLeft extends MInfixExpression
 	{
-		public boolean isCompoundWithNumberOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.left);
+			
+			if (plain != null)
+			{
+				return String.format("%s.set(%s %s %s)", plain, this.left, this.operator, this.right);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+
+				return String.format("%s.%s.set(%s %s %s)", lhs, rhs, this.left, this.operator, this.right);
+			}
+		}
 	}
 	
 	static class MInfixExpressionWithDerefOnLeft extends MInfixExpression
 	{
-		public boolean isInfixWithDerefOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s %s %s", this.left, this.operator, this.right);
+		}
 	}
 
 	static class MInfixAssignmentWithBitfieldOnLeft extends MInfixExpression
 	{
-		public boolean isAssignmentWithBitfieldOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.left);
+			
+			if (plain != null)
+			{
+				return String.format("set%s(%s)", plain, this.right);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+				
+				return String.format("%s.set%s(%s)", lhs, rhs, this.right);
+			}
+		}
 	}
 
 	static class MInfixAssignmentWithDerefOnLeft extends MInfixExpression
 	{
-		public boolean isAssignmentWithDerefOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.left);
+			
+			if (plain != null)
+			{
+				return String.format("%s.set(%s)", plain, this.right);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+				
+				return String.format("%s.%s.set(%s)", lhs, rhs, this.right);
+			}
+		}
 	}
 
 	static class MCompoundWithBitfieldOnLeft extends MInfixExpression
 	{
-		public boolean isCompoundWithBitfieldOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.left);
+
+			if (plain != null)
+			{
+				return String.format("set%s(%s %s %s)", plain, this.left, this.operator, this.right);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+				
+				return String.format("%s.set%s(%s %s %s)", lhs, rhs, this.left, this.operator, this.right);
+			}
+		}
 	}
 
 	static class MCompoundWithDerefOnLeft extends MInfixExpression
 	{
-		public boolean isCompoundWithDerefOnLeft = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.left);
+
+			if (plain != null)
+			{
+				return String.format("%s.set(%s %s %s)", plain, this.left, this.operator, this.right);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.left);
+				String rhs = getStringRhs(this.left);
+				
+				return String.format("%s.%s.set(%s %s %s)", lhs, rhs, this.left, this.operator, this.right);
+			}
+		}
 	}
 	
 	static class MInfixExpressionPlain extends MInfixExpression
 	{
-		public boolean isInfix = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s %s %s", this.left, this.operator, this.right);
+		}
 	}
 
 	static class MIdentityExpressionPlain extends MIdentityExpression
 	{
-		public boolean isIdentity = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s", this.ident);
+		}
+
+		@Override
+		public String toStringPlain() 
+		{
+			return this.toString();
+		}
 	}
 	
 	static class MIdentityExpressionBitfield extends MIdentityExpression
 	{
-		public boolean isIdentityBitfield = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("get%s()", this.ident);
+		}
+		
+		public String toStringPlain()
+		{
+			return String.format("%s", this.ident);
+		}
 	}
 
 	static class MIdentityExpressionNumber extends MIdentityExpression
 	{
-		public boolean isIdentityNumber = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.get()", this.ident);
+		}
+		
+		@Override
+		public String toStringPlain()
+		{
+			return String.format("%s", this.ident);
+		}
 	}
 	
 	static class MIdentityExpressionPtr extends MIdentityExpression
 	{
-		public boolean isIdentityPtr = true;
+		@Override
+		public String toString()
+		{
+			return String.format("%s.ptrCopy()", this.ident);
+		}
+		
+		@Override
+		public String toStringPlain()
+		{
+			return String.format("%s", this.ident);
+		}
+	}
+
+	static class MIdentityExpressionDeref extends MIdentityExpression
+	{
+		@Override
+		public String toString()
+		{
+			return String.format("%s.get()", this.ident);
+		}
+		
+		@Override
+		public String toStringPlain()
+		{
+			return String.format("%s", this.ident);
+		}
 	}
 	
 	static class MIdentityExpressionEnumerator extends MIdentityExpression
 	{
-		public boolean isIdentityEnumerator = true;
-
 		public String enumName;
+
+		@Override
+		public String toString()
+		{
+			return String.format("%s.%s.val", this.enumName, this.ident);
+		}
+
+		@Override
+		public String toStringPlain()
+		{
+			return this.ident;
+		}
 	}
 	
 	static class MTernaryExpression extends MExpression
 	{
-		public boolean isTernary = true;
-		
 		public MExpression condition;
 		public MExpression negative;
 		public MExpression positive;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s ? %s : %s", this.condition, this.positive, this.negative);
+		}
 	}
 
 	static class MFieldReferenceExpressionPlain extends MFieldReferenceExpression
 	{
-		public boolean isFieldReference = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.%s", this.object, this.field);
+		}
+		
+		@Override
+		String toStringLhOnly() 
+		{
+			return this.object.toString();
+		}
+
+		@Override
+		String toStringRhOnly() 
+		{
+			return this.field;
+		}
 	}
 
 	static class MFieldReferenceExpressionBitfield extends MFieldReferenceExpression
 	{
-		public boolean isFieldReferenceBitfield = true;
+		@Override
+		public String toString()
+		{
+			return String.format("%s.get%s()", this.object, this.field);
+		}
+		
+		@Override
+		public String toStringLhOnly()
+		{
+			return String.format("%s", this.object);
+		}
+
+		@Override
+		public String toStringRhOnly()
+		{
+			return String.format("%s", this.field);
+		}
 	}
 	
 	static class MFieldReferenceExpressionNumber extends MFieldReferenceExpression
 	{
-		public boolean isFieldReferenceNumber = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.%s.get()", this.object, this.field);
+		}
+		
+		@Override
+		public String toStringLhOnly() 
+		{
+			return String.format("%s", this.object);
+		}
+
+		@Override
+		public String toStringRhOnly() 
+		{
+			return String.format("%s", this.field);
+		}
 	}
 	
 	static class MFieldReferenceExpressionPtr extends MFieldReferenceExpression
 	{
-		public boolean isFieldReferencePtr = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.%s.ptrCopy()", this.object, this.field);
+		}
+		
+		@Override
+		public String toStringLhOnly() 
+		{
+			return String.format("%s", this.object);
+		}
+
+		@Override
+		public String toStringRhOnly() 
+		{
+			return String.format("%s", this.field);
+		}
+	}
+	
+	static class MFieldReferenceExpressionDeref extends MFieldReferenceExpression
+	{
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.%s.get()", this.object, this.field);
+		}
+		
+		@Override
+		public String toStringLhOnly() 
+		{
+			return String.format("%s", this.object);
+		}
+
+		@Override
+		public String toStringRhOnly() 
+		{
+			return String.format("%s", this.field);
+		}
 	}
 	
 	static class MFieldReferenceExpressionEnumerator extends MFieldReferenceExpression
 	{
-		public boolean isFieldReferenceEnumerator = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.%s", this.object, this.field);
+		}
+		
+		@Override
+		String toStringLhOnly()
+		{
+			return this.object.toString();
+		}
+
+		@Override
+		String toStringRhOnly() 
+		{
+			return this.field;
+		}
 	}
 
 	static class MFunctionCallExpression extends MFunctionCallExpressionParent
 	{
-		public boolean isFunctionCall = true;
+		@Override
+		public String toString() 
+		{
+			String start = this.name.toString() + "(";
+
+			for (int i = 0; i < this.args.size(); i++)
+			{
+				start += this.args.get(i).toString();
+				
+				if (i != this.args.size() - 1)
+					start += ", ";
+			}
+
+			return start + ")";
+		}
 	}
 	
 	static class MClassInstanceCreation extends MFunctionCallExpressionParent
 	{
-		public boolean isClassInstanceCreation = true;
+		@Override
+		public String toString() 
+		{
+			String start = "new " + this.name.toString() + "(";
+
+			for (int i = 0; i < this.args.size(); i++)
+			{
+				start += this.args.get(i).toString();
+				
+				if (i != this.args.size() - 1)
+					start += ", ";
+			}
+
+			return start + ")";
+		}
 	}
 	
 	static class MLiteralExpression extends MExpression
 	{
-		public boolean isLiteral = true;
-		
 		public String literal;
+		
+		@Override
+		public String toString() 
+		{
+			return literal;
+		}
 	}
 	
 	static class MPrefixExpressionPlain extends MPrefixExpression
 	{
-		public boolean isPrefix = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s%s", this.operator, this.operand);
+		}
 	}
 
 	static class MPrefixExpressionPointer extends MPrefixExpression
 	{
-		public boolean isPrefixPointer = true;
+		// TODO: Shouldn't use this.
 	}
 	
 	static class MAddressOfExpression extends MExpression
 	{
-		public boolean isAddressOf = true;
-		
 		public MExpression operand;
+		
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s.addressOf()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+				
+				return String.format("%s.%s.addressOf()", lhs, rhs);
+			}
+		}
 	}
 	
 	static class MPostfixExpressionPlain extends MPostfixExpression
 	{
-		public boolean isPostfix = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s%s", this.operand, this.operator);
+		}
 	}
 
 	static class MPostfixExpressionPointerInc extends MPostfixExpression
 	{
-		public boolean isPostfixPointerInc = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s.ptrPostInc()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+				
+				return String.format("%s.%s.ptrPostInc()", lhs, rhs);
+			}
+		}
 	}
 
 	static class MPostfixExpressionPointerDec extends MPostfixExpression
 	{
-		public boolean isPostfixPointerDec = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s.ptrPostDec()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+				
+				return String.format("%s.%s.ptrPostDec()", lhs, rhs);
+			}
+		}
 	}
 
 	static class MPrefixExpressionPointerInc extends MPrefixExpression
 	{
-		public boolean isPrefixPointerInc = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s.ptrAdjust(1)", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.%s.ptrAdjust(1)", lhs, rhs);
+			}
+		}
 	}
 
 	static class MPrefixExpressionPointerDec extends MPrefixExpression
 	{
-		public boolean isPrefixPointerDec = true;
+		@Override
+		public String toString() 
+		{
+			if (this.operand instanceof MIdentityExpressionPtr)
+			{
+				MIdentityExpressionPtr ident = (MIdentityExpressionPtr) this.operand;
+				return String.format("%s.ptrAdjust(-1)", ident.toStringPlain());
+			}
+			else if (this.operand instanceof MFieldReferenceExpressionPtr)
+			{
+				MFieldReferenceExpressionPtr fr = (MFieldReferenceExpressionPtr) this.operand;
+				return String.format("%s.%s.ptrAdjust(-1)", fr.toStringLhOnly(), fr.toStringRhOnly());
+			}
+			else
+			{
+				MyLogger.logImportant(this.getClass().getCanonicalName());
+				return null;
+			}
+		}
 	}
 	
 	static class MPrefixExpressionPointerStar extends MPrefixExpression
 	{
-		public boolean isPrefixPointerStar = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s.get()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.%s.get()", lhs, rhs);
+			}
+		}
 	}
 	
 	static class MPostfixExpressionBitfieldInc extends MPostfixExpression
 	{
-		public boolean isPostfixBitfieldInc = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("postInc%s()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.postInc%s()", lhs, rhs);
+			}
+		}
 	}
 
 	static class MPostfixExpressionBitfieldDec extends MPostfixExpression
 	{
-		public boolean isPostfixBitfieldDec = true;
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("postDec%s()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.postDec%s()", lhs, rhs);
+			}
+		}
 	}
 
 	static class MPrefixExpressionBitfieldInc extends MPrefixExpression
 	{
 		public MExpression set;
-		public boolean isPrefixBitfieldInc = true;
+		
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+
+			if (plain != null)
+			{
+				return String.format("set%s(%s + 1)", plain, this.operand);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.set%s(%s + 1)", lhs, rhs, this.operand);
+			}
+		}
 	}
 	
 	static class MPrefixExpressionBitfieldDec extends MPrefixExpression
 	{
 		public MExpression set;
-		public boolean isPrefixBitfieldDec = true;
+		
+		@Override
+		public String toString() 
+		{
+			String plain = getPlainString(this.operand);
+
+			if (plain != null)
+			{
+				return String.format("set%s(%s - 1)", plain, this.operand);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.set%s(%s - 1)", lhs, rhs, this.operand);
+			}
+		}
 	}	
 	
 	static class MPrefixExpressionBitfield extends MPrefixExpression
 	{
 		public MExpression set;
-		public boolean isPrefixBitfield = true;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s%s", this.operator, this.operand);
+		}
 	}
 	
 	static class MCastExpression extends MExpression
 	{
-		public boolean isCast = true;
-		
 		public MExpression operand;
 		public String type = "int"; // TODO
 	}
 	
 	static class MDeleteObjectSingle extends MDeleteExpression
 	{
-		public boolean isDeleteObjectSingle = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.destruct()", this.operand);
+		}
 	}
 	
 	static class MDeleteObjectMultiple extends MDeleteExpression
 	{
-		public boolean isDeleteObjectMultiple = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("DestructHelper.destructArray(%s)", this.operand);
+		}
 	}
 	
 	static class MEmptyExpression extends MExpression
 	{
-		public boolean isEmpty = true;
+		@Override
+		public String toString() 
+		{
+			return String.format("%s", "/* Empty expression */");
+		}
 	}
 	
 	static class MNewArrayExpression extends MExpression
 	{
-		public boolean isBasicNewArray = true;
-
 		public List<MExpression> sizes = new ArrayList<MExpression>();
 		public String type;
+		
+		@Override
+		public String toString() 
+		{
+			String start = String.format("%sMulti.create(", this.type);
+			
+			for (int i = 0; i < this.sizes.size(); i++)
+			{
+				start += this.sizes.get(i).toString();
+				
+				if (i != this.sizes.size() - 1)
+					start += ", ";
+			}
+			
+			return start + ")";
+		}
 	}
 	
 	static class MNewArrayExpressionObject extends MExpression
 	{
-		public boolean isObjectNewArray = true;
-
 		public List<MExpression> sizes = new ArrayList<MExpression>();
 		public String type;
+		
+		@Override
+		public String toString() 
+		{
+			String start = String.format("PTR.newObjPtr(CreateHelper.allocateArray(%s.class,", this.type);
+			
+			for (int i = 0; i < this.sizes.size(); i++)
+			{
+				start += this.sizes.get(i).toString();
+				
+				if (i != this.sizes.size() - 1)
+					start += ", ";
+			}
+			
+			return start + ")";
+		}
 	}
 	
 	static class MNewExpression extends MExpression
 	{
-		public boolean isNewSingle = true;
-		
 		public String type;
 		public MExpression argument;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("PTR.new%sPtr(%s)", this.type, this.argument);
+		}
 	}
 	
 	static class MNewExpressionObject extends MExpression
 	{
-		public boolean isNewObject = true;
-		
 		public String type;
 		public List<MExpression> arguments = new ArrayList<MExpression>();
+		
+		@Override
+		public String toString() 
+		{
+			String start = String.format("new %s(", this.type);
+			
+			for (int i = 0; i < this.arguments.size(); i++)
+			{
+				start += this.arguments.get(i).toString();
+				
+				if (i != this.arguments.size() - 1)
+					start += ", ";
+			}
+			
+			return start + ")";
+		}
 	}
 	
 	static class MAddItemCall extends MExpression
 	{
-		public boolean isAddItemCall = true;
-		
 		public MExpression operand;
 		public int nextFreeStackId;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("StackHelper.addItem(%s, %d, __stack)", this.operand, this.nextFreeStackId);
+		}
 	}
 }
