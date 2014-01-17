@@ -146,12 +146,29 @@ class ExpressionEvaluator
 		}
 		else if (TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
-			// PtrObject.valueOf(new object())
+			// PtrObject.valueOf(new object(arg1, arg2))
 			MNewExpressionObject ptr = new MNewExpressionObject();
 			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.RAW);
-			// TODO: expr.getExpressionType is not good enough here.
-			// ptr.arguments.add(ctx.initMngr.eval1Init(expr.getInitializer(), expr.getExpressionType(), null));
 
+			IBinding binding = ctx.converter.evalTypeId(expr.getTypeId());
+			ICPPConstructor con = (ICPPConstructor) binding;
+			ICPPParameter[] params = con.getParameters();
+			
+			IASTInitializer init = expr.getInitializer();
+			
+			if (init instanceof ICPPASTConstructorInitializer)
+			{
+				ICPPASTConstructorInitializer con2 = (ICPPASTConstructorInitializer) init;
+				
+				IASTInitializerClause[] clss = con2.getArguments();
+				
+				for (int i = 0; i < clss.length; i++)
+				{
+					IASTExpression expr2 = (IASTExpression) clss[i];
+					ptr.arguments.add(wrapIfNeeded(expr2, params[i].getType()));
+				}
+			}
+			
 			MValueOfExpressionPtr ptrExpr = new MValueOfExpressionPtr();
 			ptrExpr.type = "PtrObject";
 			ptrExpr.operand = ptr;

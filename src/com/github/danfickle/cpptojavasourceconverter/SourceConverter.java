@@ -843,12 +843,13 @@ public class SourceConverter
 	/**
 	 * Given a typeId returns a Java type. Used in sizeof, etc. 
 	 */
-	String evalTypeId(IASTTypeId typeId) throws DOMException
+	IBinding evalTypeId(IASTTypeId typeId) throws DOMException
 	{
-		//typeId.getAbstractDeclarator().getName().resolveBinding();
 		if (typeId != null)
 		{
-			//return evaluateDeclSpecifierReturnType(typeId.getDeclSpecifier());
+			IASTDeclSpecifier dspec = typeId.getDeclSpecifier();
+			ICPPASTNamedTypeSpecifier comp = (ICPPASTNamedTypeSpecifier) dspec;
+			return comp.getName().resolveBinding();
 		}
 		return null;
 	}
