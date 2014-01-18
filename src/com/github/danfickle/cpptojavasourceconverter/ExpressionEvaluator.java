@@ -381,10 +381,7 @@ class ExpressionEvaluator
 		else if (expr.literal.equals("this"))
 			/* Do nothing. */;
 		else
-		{
-			MyLogger.logImportant("Not a ptr literal: " + expr.literal);
-			MyLogger.exitOnError();
-		}
+			assert(false);
 	}
 	
 	private MExpression evalExprUnary(IASTUnaryExpression expr) throws DOMException
@@ -429,25 +426,27 @@ class ExpressionEvaluator
 
 		if (owner.getImplicitNames().length != 0)
 		{
-			IBinding binding = ((IASTName) owner.getImplicitNames()[0]).resolveBinding();
+			IASTName nm = (IASTName) owner.getImplicitNames()[0];
+			IBinding binding = nm.resolveBinding();
+
+			funcDep(binding, nm);
 			
 			if (binding instanceof ICPPMethod)
 			{
 				MOverloadedMethodUnary unary = new MOverloadedMethodUnary();
 				unary.object = eval1Expr(expr.getOperand());
-				unary.method = TypeManager.normalizeName(((ICPPMethod) binding).getName());
+				unary.method = TypeManager.normalizeName(binding.getName());
 				return unary;
 			}
 			else if (binding instanceof ICPPFunction)
 			{
 				MOverloadedFunctionUnary unary = new MOverloadedFunctionUnary();
-				unary.function = reparentFunctionCall(binding, (IASTName) owner.getImplicitNames()[0]);
+				unary.function = reparentFunctionCall(binding, nm);
 				unary.object = eval1Expr(expr.getOperand());
 				return unary;
 			}
 			else
 			{
-				MyLogger.logImportant(binding.getClass().getCanonicalName());
 				assert(false);
 				return null;
 			}
@@ -629,7 +628,6 @@ class ExpressionEvaluator
 			return pre;
 		}
 
-		MyLogger.logImportant(expr.getRawSignature());
 		assert(false);
 		return null;
 	}
@@ -680,36 +678,36 @@ class ExpressionEvaluator
 		else
 		{
 			IASTName funcNm = getIFunctionFromFuncCallExpr(expr);
-			IFunction funcb = (IFunction) funcNm.resolveBinding();
+			IBinding funcb = funcNm.resolveBinding();
 
-			CppFunction funcDecl = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(funcb), funcNm);
-			funcDecl.isUsed = true;
-
+			funcDep(funcb, funcNm);
+			
 			MFunctionCallExpression func = new MFunctionCallExpression();
 			func.name = eval1Expr(expr.getFunctionNameExpression());
+			reparentFunctionCall(funcb, funcNm, func.name);
 			
-			if (func.name instanceof MIdentityExpression)
-			{
-				if (funcDecl.isOriginallyGlobal)
-					((MIdentityExpression) func.name).ident = funcDecl.parent.name + '.' + funcDecl.name;
-				else
-					((MIdentityExpression) func.name).ident = funcDecl.name;
-			}
-			else if (func.name instanceof MFieldReferenceExpression)
-			{
-				((MFieldReferenceExpression) func.name).field = funcDecl.name;
-			}
-
 			evalExprFuncCallArgs(expr, func.args);
 			return func;
 		}
 	}
 
+	/**
+	 * Java doesn't have global functions, so chuck it in a class.
+	 */
 	private String reparentFunctionCall(IBinding binding, IASTName nm) throws DOMException
 	{
 		CppFunction funcDecl = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(binding), nm);		
 		assert(funcDecl.isOriginallyGlobal);
 		return funcDecl.parent.name + '.' + funcDecl.name;
+	}
+	
+	/**
+	 * Mark a function as used.
+	 */
+	private void funcDep(IBinding binding, IASTName nm) throws DOMException
+	{
+		CppFunction funcDecl = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(binding), nm);
+		funcDecl.isUsed = true;
 	}
 	
 	private void reparentFunctionCall(IBinding binding, IASTName nm, MExpression funcName) throws DOMException
