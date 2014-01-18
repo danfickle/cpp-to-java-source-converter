@@ -424,8 +424,35 @@ class ExpressionEvaluator
 		 * IASTImplicitNameOwner => Methods
 		 *   getImplicitNames
 		 */
-		
-		if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
+
+		IASTImplicitNameOwner owner = (IASTImplicitNameOwner) expr;
+
+		if (owner.getImplicitNames().length != 0)
+		{
+			IBinding binding = ((IASTName) owner.getImplicitNames()[0]).resolveBinding();
+			
+			if (binding instanceof ICPPMethod)
+			{
+				MOverloadedMethodUnary unary = new MOverloadedMethodUnary();
+				unary.object = eval1Expr(expr.getOperand());
+				unary.method = TypeManager.normalizeName(((ICPPMethod) binding).getName());
+				return unary;
+			}
+			else if (binding instanceof ICPPFunction)
+			{
+				MOverloadedFunctionUnary unary = new MOverloadedFunctionUnary();
+				unary.function = reparentFunctionCall(binding, (IASTName) owner.getImplicitNames()[0]);
+				unary.object = eval1Expr(expr.getOperand());
+				return unary;
+			}
+			else
+			{
+				MyLogger.logImportant(binding.getClass().getCanonicalName());
+				assert(false);
+				return null;
+			}
+		}
+		else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)
 		{
 			MBracketExpression bra = new MBracketExpression();
 			bra.operand = eval1Expr(expr.getOperand());
@@ -603,6 +630,7 @@ class ExpressionEvaluator
 		}
 
 		MyLogger.logImportant(expr.getRawSignature());
+		assert(false);
 		return null;
 	}
 
@@ -677,6 +705,23 @@ class ExpressionEvaluator
 		}
 	}
 
+	private String reparentFunctionCall(IBinding binding, IASTName nm) throws DOMException
+	{
+		CppFunction funcDecl = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(binding), nm);		
+		assert(funcDecl.isOriginallyGlobal);
+		return funcDecl.parent.name + '.' + funcDecl.name;
+	}
+	
+	private void reparentFunctionCall(IBinding binding, IASTName nm, MExpression funcName) throws DOMException
+	{
+		CppFunction funcDecl = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(binding), nm);		
+		
+		if (funcName != null && funcDecl.isOriginallyGlobal)
+		{
+			((MIdentityExpression) funcName).ident = funcDecl.parent.name + '.' + funcDecl.name;
+		}
+	}
+	
 	private MExpression evalExprBinary(IASTBinaryExpression expr) throws DOMException 
 	{
 		if (ctx.bitfieldMngr.isBitfield(expr.getOperand1()))

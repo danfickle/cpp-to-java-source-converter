@@ -1372,4 +1372,28 @@ class ExpressionModels
 			return String.format("StackHelper.addItem(%s, %d, __stack)", this.operand, this.nextFreeStackId);
 		}
 	}
+	
+	static class MOverloadedMethodUnary extends MExpression
+	{
+		public String method;
+		public MExpression object;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.%s()", this.object, this.method);
+		}
+	}
+	
+	static class MOverloadedFunctionUnary extends MExpression
+	{
+		public String function;
+		public MExpression object;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s(%s)", this.function, this.object);
+		}
+	}
 }
