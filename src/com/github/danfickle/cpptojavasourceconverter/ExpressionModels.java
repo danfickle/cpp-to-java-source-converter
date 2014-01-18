@@ -1396,4 +1396,30 @@ class ExpressionModels
 			return String.format("%s(%s)", this.function, this.object);
 		}
 	}
+	
+	static class MOverloadedMethodInfix extends MExpression
+	{
+		public String method;
+		public MExpression object;
+		public MExpression right;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.%s(%s)", this.object, this.method, this.right);
+		}
+	}
+	
+	static class MOverloadedFunctionInfix extends MExpression
+	{
+		public String function;
+		public MExpression left;
+		public MExpression right;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s(%s, %s)", this.function, this.left, this.right);
+		}
+	}
 }

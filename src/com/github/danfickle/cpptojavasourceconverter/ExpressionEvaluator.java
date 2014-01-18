@@ -722,7 +722,38 @@ class ExpressionEvaluator
 	
 	private MExpression evalExprBinary(IASTBinaryExpression expr) throws DOMException 
 	{
-		if (ctx.bitfieldMngr.isBitfield(expr.getOperand1()))
+		IASTImplicitNameOwner owner = (IASTImplicitNameOwner) expr;
+
+		if (owner.getImplicitNames().length != 0)
+		{
+			IASTName nm = (IASTName) owner.getImplicitNames()[0];
+			IBinding binding = nm.resolveBinding();
+
+			funcDep(binding, nm);
+			
+			if (binding instanceof ICPPMethod)
+			{
+				MOverloadedMethodInfix infix = new MOverloadedMethodInfix();
+				infix.object = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.method = TypeManager.normalizeName(binding.getName());
+				return infix;
+			}
+			else if (binding instanceof ICPPFunction)
+			{
+				MOverloadedFunctionInfix infix = new MOverloadedFunctionInfix();
+				infix.function = reparentFunctionCall(binding, nm);
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				return infix;
+			}
+			else
+			{
+				assert(false);
+				return null;
+			}
+		}
+		else if (ctx.bitfieldMngr.isBitfield(expr.getOperand1()))
 		{
 			if (expr.getOperator() == IASTBinaryExpression.op_assign)
 			{
