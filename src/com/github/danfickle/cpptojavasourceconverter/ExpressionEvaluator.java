@@ -9,6 +9,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppFunction;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
 import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
@@ -632,7 +633,7 @@ class ExpressionEvaluator
 		return null;
 	}
 
-	private IASTName getIFunctionFromFuncCallExpr(IASTFunctionCallExpression expr)
+	private IASTName getAstNameFromFuncCallExpr(IASTFunctionCallExpression expr)
 	{
 		if (expr.getFunctionNameExpression() instanceof IASTIdExpression)
 		{
@@ -644,11 +645,24 @@ class ExpressionEvaluator
 		}		
 	}
 	
-	private void evalExprFuncCallArgs(IASTFunctionCallExpression expr, List<MExpression> args) throws DOMException
+	private void evalExprFuncCallArgs(IASTFunctionCallExpression expr, List<MExpression> args, IParameter[] params) throws DOMException
 	{
-		IFunction funcb = (IFunction) getIFunctionFromFuncCallExpr(expr).resolveBinding();
-		IParameter[] params = funcb.getParameters();
+		IASTName nm = getAstNameFromFuncCallExpr(expr);
+		IBinding binding = nm.resolveBinding();
 		
+		if (binding instanceof IFunction)
+		{
+			params = ((IFunction) binding).getParameters();
+		}
+		else if (binding instanceof ICPPConstructor)
+		{
+			params = ((ICPPConstructor) binding).getParameters();
+		}
+		else if (binding instanceof ICPPMethod)
+		{
+			params = ((ICPPMethod) binding).getParameters();
+		}
+	
 		for (int i = 0; i < params.length; i++)
 		{
 			IASTExpression argExpr = (IASTExpression) expr.getArguments()[i];
@@ -658,7 +672,36 @@ class ExpressionEvaluator
 	
 	private MExpression evalExprFuncCall(IASTFunctionCallExpression expr) throws DOMException
 	{
-		if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
+		IASTImplicitNameOwner owner = (IASTImplicitNameOwner) expr;
+
+		if (owner.getImplicitNames().length != 0)
+		{
+			IASTName nm = (IASTName) owner.getImplicitNames()[0];
+			IBinding binding = nm.resolveBinding();
+
+			funcDep(binding, nm);
+			
+			if (binding instanceof ICPPConstructor)
+			{
+				MClassInstanceCreation func = new MClassInstanceCreation();
+				func.name = eval1Expr(expr.getFunctionNameExpression());
+				evalExprFuncCallArgs(expr, func.args, ((ICPPConstructor) binding).getParameters());
+				return func;
+			}
+			else if (binding instanceof ICPPMethod)
+			{
+				MOverloadedMethodFuncCall fcall = new MOverloadedMethodFuncCall();
+				fcall.object = eval1Expr(expr.getFunctionNameExpression());
+				evalExprFuncCallArgs(expr, fcall.args, ((ICPPMethod) binding).getParameters());
+				return fcall;
+			}
+			else
+			{
+				assert(false);
+				return null;
+			}
+		}
+		else if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
 			((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
 		{
 			// TODO: Redirect function call to correct location.
@@ -677,7 +720,7 @@ class ExpressionEvaluator
 		}
 		else
 		{
-			IASTName funcNm = getIFunctionFromFuncCallExpr(expr);
+			IASTName funcNm = getAstNameFromFuncCallExpr(expr);
 			IBinding funcb = funcNm.resolveBinding();
 
 			funcDep(funcb, funcNm);
@@ -685,8 +728,7 @@ class ExpressionEvaluator
 			MFunctionCallExpression func = new MFunctionCallExpression();
 			func.name = eval1Expr(expr.getFunctionNameExpression());
 			reparentFunctionCall(funcb, funcNm, func.name);
-			
-			evalExprFuncCallArgs(expr, func.args);
+			evalExprFuncCallArgs(expr, func.args, null);
 			return func;
 		}
 	}
@@ -706,17 +748,24 @@ class ExpressionEvaluator
 	 */
 	private void funcDep(IBinding binding, IASTName nm) throws DOMException
 	{
-		CppFunction funcDecl = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(binding), nm);
-		funcDecl.isUsed = true;
+		CppDeclaration decl = ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(binding), nm);
+		
+		if (decl instanceof CppFunction)
+		{
+			((CppFunction) decl).isUsed = true;
+		}
 	}
 	
 	private void reparentFunctionCall(IBinding binding, IASTName nm, MExpression funcName) throws DOMException
 	{
-		CppFunction funcDecl = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(binding), nm);		
-		
-		if (funcName != null && funcDecl.isOriginallyGlobal)
+		if (ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(binding), nm) instanceof CppFunction)
 		{
-			((MIdentityExpression) funcName).ident = funcDecl.parent.name + '.' + funcDecl.name;
+			CppFunction funcDecl = (CppFunction) ctx.typeMngr.getDeclFromTypeName(ctx.converter.evalBindingReturnType(binding), nm);
+		
+			if (funcName != null && funcDecl.isOriginallyGlobal)
+			{
+				((MIdentityExpression) funcName).ident = funcDecl.parent.name + '.' + funcDecl.name;
+			}
 		}
 	}
 	

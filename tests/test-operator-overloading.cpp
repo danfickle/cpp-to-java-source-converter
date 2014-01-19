@@ -17,11 +17,16 @@ public:
 	}
 
 	// Function call method
-	void operator()
+	void operator ()()
 	{
 		j++;
 	}
 
+	int operator ()(int kk, int ll)
+	{
+		kk++;
+		ll++;
+	}
 };
 
 // Binary function
@@ -46,5 +51,6 @@ void OpTestTest()
 	OpTest e = +a;
 	OpTest f = -a;
 	f();
+	f(1, 2);
 }
 

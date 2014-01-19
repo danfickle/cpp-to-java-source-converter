@@ -1422,4 +1422,26 @@ class ExpressionModels
 			return String.format("%s(%s, %s)", this.function, this.left, this.right);
 		}
 	}
+	
+	static class MOverloadedMethodFuncCall extends MExpression
+	{
+		public MExpression object;
+		public List<MExpression> args = new ArrayList<MExpression>();
+		
+		@Override
+		public String toString() 
+		{
+			String start = String.format("%s.opFuncCall(", this.object);
+			
+			for (int i = 0; i < this.args.size(); i++)
+			{
+				start += this.args.get(i).toString();
+				
+				if (i != this.args.size() - 1)
+					start += ", ";
+			}
+			
+			return start + ")";
+		}
+	}
 }
