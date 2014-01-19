@@ -36,7 +36,7 @@ int func(int a)
   this->_a;  // 12 -> Field reference
   this->_b;  // 13 -> Field reference bitfield
   this->_c; // 14 -> Field reference dereference pointer
-  this._d;  // 15 -> Field reference enum
+  this->_d; // 15 -> Field reference enum
 
   10;     // 17 -> Literal
   ++_a;   // 18 -> Prefix plain
@@ -89,13 +89,13 @@ int func(int a)
   *ptr | 3;  // -> Pointer deref infix
   *ptr += 4; // -> Pointer deref compound
 
-  *this._c = 2;  // -> Field deref assignment
-  *this._c | 3;  // -> Field deref infix
-  *this._c += 4; // -> Field deref compound
+  (*this)._a = 2;  // -> Field deref assignment
+  (*this)._a | 3;  // -> Field deref infix
+  (*this)._a += 4; // -> Field deref compound
 
-  this->_c = 2;  // -> Field deref assignment
-  this->_c | 3;  // -> Field deref infix
-  this->_c += 4; // -> Field deref compound
+  this->_a = 2;  // -> Field deref assignment
+  this->_a | 3;  // -> Field deref infix
+  this->_a += 4; // -> Field deref compound
 
   delete ptr;           // -> Basic type delete
   delete ptr_cls;       // -> Object type delete
@@ -111,8 +111,8 @@ int func(int a)
   global_func(100);                // -> Function call expression
   global_func(101, 102);           // -> Function call expression with multiple args
   mymethod(103, myclass);          // -> Id method call
-  this->mymethod(105, cls(100));   // -> Field reference pointer function call
-  myclass.mymethod(107, cls(200)); // -> Field reference object function call
+  this->mymethod(105, cls(100, 101));   // -> Field reference pointer function call
+  myclass.mymethod(107, cls(200, 201)); // -> Field reference object function call
 
   _d = (bb) 1;       // Cast to enum
   _b = (short) 5;    // Cast to bitfield
