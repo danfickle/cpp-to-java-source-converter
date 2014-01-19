@@ -672,6 +672,15 @@ class ExpressionEvaluator
 	
 	private MExpression evalExprFuncCall(IASTFunctionCallExpression expr) throws DOMException
 	{
+		/**
+		 * IASTFunctionCallExpression => Methods
+		 *   getArguments
+		 *   getFunctionNameExpression
+		 *   
+		 * IASTImplicitNameOwner => Methods
+		 *   getImplicitNames
+		 */
+		
 		IASTImplicitNameOwner owner = (IASTImplicitNameOwner) expr;
 
 		if (owner.getImplicitNames().length != 0)
@@ -700,23 +709,6 @@ class ExpressionEvaluator
 				assert(false);
 				return null;
 			}
-		}
-		else if (expr.getFunctionNameExpression() instanceof IASTIdExpression &&
-			((IASTIdExpression) expr.getFunctionNameExpression()).getName().resolveBinding() instanceof ICPPClassType)
-		{
-			// TODO: Redirect function call to correct location.
-			
-			MClassInstanceCreation func = new MClassInstanceCreation();
-			func.name = eval1Expr(expr.getFunctionNameExpression());
-			
-			for (IASTInitializerClause cls : expr.getArguments())
-			{
-				IASTExpression argExpr = (IASTExpression) cls;
-				// TODO: Correct func arg type.
-				func.args.add(wrapIfNeeded(argExpr, argExpr.getExpressionType()));
-			}
-
-			return func;
 		}
 		else
 		{

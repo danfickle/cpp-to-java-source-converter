@@ -92,6 +92,7 @@ This is an incomplete and fluid list of items that need doing before the initial
   + Always initialize pointer objects (pointing to nothing if needed).
   + Output function declarations with missing definitions for default args function with a TODO as the body.
   + Varargs.
+  + Bracketed expressions
 + test-references
 + test-enums
 + test-bitfield
