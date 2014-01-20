@@ -10,6 +10,12 @@ public:
 		return OpTest(j - b.j);
 	}
 
+	// Binary method
+ 	OpTest operator /(int b) const
+	{
+		return OpTest(j - b);
+	}
+
 	// Unary method
 	OpTest operator -()
 	{
@@ -81,10 +87,14 @@ void OpTestTest()
 	OpTest e = +a;
 	OpTest f = -a;
 	OpTest g = 5 + b;
+	OpTest h = b / 2;
+
 	++f;
 	f++;
+
 	--g;
 	g--;
+
 	f();
 	f(1, 2);
 }

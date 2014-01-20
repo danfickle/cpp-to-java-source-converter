@@ -684,10 +684,9 @@ class ExpressionEvaluator
 		}		
 	}
 	
-	private void evalExprFuncCallArgs(IASTFunctionCallExpression expr, List<MExpression> args, IParameter[] params) throws DOMException
+	private void evalExprFuncCallArgs(IASTFunctionCallExpression expr, List<MExpression> args, IBinding binding) throws DOMException
 	{
-		IASTName nm = getAstNameFromFuncCallExpr(expr);
-		IBinding binding = nm.resolveBinding();
+		IParameter[] params;
 		
 		if (binding instanceof IFunction)
 		{
@@ -697,8 +696,9 @@ class ExpressionEvaluator
 		{
 			params = ((ICPPConstructor) binding).getParameters();
 		}
-		else if (binding instanceof ICPPMethod)
+		else
 		{
+			assert(binding instanceof ICPPMethod);
 			params = ((ICPPMethod) binding).getParameters();
 		}
 	
@@ -733,14 +733,14 @@ class ExpressionEvaluator
 			{
 				MClassInstanceCreation func = new MClassInstanceCreation();
 				func.name = eval1Expr(expr.getFunctionNameExpression());
-				evalExprFuncCallArgs(expr, func.args, ((ICPPConstructor) binding).getParameters());
+				evalExprFuncCallArgs(expr, func.args, binding);
 				return func;
 			}
 			else if (binding instanceof ICPPMethod)
 			{
 				MOverloadedMethodFuncCall fcall = new MOverloadedMethodFuncCall();
 				fcall.object = eval1Expr(expr.getFunctionNameExpression());
-				evalExprFuncCallArgs(expr, fcall.args, ((ICPPMethod) binding).getParameters());
+				evalExprFuncCallArgs(expr, fcall.args, binding);
 				return fcall;
 			}
 			else
@@ -759,7 +759,7 @@ class ExpressionEvaluator
 			MFunctionCallExpression func = new MFunctionCallExpression();
 			func.name = eval1Expr(expr.getFunctionNameExpression());
 			reparentFunctionCall(funcb, funcNm, func.name);
-			evalExprFuncCallArgs(expr, func.args, null);
+			evalExprFuncCallArgs(expr, func.args, funcb);
 			return func;
 		}
 	}
@@ -814,23 +814,28 @@ class ExpressionEvaluator
 			if (binding instanceof ICPPMethod)
 			{
 				MOverloadedMethodInfix infix = new MOverloadedMethodInfix();
+
+				IParameter[] params = ((ICPPMethod) binding).getParameters();
+				assert(params.length == 1);
+				
 				infix.object = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
+				infix.right = wrapIfNeeded(expr.getOperand2(), params[0].getType());
 				infix.method = TypeManager.normalizeName(binding.getName());
-				return infix;
-			}
-			else if (binding instanceof ICPPFunction)
-			{
-				MOverloadedFunctionInfix infix = new MOverloadedFunctionInfix();
-				infix.function = reparentFunctionCall(binding, nm);
-				infix.left = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
 				return infix;
 			}
 			else
 			{
-				assert(false);
-				return null;
+				assert(binding instanceof ICPPFunction);
+				
+				MOverloadedFunctionInfix infix = new MOverloadedFunctionInfix();
+
+				IParameter[] params = ((ICPPFunction) binding).getParameters();
+				assert(params.length == 2);
+
+				infix.function = reparentFunctionCall(binding, nm);
+				infix.left = wrapIfNeeded(expr.getOperand1(), params[0].getType());
+				infix.right = wrapIfNeeded(expr.getOperand2(), params[1].getType());
+				return infix;
 			}
 		}
 		else if (ctx.bitfieldMngr.isBitfield(expr.getOperand1()))

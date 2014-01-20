@@ -538,6 +538,8 @@ class TypeManager
 				replace = "opMinus";
 			else if (name.equals("operator +"))
 				replace = "opPlus";
+			else if (name.equals("operator /"))
+				replace = "opDivide";
 			else if (name.equals("operator *"))
 				replace = "opStar";
 			else if (name.equals("operator &"))
