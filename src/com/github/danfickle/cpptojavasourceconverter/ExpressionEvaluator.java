@@ -436,20 +436,55 @@ class ExpressionEvaluator
 			{
 				MOverloadedMethodUnary unary = new MOverloadedMethodUnary();
 				unary.object = eval1Expr(expr.getOperand());
-				unary.method = TypeManager.normalizeName(binding.getName());
-				return unary;
-			}
-			else if (binding instanceof ICPPFunction)
-			{
-				MOverloadedFunctionUnary unary = new MOverloadedFunctionUnary();
-				unary.function = reparentFunctionCall(binding, nm);
-				unary.object = eval1Expr(expr.getOperand());
+				
+				/* In C++, post increment is distinguished from pre increment
+				 * by a dummy int param. */
+				if (((ICPPMethod) binding).getParameters().length == 1)
+				{
+					if (binding.getName().equals("operator ++"))
+					{
+						unary.method = "opPostIncrement";
+					}
+					else
+					{
+						assert(binding.getName().equals("operator --"));
+						unary.method = "opPreIncrement";
+					}
+				}
+				else
+				{
+					assert(((ICPPMethod) binding).getParameters().length == 0);
+					unary.method = TypeManager.normalizeName(binding.getName());
+				}
+
 				return unary;
 			}
 			else
 			{
-				assert(false);
-				return null;
+				assert(binding instanceof ICPPFunction);
+				
+				MOverloadedFunctionUnary unary = new MOverloadedFunctionUnary();
+				unary.function = reparentFunctionCall(binding, nm);
+				
+				if (((ICPPFunction) binding).getParameters().length == 2)
+				{
+					if (binding.getName().equals("operator ++"))
+					{
+						unary.function = unary.function.replace("opPreIncrement", "opPostIncrement");
+					}
+					else
+					{
+						assert(binding.getName().equals("operator --"));
+						unary.function = unary.function.replace("opPreDecrement", "opPostDecrement");
+					}
+				}
+				else
+				{
+					assert(((ICPPFunction) binding).getParameters().length == 1);
+				}
+
+				unary.object = eval1Expr(expr.getOperand());
+				return unary;
 			}
 		}
 		else if (expr.getOperator() == IASTUnaryExpression.op_bracketedPrimary)

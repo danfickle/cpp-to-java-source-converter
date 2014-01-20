@@ -494,6 +494,10 @@ class TypeManager
 				replace = "opPlusAssign";
 			else if (name.equals("operator ()"))
 				replace = "opFuncCall";
+			else if (name.equals("operator ++"))
+				replace = "opPreIncrement";
+			else if (name.equals("operator --"))
+				replace = "opPreDecrement";
 			else if (name.equals("operator =="))
 				replace = "equals";
 			else if (name.equals("operator -="))
