@@ -437,8 +437,8 @@ class ExpressionEvaluator
 				MOverloadedMethodUnary unary = new MOverloadedMethodUnary();
 				unary.object = eval1Expr(expr.getOperand());
 				
-				/* In C++, post increment is distinguished from pre increment
-				 * by a dummy int param. */
+				// In C++, post increment is distinguished from pre increment
+				// by a dummy int param.
 				if (((ICPPMethod) binding).getParameters().length == 1)
 				{
 					if (binding.getName().equals("operator ++"))
@@ -448,8 +448,10 @@ class ExpressionEvaluator
 					else
 					{
 						assert(binding.getName().equals("operator --"));
-						unary.method = "opPreIncrement";
+						unary.method = "opPostDecrement";
 					}
+
+					unary.withNullArgForPostIncAndDec = true;
 				}
 				else
 				{
@@ -477,6 +479,8 @@ class ExpressionEvaluator
 						assert(binding.getName().equals("operator --"));
 						unary.function = unary.function.replace("opPreDecrement", "opPostDecrement");
 					}
+
+					unary.withNullArgForPostIncAndDec = true;
 				}
 				else
 				{

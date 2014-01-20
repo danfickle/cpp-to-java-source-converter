@@ -1377,11 +1377,12 @@ class ExpressionModels
 	{
 		public String method;
 		public MExpression object;
+		public boolean withNullArgForPostIncAndDec;
 		
 		@Override
 		public String toString() 
 		{
-			return String.format("%s.%s()", this.object, this.method);
+			return String.format("%s.%s(%s)", this.object, this.method, this.withNullArgForPostIncAndDec ? "null" : "");
 		}
 	}
 	
@@ -1389,11 +1390,12 @@ class ExpressionModels
 	{
 		public String function;
 		public MExpression object;
+		public boolean withNullArgForPostIncAndDec;
 		
 		@Override
 		public String toString() 
 		{
-			return String.format("%s(%s)", this.function, this.object);
+			return String.format("%s(%s%s)", this.function, this.object, this.withNullArgForPostIncAndDec ? ", null" : "");
 		}
 	}
 	

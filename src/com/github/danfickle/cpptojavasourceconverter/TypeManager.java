@@ -133,8 +133,32 @@ class TypeManager
 			simple = "Anon" + (decl instanceof CppClass ? "Class" : "Enum") + ctx.global.anonCount++;
 			complete += simple;
 		}
+
+		decl.completeCppName = complete;		
 		
-		decl.completeCppName = complete;
+		if (simple.equals("operator ++") ||
+			simple.equals("operator --"))
+		{
+			// If we have a dummy parameter, then it is post inc/dec
+			// rather than pre inc/dec.
+			if (nm.resolveBinding() instanceof ICPPMethod)
+			{
+				if (((ICPPMethod) nm.resolveBinding()).getParameters().length == 1)
+				{
+					simple = "op" + (simple.equals("operator ++") ? "PostIncrement" : "PostDecrement");
+				}
+			}
+			else
+			{
+				assert(nm.resolveBinding() instanceof ICPPFunction);
+
+				if (((ICPPFunction) nm.resolveBinding()).getParameters().length == 2)
+				{
+					simple = "op" + (simple.equals("operator ++") ? "PostIncrement" : "PostDecrement");
+				}
+			}
+		}
+
 		decl.name = cppNameToJavaName(simple, nt);
 	}
 	
