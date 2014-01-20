@@ -1,5 +1,8 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
@@ -505,6 +508,54 @@ class TypeManager
 			return qualifiedType;
 	}
 
+	static final Map<String, String> operators = new HashMap<String, String>();
+	
+	static 
+	{
+		operators.put("operator =", "opAssign");
+		operators.put("operator +", "opPlus");
+		operators.put("operator -", "opMinus");
+		operators.put("operator *", "opStar");
+		operators.put("operator /", "opDivide");
+		operators.put("operator %", "opModulo");
+		operators.put("operator ++", "opPreIncrement");
+		operators.put("operator --", "opPreDecrement");
+		operators.put("operator ==", "equals");
+		operators.put("operator !=", "opNotEquals");
+		operators.put("operator >", "opGreaterThan");
+		operators.put("operator <", "opLessThan");
+		operators.put("operator >=", "opGtEquals");
+		operators.put("operator <=", "opLtEquals");
+		operators.put("operator !", "opLogicalNot");
+		operators.put("operator &&", "opLogicalAnd");
+		operators.put("operator ||", "opLogicalOr");
+		operators.put("operator ~", "opComplement");
+		operators.put("operator &", "opBitwiseAnd");
+		operators.put("operator |", "opBitwiseOr");
+		operators.put("operator ^", "opBitwiseXOr");
+		operators.put("operator <<", "opBitwiseLeftShift");
+		operators.put("operator >>", "opBitwiseRightShift");
+		operators.put("operator +=", "opPlusAssign");
+		operators.put("operator -=", "opMinusAssign");
+		operators.put("operator *=", "opMultiplyAssign");
+		operators.put("operator /=", "opDivideAssign");
+		operators.put("operator %=", "opModuloAssign");
+		operators.put("operator &=", "opAndAssign");
+		operators.put("operator |=", "opOrAssign");
+		operators.put("operator ^=", "opXOrAssign");
+		operators.put("operator <<=", "opLeftShiftAssign");
+		operators.put("operator >>=", "opRightShiftAssign");
+		operators.put("operator []", "opSubscript");
+		operators.put("operator ->", "opThinPointer");
+		operators.put("operator ->*", "opThinPointerWithDeref");		
+		operators.put("operator ()", "opFunctionCall");
+		operators.put("operator ,", "opComma");
+		operators.put("operator new", "opNewSingle");		
+		operators.put("operator new[]", "opNewArray");
+		operators.put("operator delete", "opDelSingle");		
+		operators.put("operator delete[]", "opDelArray");		
+	}
+	
 	/**
 	 * Replaces C++ names with Java compatible names for functions.
 	 * You may need to add missing operators.
@@ -512,54 +563,10 @@ class TypeManager
 	static String normalizeName(String name)
 	{
 		String replace;
-		if (name.startsWith("operator"))
+		if (name.startsWith("operator "))
 		{
-			if (name.equals("operator +="))
-				replace = "opPlusAssign";
-			else if (name.equals("operator ()"))
-				replace = "opFuncCall";
-			else if (name.equals("operator ++"))
-				replace = "opPreIncrement";
-			else if (name.equals("operator --"))
-				replace = "opPreDecrement";
-			else if (name.equals("operator =="))
-				replace = "equals";
-			else if (name.equals("operator -="))
-				replace = "opMinusAssign";
-			else if (name.equals("operator !="))
-				replace = "opNotEquals";
-			else if (name.equals("operator !"))
-				replace = "opNot";
-			else if (name.equals("operator ->"))
-				replace = "opAccess";
-			else if (name.equals("operator |"))
-				replace = "opOr";
-			else if (name.equals("operator -"))
-				replace = "opMinus";
-			else if (name.equals("operator +"))
-				replace = "opPlus";
-			else if (name.equals("operator /"))
-				replace = "opDivide";
-			else if (name.equals("operator *"))
-				replace = "opStar";
-			else if (name.equals("operator &"))
-				replace = "opAddressOf";
-			else if (name.equals("operator []"))
-				replace = "opArrayAccess";
-			else if (name.equals("operator new[]"))
-				replace = "opNewArray";
-			else if (name.equals("operator delete[]"))
-				replace = "opDeleteArray";
-			else if (name.equals("operator ="))
-				replace = "opAssign";
-			else if (name.equals("operator |="))
-				replace = "opOrAssign";
-			else if (name.equals("operator new"))
-				replace = "opNew";
-			else if (name.equals("operator delete"))
-				replace = "opDelete";
-			else
-				replace = "__PROBLEM__";
+			replace = operators.get(name);
+			assert(replace != null);
 		}
 		else if (name.startsWith("~"))
 			replace = "destruct";

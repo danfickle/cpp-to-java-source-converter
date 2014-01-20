@@ -1433,7 +1433,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			String start = String.format("%s.opFuncCall(", this.object);
+			String start = String.format("%s.opFunctionCall(", this.object);
 			
 			for (int i = 0; i < this.args.size(); i++)
 			{
