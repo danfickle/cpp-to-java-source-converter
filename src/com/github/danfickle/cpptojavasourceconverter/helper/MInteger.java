@@ -114,7 +114,7 @@ public class MInteger implements IInteger
 	@Override
 	public int ptrCompare() 
 	{
-		return 0;
+		return 1;
 	}
 
 	@Override

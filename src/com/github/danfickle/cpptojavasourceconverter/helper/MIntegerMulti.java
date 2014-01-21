@@ -103,7 +103,7 @@ public class MIntegerMulti implements IInteger
 	{
 		// Get the pointer offset to compare with
 		// another pointer offset from the same block.
-		return currentOffset;
+		return currentOffset + 1;
 	}
 
 	@Override

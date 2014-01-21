@@ -63,7 +63,7 @@ public class PtrObjectMulti<T> implements IPtrObject<T>
 	@Override
 	public int ptrCompare()
 	{
-		return currentOffset;
+		return currentOffset + 1;
 	}
 
 	@Override

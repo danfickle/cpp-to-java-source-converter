@@ -72,7 +72,7 @@ public class PtrObject<T> implements IPtrObject<T>
 	@Override
 	public int ptrCompare() 
 	{
-		return 0;
+		return 1;
 	}
 
 	@Override
