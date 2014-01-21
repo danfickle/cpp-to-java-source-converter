@@ -1446,4 +1446,16 @@ class ExpressionModels
 			return start + ")";
 		}
 	}
+	
+	static class MOverloadedMethodSubscript extends MExpression
+	{
+		public MExpression object;
+		public MExpression subscript;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.opSubscript(%s)", this.object, this.subscript);
+		}
+	}
 }

@@ -1,6 +1,7 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.eclipse.cdt.core.dom.ast.*;
@@ -335,11 +336,36 @@ class ExpressionEvaluator
 
 	private MExpression evalExprArraySubscript(IASTArraySubscriptExpression expr) throws DOMException
 	{
-		//if (isEventualPtr(expr.getArrayExpression().getExpressionType()))
+		/**
+		 * IASTArraySubscriptExpression => Methods
+		 *   getArgument
+		 *   getArrayExpression
+		 * 
+		 * IASTImplicitNameOwner => Methods
+		 *   getImplicitNames
+		 */
+		
+		IASTImplicitNameOwner owner = (IASTImplicitNameOwner) expr;
+
+		if (owner.getImplicitNames().length != 0)
+		{
+			IASTName nm = (IASTName) owner.getImplicitNames()[0];
+			IBinding binding = nm.resolveBinding();
+
+			funcDep(binding, nm);
+			
+			assert(binding instanceof ICPPMethod);
+			
+			MOverloadedMethodSubscript sub = new MOverloadedMethodSubscript();
+			sub.object = eval1Expr(expr.getArrayExpression());
+			sub.subscript = wrapIfNeeded((IASTExpression) expr.getArgument(), ((ICPPMethod) binding).getParameters()[0].getType());
+			return sub;
+		}
+		else
 		{
 			MArrayExpressionPtr ptr = new MArrayExpressionPtr();
 			ptr.operand = eval1Expr(expr.getArrayExpression());
-			//ptr.subscript.addAll(evalExpr(expr.getSubscriptExpression()));
+			ptr.subscript = Arrays.asList(eval1Expr((IASTExpression) expr.getArgument()));
 			return ptr;
 		}
 	}

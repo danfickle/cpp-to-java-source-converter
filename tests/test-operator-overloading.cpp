@@ -45,6 +45,11 @@ public:
 	{
 		j++;
 	}
+
+	OpTest& operator [](int a)
+	{
+		return *this;
+	}
 };
 
 // Binary function
@@ -94,6 +99,8 @@ void OpTestTest()
 
 	--g;
 	g--;
+
+	g[12];
 
 	f();
 	f(1, 2);

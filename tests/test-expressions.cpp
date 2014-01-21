@@ -22,9 +22,11 @@ int func(int a)
   int myint;
   cls myclass;
   cls * ptr_cls;
+  cls myclasses[4];
 
   arr[1];   // 1  -> Plain array access
   ptr[2];   // 2  -> Pointer array access
+  myclasses[1];  // Array access of objects
 
   _a;       // 7  -> Id
   _b;       // 8  -> Bitfield id
