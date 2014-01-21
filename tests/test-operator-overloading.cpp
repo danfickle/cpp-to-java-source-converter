@@ -50,7 +50,22 @@ public:
 	{
 		return *this;
 	}
+
+	void operator delete(void* ptr)
+	{
+	}
 };
+
+/* TODO: Uncomment when we have figured out function/method conflict.
+void operator delete(void * ptr)
+{
+}
+*/
+
+void operator delete[](void * ptr)
+{
+
+}
 
 // Binary function
 OpTest operator +(const OpTest& a, const OpTest& b)
@@ -104,5 +119,14 @@ void OpTestTest()
 
 	f();
 	f(1, 2);
+
+	OpTest * ptr = new OpTest(1);
+	delete ptr;
+
+	int * ptr2 = new int(3);
+	delete ptr2;
+
+	int * ptr3 = new int[24];
+	delete[] ptr3;
 }
 

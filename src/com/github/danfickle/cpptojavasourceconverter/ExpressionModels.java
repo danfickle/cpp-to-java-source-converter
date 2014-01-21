@@ -1458,4 +1458,30 @@ class ExpressionModels
 			return String.format("%s.opSubscript(%s)", this.object, this.subscript);
 		}
 	}
+	
+	static class MOverloadedFunctionDelete extends MExpression
+	{
+		public String function;
+		public MExpression right;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s(%s)", this.function, this.right);
+		}
+	}
+	
+	static class MOverloadedMethodDelete extends MExpression
+	{
+		public String method;
+		public MExpression object;
+		public MExpression right;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.%s(%s)", this.object, this.method, this.right);
+		}
+	}
+	
 }

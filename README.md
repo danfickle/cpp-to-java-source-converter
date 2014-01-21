@@ -93,6 +93,8 @@ This is an incomplete and fluid list of items that need doing before the initial
   + Output function declarations with missing definitions for default args function with a TODO as the body.
   + Varargs.
   + Bracketed expressions
+  + Special case this pointer and void pointer.
+  + Conflict with methods/functions having the same type such as operator delete.
 + test-references
 + test-enums
 + test-bitfield

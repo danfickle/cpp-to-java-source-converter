@@ -178,9 +178,83 @@ class ExpressionEvaluator
 		return null;
 	}
 
+	private MExpression evalExprDeleteDestructor(IASTName nm, IBinding binding, ICPPASTDeleteExpression expr) throws DOMException
+	{
+		assert (binding instanceof ICPPMethod);
+		
+		funcDep(binding, nm);
+
+		if (!expr.isVectored())
+		{
+			MDeleteObjectSingle del = new MDeleteObjectSingle();
+			del.operand = eval1Expr(expr.getOperand());
+			return del;
+		}
+		else
+		{
+			MDeleteObjectMultiple del = new MDeleteObjectMultiple();
+			del.operand = eval1Expr(expr.getOperand());
+			return del;
+		}
+	}
+	
+	private MExpression evalExprDeleteOperator(IASTName nm, IBinding binding, ICPPASTDeleteExpression expr, MExpression child) throws DOMException
+	{
+		funcDep(binding, nm);
+			
+		if (binding instanceof ICPPMethod)
+		{
+			MOverloadedMethodDelete del = new MOverloadedMethodDelete();
+			del.object = eval1Expr(expr.getOperand());
+			del.right = child;
+			del.method = TypeManager.normalizeName(binding.getName());
+			return del;
+		}
+		else
+		{
+			assert(binding instanceof ICPPFunction);
+			
+			MOverloadedFunctionDelete del = new MOverloadedFunctionDelete(); 
+			del.function = reparentFunctionCall(binding, nm);
+			del.right = child;
+			return del;
+		}
+	}
+	
 	private MExpression evalExprDelete(ICPPASTDeleteExpression expr) throws DOMException
 	{
-		if (TypeManager.isOneOf(expr.getOperand().getExpressionType(), TypeEnum.OBJECT_POINTER))
+		IASTImplicitNameOwner owner = (IASTImplicitNameOwner) expr;
+
+		if (owner.getImplicitNames().length != 0)
+		{
+			IASTName nm = (IASTName) owner.getImplicitNames()[0];
+			IBinding binding = nm.resolveBinding();
+
+			// This is complicated. We may have a destructor on its own,
+			// a dtor nested in an overloaded delete or just an overloaded delete.
+			// So we handle all three cases.
+			if (binding.getName().startsWith("~"))
+			{
+				MExpression evaluated = evalExprDeleteDestructor(nm, binding, expr);
+
+				if (owner.getImplicitNames().length > 1)
+				{
+					nm = (IASTName) owner.getImplicitNames()[1];
+					binding = nm.resolveBinding();
+					
+					return evalExprDeleteOperator(nm, binding, expr, evaluated);
+				}
+				else
+				{
+					return evaluated;
+				}
+			}
+			else
+			{
+				return evalExprDeleteOperator(nm, binding, expr, eval1Expr(expr.getOperand()));
+			}
+		}
+		else if (TypeManager.isOneOf(expr.getOperand().getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
 			if (expr.isVectored())
 			{
@@ -197,6 +271,7 @@ class ExpressionEvaluator
 		}
 		else
 		{
+			// Basic objects don't do anything when deleted.
 			MEmptyExpression emp = new MEmptyExpression();
 			return emp;
 		}
