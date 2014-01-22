@@ -4,6 +4,8 @@ public:
 	int j;
 	OpTest(int i) : j(i) { }
 
+	OpTest() : j(0) { }
+
 	// Binary method
  	OpTest operator -(const OpTest& b) const
 	{
@@ -56,11 +58,9 @@ public:
 	}
 };
 
-/* TODO: Uncomment when we have figured out function/method conflict.
 void operator delete(void * ptr)
 {
 }
-*/
 
 void operator delete[](void * ptr)
 {
@@ -128,5 +128,8 @@ void OpTestTest()
 
 	int * ptr3 = new int[24];
 	delete[] ptr3;
+
+	OpTest * ptr4 = new OpTest[25];
+	delete[] ptr4;
 }
 

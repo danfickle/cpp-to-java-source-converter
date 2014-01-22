@@ -101,7 +101,7 @@ class TypeManager
 			{
 				if (ent.cppType.isSameType(type) && ent.nm.equals(nm))
 					return ent;
-				else if (ent.cppType.isSameType(type) && ent.nm.toString().equals(nm.toString()))
+				else if (ent.cppType.isSameType(type) && getCompleteName(ent.nm).equals(getCompleteName(nm)))
 					return ent;
 			}
 		}
