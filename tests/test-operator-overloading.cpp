@@ -6,6 +6,8 @@ public:
 
 	OpTest() : j(0) { }
 
+	~OpTest() { }
+
 	// Binary method
  	OpTest operator -(const OpTest& b) const
 	{

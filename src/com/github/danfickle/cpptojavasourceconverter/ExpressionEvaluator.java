@@ -223,6 +223,15 @@ class ExpressionEvaluator
 	
 	private MExpression evalExprDelete(ICPPASTDeleteExpression expr) throws DOMException
 	{
+		/**
+		 * ICPPASTDeleteExpression => Methods
+		 *   isVectored
+		 *   getOperand
+		 *   
+		 * IASTImplicitNameOwner => Methods
+		 *   getImplicitNames
+		 */
+		
 		IASTImplicitNameOwner owner = (IASTImplicitNameOwner) expr;
 
 		if (owner.getImplicitNames().length != 0)
@@ -233,7 +242,7 @@ class ExpressionEvaluator
 			// This is complicated. We may have a destructor on its own,
 			// a dtor nested in an overloaded delete or just an overloaded delete.
 			// So we handle all three cases.
-			if (binding.getName().startsWith("~"))
+			if (binding instanceof ICPPMethod && ((ICPPMethod) binding).isDestructor())
 			{
 				MExpression evaluated = evalExprDeleteDestructor(nm, binding, expr);
 
@@ -251,7 +260,21 @@ class ExpressionEvaluator
 			}
 			else
 			{
-				return evalExprDeleteOperator(nm, binding, expr, eval1Expr(expr.getOperand()));
+				if (!expr.isVectored() || !TypeManager.isOneOf(expr.getOperand().getExpressionType(), TypeEnum.OBJECT_POINTER))
+				{
+					// For single delete expressions, an implicit name is generated for the
+					// destructor.
+					return evalExprDeleteOperator(nm, binding, expr, eval1Expr(expr.getOperand()));
+				}
+				else
+				{
+					// Otherwise, for object arrays, we must generate the implicit
+					// destructor calls (as an implicit name is not generated).
+					// TODO: Is this a bug in CDT?
+					MDeleteObjectMultiple del = new MDeleteObjectMultiple();
+					del.operand = eval1Expr(expr.getOperand());
+					return evalExprDeleteOperator(nm, binding, expr, del);
+				}
 			}
 		}
 		else if (TypeManager.isOneOf(expr.getOperand().getExpressionType(), TypeEnum.OBJECT_POINTER))
