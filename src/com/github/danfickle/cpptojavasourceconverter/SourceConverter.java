@@ -841,19 +841,45 @@ public class SourceConverter
 	}
 
 	/**
-	 * Given a typeId returns a Java type. Used in sizeof, etc. 
+	 * Given a typeId returns a binding. Used in sizeof, new, etc. 
 	 */
-	IBinding evalTypeId(IASTTypeId typeId) throws DOMException
+	IBinding eval1TypeIdReturnBinding(IASTTypeId typeId) throws DOMException
 	{
-		if (typeId != null)
+		IASTDeclSpecifier dspec = typeId.getDeclSpecifier();
+		
+		if (dspec instanceof ICPPASTNamedTypeSpecifier)
 		{
-			IASTDeclSpecifier dspec = typeId.getDeclSpecifier();
 			ICPPASTNamedTypeSpecifier comp = (ICPPASTNamedTypeSpecifier) dspec;
 			return comp.getName().resolveBinding();
 		}
-		return null;
+		else
+		{
+			// TODO: Other decl spec types such as simple (int, short, etc).
+			assert(false);
+			return null;
+		}
 	}
 
+	/**
+	 * Given a typeId returns a binding. Used in sizeof, new, etc. 
+	 */
+	IASTName evalTypeIdReturnName(IASTTypeId typeId) throws DOMException
+	{
+		IASTDeclSpecifier dspec = typeId.getDeclSpecifier();
+		
+		if (dspec instanceof ICPPASTNamedTypeSpecifier)
+		{
+			ICPPASTNamedTypeSpecifier comp = (ICPPASTNamedTypeSpecifier) dspec;
+			return comp.getName();
+		}
+		else
+		{
+			// TODO: Other decl spec types such as simple (int, short, etc).
+			assert(false);
+			return null;
+		}
+	}
+	
 	/**
 	 * Given a declaration like: int a = 5;
 	 * Returns an infix expression: a.set(5);

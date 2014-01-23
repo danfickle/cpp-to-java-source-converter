@@ -25,7 +25,7 @@ class ExpressionEvaluator
 	}
 	
 	/**
-	 * Given a C++ expression, attempts to convert it one Java expression.
+	 * Given a C++ expression, attempts to convert it to one Java expression.
 	 */
 	MExpression eval1Expr(IASTExpression expression) throws DOMException
 	{
@@ -81,7 +81,7 @@ class ExpressionEvaluator
 		{
 			ICASTTypeIdInitializerExpression typeIdInitializerExpression = (ICASTTypeIdInitializerExpression)expression;
 
-			ctx.converter.evalTypeId(typeIdInitializerExpression.getTypeId());
+			ctx.converter.eval1TypeIdReturnBinding(typeIdInitializerExpression.getTypeId());
 			//evaluate(typeIdInitializerExpression.getInitializer());
 		}
 		else if (expression instanceof ICPPASTSimpleTypeConstructorExpression)
@@ -110,10 +110,19 @@ class ExpressionEvaluator
 		return null;
 	}
 	
+	@SuppressWarnings("deprecation")
+	// TODO: getNewTypeIdArrayExpressions() is deprecated. Find another
+	// way to get array count.
 	private MExpression evalExprNew(ICPPASTNewExpression expr) throws DOMException
 	{
+		// NOTE: we don't handle operator new or operator new[]
+		// overloads as manual memory management in Java is not desirable.
+		
 		if (expr.isArrayAllocation() && !TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
+			// Array of basic types.
+			//   new short[400]
+			//   MShort.create(400)
 			MNewArrayExpression ptr = new MNewArrayExpression();
 			
 			for (IASTExpression arraySize : expr.getNewTypeIdArrayExpressions())
@@ -124,30 +133,44 @@ class ExpressionEvaluator
 		}
 		else if (expr.isArrayAllocation() && TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
+			// Array of objects.
+			//   new object[500]
+			//   PtrObjectMulti.create(object.class, 500)
 			MNewArrayExpressionObject ptr = new MNewArrayExpressionObject();
+			
+			// Mark the constructor as used.
+			ICPPConstructor ctor = (ICPPConstructor) ctx.converter.eval1TypeIdReturnBinding(expr.getTypeId());
+			IASTName nm = ctx.converter.evalTypeIdReturnName(expr.getTypeId());
+			funcDep(ctor, nm);
 			
 			for (IASTExpression arraySize : expr.getNewTypeIdArrayExpressions())
 				ptr.sizes.add(eval1Expr(arraySize));
 			
-			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.IMPLEMENTATION);
+			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.RAW);
 			return ptr;
 		}
 		else if (TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.OBJECT_POINTER))
 		{
-			// PtrObject.valueOf(new object(arg1, arg2))
+			// Single new object:
+			//   new object(arg1, arg2)
+			//   PtrObject.valueOf(new object(arg1, arg2))
 			MNewExpressionObject ptr = new MNewExpressionObject();
 			ptr.type = ctx.typeMngr.cppToJavaType(expr.getExpressionType(), TypeType.RAW);
 
-			IBinding binding = ctx.converter.evalTypeId(expr.getTypeId());
+			IBinding binding = ctx.converter.eval1TypeIdReturnBinding(expr.getTypeId());
 			ICPPConstructor con = (ICPPConstructor) binding;
 			ICPPParameter[] params = con.getParameters();
-			
 			IASTInitializer init = expr.getInitializer();
+
+			// Mark the constructor as used.
+			IASTName nm = ctx.converter.evalTypeIdReturnName(expr.getTypeId());
+			funcDep(con, nm);
 			
-			if (init instanceof ICPPASTConstructorInitializer)
+			if (init != null)
 			{
-				ICPPASTConstructorInitializer con2 = (ICPPASTConstructorInitializer) init;
+				assert(init instanceof ICPPASTConstructorInitializer);
 				
+				ICPPASTConstructorInitializer con2 = (ICPPASTConstructorInitializer) init;
 				IASTInitializerClause[] clss = con2.getArguments();
 				
 				for (int i = 0; i < clss.length; i++)
@@ -165,17 +188,16 @@ class ExpressionEvaluator
 		else if (TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.BASIC_POINTER) &&
 				 TypeManager.getPointerIndirectionCount(expr.getExpressionType()) == 1)
 		{
-			// MInteger.valueOf(101)
+			// Single new number:
+			//  new int(101)
+			//  MInteger.valueOf(101)
 			return ctx.initMngr.eval1Init(expr.getInitializer(), TypeManager.getPointerBaseType(expr.getExpressionType()), null, InitType.WRAPPED);
 		}
-		else if (TypeManager.isOneOf(expr.getExpressionType(), TypeEnum.BASIC_POINTER))
+		else
 		{
-			// TODO: Multiple indirection to basic type.
+			assert(false);
 			return null;
 		}
-
-		MyLogger.logImportant(expr.getRawSignature());
-		return null;
 	}
 
 	private MExpression evalExprDeleteDestructor(IASTName nm, IBinding binding, ICPPASTDeleteExpression expr) throws DOMException

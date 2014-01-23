@@ -81,6 +81,7 @@ TODO
 This is an incomplete and fluid list of items that need doing before the initial release.
 
 + General
+  + A lot of work on multi dimension arrays.
   + integer promotion/demotion
   + cleanup cpptojavatype method.
   + function pointers.
