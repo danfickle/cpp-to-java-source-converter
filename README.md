@@ -15,9 +15,10 @@ The project is about three quarters of the way to an initial release. The below 
 + order of operation differences
 + platform dependent/undefined behavior
 + unions
-+ dynamic cast, etc.
++ dynamic cast and other RTTI features
 + multiple inheritance
 + C++11 features
++ overloaded operator new and operator delete memory management
 
 Everything else should work with the initial release.
 

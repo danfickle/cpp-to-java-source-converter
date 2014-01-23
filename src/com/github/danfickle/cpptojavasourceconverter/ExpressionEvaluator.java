@@ -198,29 +198,6 @@ class ExpressionEvaluator
 		}
 	}
 	
-	private MExpression evalExprDeleteOperator(IASTName nm, IBinding binding, ICPPASTDeleteExpression expr, MExpression child) throws DOMException
-	{
-		funcDep(binding, nm);
-			
-		if (binding instanceof ICPPMethod)
-		{
-			MOverloadedMethodDelete del = new MOverloadedMethodDelete();
-			del.object = eval1Expr(expr.getOperand());
-			del.right = child;
-			del.method = TypeManager.normalizeName(binding.getName());
-			return del;
-		}
-		else
-		{
-			assert(binding instanceof ICPPFunction);
-			
-			MOverloadedFunctionDelete del = new MOverloadedFunctionDelete(); 
-			del.function = reparentFunctionCall(binding, nm);
-			del.right = child;
-			return del;
-		}
-	}
-	
 	private MExpression evalExprDelete(ICPPASTDeleteExpression expr) throws DOMException
 	{
 		/**
@@ -239,42 +216,30 @@ class ExpressionEvaluator
 			IASTName nm = (IASTName) owner.getImplicitNames()[0];
 			IBinding binding = nm.resolveBinding();
 
-			// This is complicated. We may have a destructor on its own,
-			// a dtor nested in an overloaded delete or just an overloaded delete.
-			// So we handle all three cases.
+			// NOTE: we don't handle operator delete or operator delete[]
+			// overloads as manual memory management in Java is not desirable.
+			//
+			// TODO: Should we place a note next to each use of delete/
+			// delete[] to tell the user that operator overloading is not 
+			// supported. For now we just have a note in the README.
+			//
+			// NOTE: We used to support operator overloading for delete.
+			// It was removed in a commit with message:
+			// 'Removed handling of operator delete/delete[]' on 2014-01-23. 
+
 			if (binding instanceof ICPPMethod && ((ICPPMethod) binding).isDestructor())
 			{
-				MExpression evaluated = evalExprDeleteDestructor(nm, binding, expr);
-
-				if (owner.getImplicitNames().length > 1)
-				{
-					nm = (IASTName) owner.getImplicitNames()[1];
-					binding = nm.resolveBinding();
-					
-					return evalExprDeleteOperator(nm, binding, expr, evaluated);
-				}
-				else
-				{
-					return evaluated;
-				}
+				// For single object delete an implicit name is generated for the destructor.
+				return evalExprDeleteDestructor(nm, binding, expr);
 			}
-			else
+			else if (TypeManager.isOneOf(expr.getOperand().getExpressionType(), TypeEnum.OBJECT_POINTER))
 			{
-				if (!expr.isVectored() || !TypeManager.isOneOf(expr.getOperand().getExpressionType(), TypeEnum.OBJECT_POINTER))
-				{
-					// For single delete expressions, an implicit name is generated for the
-					// destructor.
-					return evalExprDeleteOperator(nm, binding, expr, eval1Expr(expr.getOperand()));
-				}
-				else
-				{
-					// Otherwise, for object arrays, we must generate the implicit
-					// destructor calls (as an implicit name is not generated).
-					// TODO: Is this a bug in CDT?
-					MDeleteObjectMultiple del = new MDeleteObjectMultiple();
-					del.operand = eval1Expr(expr.getOperand());
-					return evalExprDeleteOperator(nm, binding, expr, del);
-				}
+				// Otherwise, for object arrays, we must generate the implicit
+				// destructor calls (as an implicit name is not generated).
+				// TODO: Is this a bug in CDT?
+				MDeleteObjectMultiple del = new MDeleteObjectMultiple();
+				del.operand = eval1Expr(expr.getOperand());
+				return del;
 			}
 		}
 		else if (TypeManager.isOneOf(expr.getOperand().getExpressionType(), TypeEnum.OBJECT_POINTER))
@@ -292,12 +257,10 @@ class ExpressionEvaluator
 				return del;
 			}
 		}
-		else
-		{
-			// Basic objects don't do anything when deleted.
-			MEmptyExpression emp = new MEmptyExpression();
-			return emp;
-		}
+
+		// Basic objects don't do anything when deleted.
+		MEmptyExpression emp = new MEmptyExpression();
+		return emp;
 	}
 	
 	private MExpression evalExprId(IASTIdExpression expr) throws DOMException
