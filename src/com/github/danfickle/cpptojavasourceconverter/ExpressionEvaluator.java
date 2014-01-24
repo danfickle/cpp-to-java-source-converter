@@ -974,10 +974,35 @@ class ExpressionEvaluator
 				return infix;
 			}
 		}
+		else if(ExpressionHelpers.isEventualPtrDeref(expr.getOperand1()))
+		{
+			if (expr.getOperator() == IASTBinaryExpression.op_assign)
+			{
+				MInfixAssignmentWithDerefOnLeft infix = new MInfixAssignmentWithDerefOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				return infix;
+			}
+			else if (ExpressionHelpers.isAssignmentExpression(expr.getOperator()))
+			{
+				MCompoundWithDerefOnLeft infix = new MCompoundWithDerefOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = ExpressionHelpers.compoundAssignmentToInfixOperator(expr.getOperator());
+				return infix;
+			}
+			else
+			{
+				MInfixExpressionWithDerefOnLeft infix = new MInfixExpressionWithDerefOnLeft();
+				infix.left = eval1Expr(expr.getOperand1());
+				infix.right = eval1Expr(expr.getOperand2());
+				infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
+				return infix;
+			}
+		}
 		else if (ExpressionHelpers.isBasicExpression(expr.getOperand1()))
 		{
 			MInfixExpression infix = null;
-			
 			if (expr.getOperator() == IASTBinaryExpression.op_assign)
 			{
 				infix = new MInfixAssignmentWithNumberOnLeft();
@@ -1010,32 +1035,6 @@ class ExpressionEvaluator
 			}
 			
 			return infix;
-		}
-		else if(ExpressionHelpers.isEventualPtrDeref(expr.getOperand1()))
-		{
-			if (expr.getOperator() == IASTBinaryExpression.op_assign)
-			{
-				MInfixAssignmentWithDerefOnLeft infix = new MInfixAssignmentWithDerefOnLeft();
-				infix.left = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
-				return infix;
-			}
-			else if (ExpressionHelpers.isAssignmentExpression(expr.getOperator()))
-			{
-				MCompoundWithDerefOnLeft infix = new MCompoundWithDerefOnLeft();
-				infix.left = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
-				infix.operator = ExpressionHelpers.compoundAssignmentToInfixOperator(expr.getOperator());
-				return infix;
-			}
-			else
-			{
-				MInfixExpressionWithDerefOnLeft infix = new MInfixExpressionWithDerefOnLeft();
-				infix.left = eval1Expr(expr.getOperand1());
-				infix.right = eval1Expr(expr.getOperand2());
-				infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
-				return infix;
-			}
 		}
 		else if (expr.getOperator() == IASTBinaryExpression.op_assign &&
 				TypeManager.isPtrOrArrayBasic(expr.getOperand1().getExpressionType()))

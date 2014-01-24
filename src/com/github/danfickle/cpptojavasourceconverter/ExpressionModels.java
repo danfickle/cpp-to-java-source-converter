@@ -616,7 +616,7 @@ class ExpressionModels
 		public String toString() 
 		{
 			String plain = getPlainString(this.left);
-			
+			MyLogger.logImportant(this.left.getClass().getCanonicalName() + plain);
 			if (plain != null)
 			{
 				return String.format("%s.set(%s)", plain, this.right);
@@ -1075,7 +1075,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MPrefixExpressionPointerStar extends MPrefixExpression
+	static class MPrefixExpressionPointerStar extends MPrefixExpression implements PlainString
 	{
 		@Override
 		public String toString() 
@@ -1092,6 +1092,24 @@ class ExpressionModels
 				String rhs = getStringRhs(this.operand);
 
 				return String.format("%s.%s.get()", lhs, rhs);
+			}
+		}
+
+		@Override
+		public String toStringPlain() 
+		{
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.%s", lhs, rhs);
 			}
 		}
 	}
