@@ -164,7 +164,19 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			return String.format("%s.addressOf()", this.operand);
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
+			{
+				return String.format("%s.addressOf()", plain);
+			}
+			else
+			{
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.%s.addressOf()", lhs, rhs);
+			}
 		}
 	}
 	
