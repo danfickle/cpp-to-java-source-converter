@@ -681,7 +681,7 @@ class ExpressionEvaluator
 			}
 			else if (ExpressionHelpers.isPrefixExpression(expr.getOperator()))
 			{
-				// TODO: Shouldn't get here!
+				// That leaves +, - ~ and !
 				MPrefixExpressionPointer pre = new MPrefixExpressionPointer();
 				pre.operand = eval1Expr(expr.getOperand());
 				pre.operator = ExpressionHelpers.evalUnaryPrefixOperator(expr.getOperator());

@@ -120,6 +120,20 @@ class ExpressionModels
 		}
 	}
 	
+	static String joinExpressions(List<MExpression> exprs)
+	{
+		StringBuilder sb = new StringBuilder();
+		
+		for (int i = 0; i < exprs.size(); i++)
+		{
+			sb.append(exprs.get(i).toString());
+			if (i != exprs.size() - 1)
+				sb.append(", ");
+		}
+
+		return sb.toString();
+	}
+	
 	/**
 	 * Note: MStringExpression breaks the MVC architecture.
 	 */
@@ -141,17 +155,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			String start = "";
-			
-			for (int i = 0; i < exprs.size(); i++)
-			{
-				start += exprs.get(i).toString();
-				
-				if (i != exprs.size() - 1)
-					start +=  ", ";
-			}
-			
-			return start;
+			return joinExpressions(exprs);
 		}
 	}
 	
@@ -268,17 +272,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			String start = String.format("%s.create(", this.type);
-
-			for (int i = 0; i < this.operands.size(); i++)
-			{
-				start += this.operands.get(i).toString();
-				
-				if (i != this.operands.size() - 1)
-					start += ", ";
-			}
-
-			return start + ')';
+			return String.format("%s.create(%s)", this.type, joinExpressions(this.operands));
 		}
 	}
 	
@@ -391,21 +385,6 @@ class ExpressionModels
 				return String.format("%s.%s.ptrAdjust(%s%s)", lhs, rhs, this.operator, this.right);
 			}
 		}
-	}
-	
-	static class MPtrCreateNull
-	{
-		// TODO: Not currently used.
-	}
-	
-	static class MPostfixWithDeref extends MPostfixExpression
-	{
-		// TODO: Not currently used
-	}
-
-	static class MPrefixWithDeref extends MPrefixExpression
-	{
-		// TODO: Not currently used
 	}
 	
 	static class MPtrCopy extends MExpression
@@ -525,17 +504,7 @@ class ExpressionModels
 				operand = String.format("%s.%s", lhs, rhs);
 			}
 			
-			operand += ".ptrOffset(";
-			
-			for (int i = 0; i < this.subscript.size(); i++)
-			{
-				operand += this.subscript.get(i).toString();
-				
-				if (i != this.subscript.size() - 1)
-					operand += ", ";
-			}
-			
-			return operand + ")";
+			return String.format("%s.ptrOffset(%s)", operand, joinExpressions(this.subscript));
 		}
 	}
 	
@@ -936,17 +905,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			String start = this.name.toString() + "(";
-
-			for (int i = 0; i < this.args.size(); i++)
-			{
-				start += this.args.get(i).toString();
-				
-				if (i != this.args.size() - 1)
-					start += ", ";
-			}
-
-			return start + ")";
+			return String.format("%s(%s)", this.name, joinExpressions(this.args));
 		}
 	}
 	
@@ -955,17 +914,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			String start = "new " + this.name.toString() + "(";
-
-			for (int i = 0; i < this.args.size(); i++)
-			{
-				start += this.args.get(i).toString();
-				
-				if (i != this.args.size() - 1)
-					start += ", ";
-			}
-
-			return start + ")";
+			return String.format("new %s(%s)", this.name, joinExpressions(this.args));
 		}
 	}
 	
@@ -989,11 +938,6 @@ class ExpressionModels
 		}
 	}
 
-	static class MPrefixExpressionPointer extends MPrefixExpression
-	{
-		// TODO: Shouldn't use this.
-	}
-	
 	static class MAddressOfExpression extends MExpression
 	{
 		public MExpression operand;
@@ -1094,21 +1038,28 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			if (this.operand instanceof MIdentityExpressionPtr)
+			String plain = getPlainString(this.operand);
+			
+			if (plain != null)
 			{
-				MIdentityExpressionPtr ident = (MIdentityExpressionPtr) this.operand;
-				return String.format("%s.ptrAdjust(-1)", ident.toStringPlain());
-			}
-			else if (this.operand instanceof MFieldReferenceExpressionPtr)
-			{
-				MFieldReferenceExpressionPtr fr = (MFieldReferenceExpressionPtr) this.operand;
-				return String.format("%s.%s.ptrAdjust(-1)", fr.toStringLhOnly(), fr.toStringRhOnly());
+				return String.format("%s.ptrAdjust(-1)", plain);
 			}
 			else
 			{
-				MyLogger.logImportant(this.getClass().getCanonicalName());
-				return null;
+				String lhs = getStringLhs(this.operand);
+				String rhs = getStringRhs(this.operand);
+
+				return String.format("%s.%s.ptrAdjust(-1)", lhs, rhs);
 			}
+		}
+	}
+	
+	static class MPrefixExpressionPointer extends MPrefixExpression
+	{
+		@Override
+		public String toString() 
+		{
+			return String.format("%s%s", this.operator, this.operand);
 		}
 	}
 	
@@ -1291,17 +1242,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			String start = String.format("%sMulti.create(", this.type);
-			
-			for (int i = 0; i < this.sizes.size(); i++)
-			{
-				start += this.sizes.get(i).toString();
-				
-				if (i != this.sizes.size() - 1)
-					start += ", ";
-			}
-			
-			return start + ")";
+			return String.format("%sMulti.create(%s)", this.type, joinExpressions(this.sizes));
 		}
 	}
 	
@@ -1313,17 +1254,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			String start = String.format("PTR.newObjPtr(CreateHelper.allocateArray(%s.class,", this.type);
-			
-			for (int i = 0; i < this.sizes.size(); i++)
-			{
-				start += this.sizes.get(i).toString();
-				
-				if (i != this.sizes.size() - 1)
-					start += ", ";
-			}
-			
-			return start + ")";
+			return String.format("PTR.newObjPtr(CreateHelper.allocateArray(%s.class, %s", this.type, joinExpressions(this.sizes));
 		}
 	}
 	
@@ -1347,17 +1278,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			String start = String.format("new %s(", this.type);
-			
-			for (int i = 0; i < this.arguments.size(); i++)
-			{
-				start += this.arguments.get(i).toString();
-				
-				if (i != this.arguments.size() - 1)
-					start += ", ";
-			}
-			
-			return start + ")";
+			return String.format("new %s(%s)", this.type, joinExpressions(this.arguments));
 		}
 	}
 	
@@ -1433,17 +1354,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			String start = String.format("%s.opFunctionCall(", this.object);
-			
-			for (int i = 0; i < this.args.size(); i++)
-			{
-				start += this.args.get(i).toString();
-				
-				if (i != this.args.size() - 1)
-					start += ", ";
-			}
-			
-			return start + ")";
+			return String.format("%s.opFunctionCall(%s)", this.object, joinExpressions(this.args));
 		}
 	}
 	
