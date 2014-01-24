@@ -1,27 +1,68 @@
 All variables are to be considered object except bitfields.
 
-Each object to have following methods:
--> ptrCopy
--> ptrOffset
--> ptrAdjust
--> ptrPostInc
--> ptrPostDec
--> ptrAddressOf
--> ptrCompare
+The interface for pointer to objects follows:
+public interface IPtrObject<T>
+{
+	public IPtrObject<T> ptrCopy();
+	public IPtrObject<T> ptrOffset(int cnt);
+	public IPtrObject<T> ptrAdjust(int cnt);
+	public IPtrObject<T> ptrPostInc();
+	public IPtrObject<T> ptrPostDec();
+	public IPtrObject<IPtrObject<T>> ptrAddressOf();
+	public int ptrCompare();
+	public T get();
+	public T set(T value);
+	public T[] deep();
+}
 
-Number and boolean objects to have following methods:
--> get
--> set
--> addressOf
--> postInc
--> postDec
--> valueOf [static]
+The concrete implementations for IPtrObject are (with static creation methods):
+PtrObject
+  valueOf
 
-Other objects to have following methods:
--> default constructor
--> destruct
--> copy
--> opAssign
+PtrObjectMulti
+  create
+
+PtrObjectNull
+  instance
+
+Number and boolean objects to have following interface. Note that this means that IInteger describes
+a number as well as a pointer to a number.
+public interface IInteger
+{
+	public IInteger ptrCopy();
+	public IInteger ptrOffset(int cnt);
+	public IInteger ptrAdjust(int cnt);
+	public IInteger ptrPostInc();
+	public IInteger ptrPostDec();
+	public IPtrObject<IInteger> ptrAddressOf();
+	public IInteger addressOf();
+	public int ptrCompare();
+	public int get();
+	public int set(int value);
+	public int postInc();
+	public int postDec();
+	public int[] deep();
+}
+
+The concrete implementations for IInteger are (with static creation methods):
+
+MInteger
+  valueOf
+
+MIntegerMulti
+  create
+
+All generated objects to implement the following interface:
+public interface CppType<T>
+{
+	void destruct();
+	T copy();
+	T opAssign(T right);
+}
+
+Concrete implementations also to implement
+default constructor
+
 
 #### Number operations ####
 All operations return a raw number other than addressof,
