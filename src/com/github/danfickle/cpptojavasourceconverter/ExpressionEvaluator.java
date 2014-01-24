@@ -14,6 +14,7 @@ import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclar
 import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
+import com.sun.org.apache.xalan.internal.xsltc.dom.MultiValuedNodeHeapIterator;
 
 class ExpressionEvaluator
 {
@@ -1125,6 +1126,8 @@ class ExpressionEvaluator
 	 */
 	MExpression wrapIfNeeded(IASTExpression cppExpr, IType tpRequired) throws DOMException
 	{
+		IASTExpression unwrapped = ExpressionHelpers.unwrap(cppExpr);
+		
 		if (TypeManager.isOneOf(tpRequired, TypeEnum.BASIC_REFERENCE))
 		{
 			// Prevents operand being copied
@@ -1144,10 +1147,37 @@ class ExpressionEvaluator
 
 			return expr;
 		}
-		else
+		else if (unwrapped instanceof IASTLiteralExpression)
 		{
-			return eval1Expr(cppExpr);
+			IASTLiteralExpression lit = (IASTLiteralExpression) unwrapped;
+			
+			if (lit.getKind() == IASTLiteralExpression.lk_this)
+			{
+				// this pointer => PtrObject.valueOf(this)
+				MValueOfExpressionPtr expr = new MValueOfExpressionPtr();
+				expr.type = "PtrObject";
+				expr.operand = ModelCreation.createLiteral("this");
+				return expr;
+			}
+			else if (lit.getKind() == IASTLiteralExpression.lk_nullptr)
+			{
+				// Null pointer => PtrObjectNull.instance()
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "PtrObjectNull.instance()";
+				return expr;
+			}
+			else if (lit.getKind() == IASTLiteralExpression.lk_integer_constant &&
+					String.valueOf(lit.getValue()).equals("0") &&
+					TypeManager.isOneOf(tpRequired, TypeEnum.OBJECT_POINTER))
+			{
+				// 0 acting as the null pointer => PtrObjectNull.instance()
+				MStringExpression expr = new MStringExpression();
+				expr.contents = "PtrObjectNull.instance()";
+				return expr;
+			}
 		}
+
+		return eval1Expr(cppExpr);
 	}
 
 	/**
