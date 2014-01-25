@@ -854,7 +854,6 @@ public class SourceConverter
 		}
 		else
 		{
-			// TODO: Other decl spec types such as simple (int, short, etc).
 			assert(false);
 			return null;
 		}

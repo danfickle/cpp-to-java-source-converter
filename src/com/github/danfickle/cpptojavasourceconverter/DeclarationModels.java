@@ -61,6 +61,9 @@ class DeclarationModels
 		public boolean isOverride;
 		public boolean isUsed;
 		public boolean isOriginallyGlobal;
+		
+		boolean isCastOperator;
+		IASTTypeId castType;
 	}
 	
 	static class CppClass extends CppDeclaration

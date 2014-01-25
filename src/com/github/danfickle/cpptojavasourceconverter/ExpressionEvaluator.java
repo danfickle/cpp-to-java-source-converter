@@ -10,6 +10,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppFunction;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppClass;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
 import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
@@ -72,7 +73,7 @@ class ExpressionEvaluator
 		}
 		else if (expression instanceof IASTCastExpression)
 		{
-			return evalCastExpression((IASTCastExpression) expression);
+			return evalExprCast((IASTCastExpression) expression);
 		}
 		else if (expression instanceof IASTTypeIdExpression)
 		{
@@ -107,7 +108,7 @@ class ExpressionEvaluator
 			return new MEmptyExpression();
 		}
 
-		MyLogger.logImportant("Unrecognized expression type: " + expression.getClass().getCanonicalName());
+		assert(false);
 		return null;
 	}
 	
@@ -395,8 +396,73 @@ class ExpressionEvaluator
 		return ternary;
 	}
 
-	private MExpression evalCastExpression(IASTCastExpression expr) throws DOMException
+	private CppFunction lookForCastOperatorOverload(ICPPASTCastExpression expr) throws DOMException
 	{
+		IASTExpression exprr = ExpressionHelpers.unwrap(expr.getOperand());
+		IASTName nm;
+		
+		if (exprr instanceof IASTIdExpression)
+		{
+			nm = ((IASTIdExpression) exprr).getName();
+		}
+		else if (exprr instanceof IASTFieldReference)
+		{
+			nm = ((IASTFieldReference) exprr).getFieldName();
+		}
+		else
+		{
+			// Assumably a literal. No use to us.
+			return null;
+		}
+		
+		IBinding binding = nm.resolveBinding();
+		CppDeclaration decl = ctx.typeMngr.getDeclFromType(ctx.converter.evalBindingReturnType(binding));
+		if (decl == null)
+			return null;
+
+		assert(decl instanceof CppClass);
+		
+		for (CppDeclaration decll : ((CppClass) decl).declarations)
+		{
+			if (decll instanceof CppFunction)
+			{
+				CppFunction func = (CppFunction) decll;
+
+				if (!func.isCastOperator)
+					continue;
+		
+				String left = ASTTypeUtil.getType(expr.getTypeId());
+				String right = ASTTypeUtil.getType(func.castType);
+				
+				if (left.equals(right))
+					return func;
+			}
+		}
+
+		return null;
+	}
+	
+	
+	private MExpression evalExprCast(IASTCastExpression expr) throws DOMException
+	{
+		// NOTE: ICPPASTCastExpression does not implement
+		// IASTImplicitNameOwner so there is no quick and easy
+		// way to look up overloads.
+		// TODO: Will this be fixed in future versions of CDT?
+		
+		if (expr instanceof ICPPASTCastExpression)
+		{
+			CppFunction func = lookForCastOperatorOverload((ICPPASTCastExpression) expr);
+
+			if (func != null)
+			{
+				MOverloadedMethodCast cast = new MOverloadedMethodCast();
+				cast.name = func.name;
+				cast.object = eval1Expr(expr.getOperand());
+				return cast;
+			}
+		}
+		
 		if (ExpressionHelpers.isBasicExpression(expr))
 		{
 			MCastExpression cast = new MCastExpression();
@@ -413,7 +479,7 @@ class ExpressionEvaluator
 		}
 		else
 		{
-			MyLogger.logImportant("No cast available: " + expr.getRawSignature());
+			assert(false);
 			return null;
 		}
 	}

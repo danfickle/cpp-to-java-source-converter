@@ -74,7 +74,7 @@ class ExpressionModels
 		}
 		else
 		{
-			MyLogger.logImportant(model.getClass().getCanonicalName());
+			assert(false);
 			return null;
 		}
 	}
@@ -91,8 +91,8 @@ class ExpressionModels
 		}
 		else
 		{
-			MyLogger.logImportant(model.getClass().getCanonicalName());
-			throw new RuntimeException();
+			assert(false);
+			return null;
 		}
 	}
 	
@@ -616,7 +616,7 @@ class ExpressionModels
 		public String toString() 
 		{
 			String plain = getPlainString(this.left);
-			MyLogger.logImportant(this.left.getClass().getCanonicalName() + plain);
+
 			if (plain != null)
 			{
 				return String.format("%s.set(%s)", plain, this.right);
@@ -1397,6 +1397,18 @@ class ExpressionModels
 		public String toString() 
 		{
 			return String.format("%s.opSubscript(%s)", this.object, this.subscript);
+		}
+	}
+	
+	static class MOverloadedMethodCast extends MExpression
+	{
+		public MExpression object;
+		public String name;
+		
+		@Override
+		public String toString() 
+		{
+			return String.format("%s.%s()", this.object, this.name);
 		}
 	}
 }

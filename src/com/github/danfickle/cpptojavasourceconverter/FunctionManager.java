@@ -134,13 +134,17 @@ class FunctionManager
 			method.isCtor = true;
 			method.retType = null;
 		}
-		else if (funcBinding instanceof ICPPMethod)
+		else if (funcBinding instanceof ICPPMethod &&
+				((ICPPMethod) funcBinding).isDestructor())
 		{
-			if (((ICPPMethod) funcBinding).isDestructor())
-			{
-				method.isDtor = true;
-				method.retType = null;
-			}
+			method.isDtor = true;
+			method.retType = null;
+		}
+		else if (func.getDeclarator().getName() instanceof ICPPASTConversionName)
+		{
+			ICPPASTConversionName conversion = (ICPPASTConversionName) func.getDeclarator().getName();
+			method.isCastOperator = true;
+			method.castType = conversion.getTypeId();
 		}
 		
 		method.args.addAll(evalParameters(funcBinding));

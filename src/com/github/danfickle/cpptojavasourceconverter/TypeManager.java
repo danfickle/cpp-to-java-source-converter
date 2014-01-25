@@ -563,10 +563,25 @@ class TypeManager
 	static String normalizeName(String name)
 	{
 		String replace;
+		
 		if (name.startsWith("operator "))
 		{
 			replace = operators.get(name);
-			assert(replace != null);
+			if (replace == null)
+			{
+				// Cast operators need cleaning.
+				replace = "castTo" + name
+						.replace("operator ", "")
+						.replace(' ', '_')
+						.replace(':', '_')
+						.replace('&', '_')
+						.replace('(', '_')
+						.replace(')', '_')
+						.replace('*', '_')
+						.replace('<', '_')
+						.replace('>', '_')
+						.replace(',', '_');
+			}
 		}
 		else if (name.startsWith("~"))
 			replace = "destruct";
@@ -589,16 +604,7 @@ class TypeManager
 		else if (name.equals("String"))
 			replace = "CppString";
 		else
-			replace = name // Cast operators need cleaning.
-			.replace(' ', '_')
-			.replace(':', '_')
-			.replace('&', '_')
-			.replace('(', '_')
-			.replace(')', '_')
-			.replace('*', '_')
-			.replace('<', '_')
-			.replace('>', '_')
-			.replace(',', '_');
+			replace = name;
 		
 		return replace;
 	}

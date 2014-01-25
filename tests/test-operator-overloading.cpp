@@ -50,13 +50,21 @@ public:
 		j++;
 	}
 
+	// Array subscript operator
 	OpTest& operator [](int a)
 	{
 		return *this;
 	}
 
+	// Operator delete overload
 	void operator delete(void* ptr)
 	{
+	}
+
+	// Cast operator overload
+	int operator int()
+	{
+		return 42;
 	}
 };
 
@@ -121,6 +129,8 @@ void OpTestTest()
 
 	f();
 	f(1, 2);
+
+	int aaaaa = (int) f;
 
 	OpTest * ptr = new OpTest(1);
 	delete ptr;
