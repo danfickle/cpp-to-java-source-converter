@@ -81,8 +81,9 @@ TODO
 This is an incomplete and fluid list of items that need doing before the initial release.
 
 + General
+  + Whitespace handling
+  + Putting in comments/defines from original
   + A lot of work on multi dimension arrays.
-  + integer promotion/demotion
   + cleanup cpptojavatype method.
   + function pointers.
   + typed malloc.
@@ -91,8 +92,6 @@ This is an incomplete and fluid list of items that need doing before the initial
   + relacing deprecated methods.
   + make lists.
   + correct names (camel case, capitalized classes etc.)
-  + Always initialize pointer objects (pointing to nothing if needed).
-  + Output function declarations with missing definitions for default args function with a TODO as the body.
   + Varargs.
   + Bracketed expressions
   + Special case this pointer and void pointer.
@@ -105,6 +104,5 @@ This is an incomplete and fluid list of items that need doing before the initial
 + test-class
   + top level class being marked as nested and nested inside Global.
 + test-operator-overloading
-  + operator overloads being generated but not being used.
 + test-pointers
 

@@ -55,8 +55,6 @@ public class StmtModels
 	
 	class MForStmt extends MStmt
 	{
-		public boolean isFor = true;
-		
 		public MStmt initializer;
 		public MExpression condition;
 		public MExpression updater;
@@ -81,8 +79,6 @@ public class StmtModels
 	
 	class MBreakStmt extends MStmt
 	{
-		public boolean isBreak = true;
-		
 		public MStmt cleanup;
 		
 		@Override
@@ -94,8 +90,6 @@ public class StmtModels
 	
 	class MContinueStmt extends MStmt
 	{
-		public boolean isContinue = true;
-		
 		public MStmt cleanup;
 		
 		@Override
@@ -107,8 +101,6 @@ public class StmtModels
 	
 	class MCaseStmt extends MStmt
 	{
-		public boolean isCase = true;
-		
 		public MExpression expr;
 		
 		@Override
@@ -120,8 +112,6 @@ public class StmtModels
 	
 	class MDefaultStmt extends MStmt
 	{
-		public boolean isDefault = true;
-		
 		@Override
 		public String toString() 
 		{
@@ -131,8 +121,6 @@ public class StmtModels
 	
 	class MEmptyStmt extends MStmt
 	{
-		public boolean isEmpty = true;
-
 		@Override
 		public String toString() 
 		{
@@ -142,8 +130,6 @@ public class StmtModels
 	
 	class MCompoundStmt extends MStmt
 	{
-		public boolean isCompound = true;
-		
 		public List<MStmt> statements = new ArrayList<MStmt>();
 		public MStmt cleanup;
 		
@@ -168,8 +154,6 @@ public class StmtModels
 	
 	class MDeclarationStmt extends MStmt
 	{
-		public boolean isDeclStmt = true;
-		
 		public MSimpleDecl simple;
 		
 		@Override
@@ -181,8 +165,6 @@ public class StmtModels
 
 	class MDoStmt extends MStmt
 	{
-		public boolean isDo = true;
-		
 		public MExpression expr;
 		public MStmt body;
 		
@@ -199,8 +181,6 @@ public class StmtModels
 	
 	class MExprStmt extends MStmt
 	{
-		public boolean isExprStmt = true;
-		
 		public MExpression expr;
 		
 		@Override
@@ -212,8 +192,6 @@ public class StmtModels
 
 	class MIfStmt extends MStmt
 	{
-		public boolean isIf = true;
-		
 		public MStmt body;
 		public MExpression condition;
 		public MStmt elseBody;
@@ -239,8 +217,6 @@ public class StmtModels
 
 	class MReturnStmt extends MStmt
 	{
-		public boolean isReturn = true;
-		
 		public MExpression expr;
 		public MStmt cleanup;
 		
@@ -253,8 +229,6 @@ public class StmtModels
 	
 	class MWhileStmt extends MStmt
 	{
-		public boolean isWhile = true;
-		
 		public MStmt body;
 		public MExpression expr;
 		public MSimpleDecl decl;
@@ -276,8 +250,6 @@ public class StmtModels
 	
 	class MSwitchStmt extends MStmt
 	{
-		public boolean isSwitch = true;
-		
 		public MStmt body;
 		public MExpression expr;
 		public MSimpleDecl decl;
@@ -299,8 +271,6 @@ public class StmtModels
 	
 	class MGotoStmt extends MStmt
 	{
-		public boolean isGoto = true;
-		
 		public String lbl;
 		@Override
 		public String toString() 
@@ -311,8 +281,6 @@ public class StmtModels
 
 	class MProblemStmt extends MStmt
 	{
-		public boolean isProblemStmt = true;
-		
 		public String problem;
 		
 		@Override
@@ -324,8 +292,6 @@ public class StmtModels
 	
 	class MLabelStmt extends MStmt
 	{
-		public boolean isLabel = true;
-		
 		public String lbl;
 		public MStmt body;
 		
@@ -338,8 +304,6 @@ public class StmtModels
 	
 	class MSuperStmt extends MStmt
 	{
-		public boolean isSuperStmt = true;
-		
 		@Override
 		public String toString() 
 		{
@@ -349,8 +313,6 @@ public class StmtModels
 	
 	class MSuperDtorStmt extends MStmt
 	{
-		public boolean isSuperDtorStmt = true;
-
 		@Override
 		public String toString() 
 		{
@@ -360,8 +322,6 @@ public class StmtModels
 	
 	class MSuperAssignStmt extends MStmt
 	{
-		public boolean isSuperAssignStmt = true;
-
 		@Override
 		public String toString() 
 		{
