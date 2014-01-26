@@ -21,7 +21,7 @@ public class ModelCreation
 	/**
 	 * Results in obj1.obj2.method(args) 
 	 */
-	static MStmt createMethodCall(String obj1, String obj2, String method, MExpression... args)
+	static MStmt createMethodCall(TranslationUnitContext ctx, String obj1, String obj2, String method, MExpression... args)
 	{
 		MFieldReferenceExpression fr1 = createFieldReference(obj1, obj2);
 		MFieldReferenceExpression fr2 = createFieldReference(fr1, method);
@@ -30,7 +30,7 @@ public class ModelCreation
 		fcall.name = fr2;
 		fcall.args = Arrays.asList(args);
 	
-		return 	createExprStmt(fcall);
+		return 	createExprStmt(ctx, fcall);
 	}
 	
 	/**
@@ -81,9 +81,9 @@ public class ModelCreation
 	/**
 	 * Results in expr as statement.
 	 */
-	static MExprStmt createExprStmt(MExpression expr)
+	static MExprStmt createExprStmt(TranslationUnitContext ctx, MExpression expr)
 	{
-		MExprStmt es = new MExprStmt();
+		MExprStmt es = ctx.stmtModels.new MExprStmt();
 		es.expr = expr;
 		return es;
 	}
@@ -91,7 +91,7 @@ public class ModelCreation
 	/**
 	 * Results in obj.method(args) as statement.
 	 */
-	static MStmt createMethodCall(String obj, String method, MExpression... args)
+	static MStmt createMethodCall(TranslationUnitContext ctx, String obj, String method, MExpression... args)
 	{
 		MFieldReferenceExpression fr = createFieldReference(obj, method);
 		MFunctionCallExpression fcall = new MFunctionCallExpression();
@@ -99,7 +99,7 @@ public class ModelCreation
 		fcall.name = fr;
 		fcall.args = Arrays.asList(args);
 		
-		return createExprStmt(fcall);
+		return createExprStmt(ctx, fcall);
 	}
 
 	/**

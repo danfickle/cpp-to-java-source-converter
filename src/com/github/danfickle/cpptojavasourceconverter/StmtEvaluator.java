@@ -40,7 +40,7 @@ class StmtEvaluator
 
 			Integer temp = ctx.stackMngr.findLastSwitchOrLoopId();
 
-			MBreakStmt brk = new MBreakStmt();
+			MBreakStmt brk = ctx.stmtModels.new MBreakStmt();
 			stmts.add(brk);
 			
 			if (temp != null) // Cleanup back to the closest loop or switch...
@@ -52,7 +52,7 @@ class StmtEvaluator
 			
 			IASTCaseStatement caseStatement = (IASTCaseStatement) statement;
 
-			MCaseStmt cs = new MCaseStmt();
+			MCaseStmt cs = ctx.stmtModels.new MCaseStmt();
 			stmts.add(cs);
 			
 			cs.expr = ctx.exprEvaluator.eval1Expr(caseStatement.getExpression());
@@ -63,7 +63,7 @@ class StmtEvaluator
 
 			Integer temp = ctx.stackMngr.findLastLoopId();
 
-			MContinueStmt con = new MContinueStmt();
+			MContinueStmt con = ctx.stmtModels.new MContinueStmt();
 			stmts.add(con);
 			
 			if (temp != null) // Cleanup back to the closest loop...
@@ -73,7 +73,7 @@ class StmtEvaluator
 		{
 			MyLogger.log("default");
 
-			MDefaultStmt def = new MDefaultStmt();
+			MDefaultStmt def = ctx.stmtModels.new MDefaultStmt();
 			stmts.add(def);
 		}
 		else if (statement instanceof IASTGotoStatement)
@@ -82,7 +82,7 @@ class StmtEvaluator
 
 			IASTGotoStatement gotoStatement = (IASTGotoStatement) statement;
 
-			MGotoStmt go = new MGotoStmt();
+			MGotoStmt go = ctx.stmtModels.new MGotoStmt();
 			stmts.add(go);
 			
 			go.lbl = gotoStatement.getName().toString();
@@ -91,7 +91,7 @@ class StmtEvaluator
 		{
 			MyLogger.log("Empty statement");
 			
-			MEmptyStmt empty = new MEmptyStmt();
+			MEmptyStmt empty = ctx.stmtModels.new MEmptyStmt();
 			stmts.add(empty);
 		}
 		else if (statement instanceof IASTProblemStatement)
@@ -100,7 +100,7 @@ class StmtEvaluator
 
 			MyLogger.log("problem: " + probStatement.getProblem().getMessageWithLocation());
 
-			MProblemStmt prob = new MProblemStmt();
+			MProblemStmt prob = ctx.stmtModels.new MProblemStmt();
 			stmts.add(prob);
 			
 			prob.problem = probStatement.getProblem().getMessageWithLocation();
@@ -116,7 +116,7 @@ class StmtEvaluator
 //					currentLocation == BodyLocation.FOR,
 //					currentLocation == BodyLocation.SWITCH);
 
-			MCompoundStmt compound = new MCompoundStmt();
+			MCompoundStmt compound = ctx.stmtModels.new MCompoundStmt();
 			stmts.add(compound);
 
 			for (IASTStatement s : compoundStatement.getStatements())
@@ -147,7 +147,7 @@ class StmtEvaluator
 				simple.name = names.get(i); 
 				simple.initExpr = exprs.get(i);
 
-				MDeclarationStmt stmt = new MDeclarationStmt();
+				MDeclarationStmt stmt = ctx.stmtModels.new MDeclarationStmt();
 				stmt.simple = simple;
 			
 				stmts.add(stmt);
@@ -159,7 +159,7 @@ class StmtEvaluator
 
 			IASTDoStatement doStatement = (IASTDoStatement)statement;
 
-			MDoStmt dos = new MDoStmt();
+			MDoStmt dos = ctx.stmtModels.new MDoStmt();
 			stmts.add(dos);
 
 			dos.body = surround(evalStmt(doStatement.getBody()));
@@ -172,7 +172,7 @@ class StmtEvaluator
 
 			IASTExpressionStatement expressionStatement = (IASTExpressionStatement)statement;
 
-			MExprStmt exprStmt = new MExprStmt();
+			MExprStmt exprStmt = ctx.stmtModels.new MExprStmt();
 			stmts.add(exprStmt);
 			exprStmt.expr = ctx.exprEvaluator.eval1Expr(expressionStatement.getExpression());
 		}
@@ -182,7 +182,7 @@ class StmtEvaluator
 
 			IASTForStatement forStatement = (IASTForStatement)statement;
 
-			MForStmt fs = new MForStmt();
+			MForStmt fs = ctx.stmtModels.new MForStmt();
 			stmts.add(fs);
 			
 			if (forStatement.getInitializerStatement() != null)
@@ -218,7 +218,7 @@ class StmtEvaluator
 
 			IASTIfStatement ifStatement = (IASTIfStatement)statement;
 
-			MIfStmt ifs = new MIfStmt();
+			MIfStmt ifs = ctx.stmtModels.new MIfStmt();
 			stmts.add(ifs);
 
 			if (ifStatement.getConditionExpression() != null)
@@ -248,7 +248,7 @@ class StmtEvaluator
 			
 			IASTLabelStatement labelStatement = (IASTLabelStatement)statement;
 
-			MLabelStmt lbl = new MLabelStmt();
+			MLabelStmt lbl = ctx.stmtModels.new MLabelStmt();
 			stmts.add(lbl);
 			
 			lbl.lbl = labelStatement.getName().toString();
@@ -260,7 +260,7 @@ class StmtEvaluator
 
 			IASTReturnStatement returnStatement = (IASTReturnStatement)statement;
 
-			MReturnStmt retu = new MReturnStmt();
+			MReturnStmt retu = ctx.stmtModels.new MReturnStmt();
 			stmts.add(retu);
 
 			retu.expr = ctx.exprEvaluator.wrapIfNeeded(returnStatement.getReturnValue(), ctx.currentReturnType);
@@ -282,7 +282,7 @@ class StmtEvaluator
 			
 			IASTSwitchStatement switchStatement = (IASTSwitchStatement)statement;
 
-			MSwitchStmt swi = new MSwitchStmt();
+			MSwitchStmt swi = ctx.stmtModels.new MSwitchStmt();
 			stmts.add(swi);
 			
 			swi.body = surround(evalStmt(switchStatement.getBody()));
@@ -308,7 +308,7 @@ class StmtEvaluator
 			
 			IASTWhileStatement whileStatement = (IASTWhileStatement)statement;
 
-			MWhileStmt whi = new MWhileStmt();
+			MWhileStmt whi = ctx.stmtModels.new MWhileStmt();
 			stmts.add(whi);
 			
 			whi.body = surround(evalStmt(whileStatement.getBody()));
@@ -349,7 +349,7 @@ class StmtEvaluator
 		}
 		
 		if (stmts.isEmpty())
-			stmts.add(new MEmptyStmt()); // TODO
+			stmts.add(ctx.stmtModels.new MEmptyStmt()); // TODO
 		return stmts;
 	}
 	
@@ -368,7 +368,7 @@ class StmtEvaluator
 		if (stmts.size() == 1 && stmts.get(0) instanceof MCompoundStmt)
 			return (MCompoundStmt) stmts.get(0);
 		
-		MCompoundStmt compound = new MCompoundStmt();
+		MCompoundStmt compound = ctx.stmtModels.new MCompoundStmt();
 		compound.statements.addAll(stmts);
 		return compound;
 	}

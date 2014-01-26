@@ -173,7 +173,7 @@ class FunctionManager
 		{
 			MStringExpression expr = new MStringExpression();
 			expr.contents = "Object[] __stack = new Object[" + ctx.stackMngr.getMaxLocalVariableId() + "]";
-			method.body.statements.add(0, ModelCreation.createExprStmt(expr));
+			method.body.statements.add(0, ModelCreation.createExprStmt(ctx, expr));
 		}
 
 		CompositeInfo info = ctx.converter.currentInfoStack.peekFirst();
@@ -255,7 +255,7 @@ class FunctionManager
 					if (superInit != null)
 						expr.args.add(superInit);
 					
-					method.body.statements.add(0, ModelCreation.createExprStmt(expr));
+					method.body.statements.add(0, ModelCreation.createExprStmt(ctx, expr));
 				}
 			}
 			else if (method.isDtor)
@@ -322,17 +322,17 @@ class FunctionManager
 			for (int k4 = k; k4 < defaultValues.size(); k4++)
 				method.args.add(vals.get(k4));
 
-			MCompoundStmt block = new MCompoundStmt();
+			MCompoundStmt block = ctx.stmtModels.new MCompoundStmt();
 			
 			// If not a void function, return the result of the method call.
 			if (evalReturnType(funcBinding).toString().equals("void"))
 			{
-				MExprStmt exprStmt = ModelCreation.createExprStmt(method);
+				MExprStmt exprStmt = ModelCreation.createExprStmt(ctx, method);
 				block.statements.add(exprStmt);
 			}
 			else
 			{
-				MReturnStmt retu = new MReturnStmt();
+				MReturnStmt retu = ctx.stmtModels.new MReturnStmt();
 				retu.expr = method;
 				block.statements.add(retu);
 			}

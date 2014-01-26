@@ -122,7 +122,7 @@ class StackManager
 	
 	MStmt createCleanupCall(int until)
 	{
-		MStmt fcall = ModelCreation.createMethodCall("StackHelper", "cleanup", 
+		MStmt fcall = ModelCreation.createMethodCall(ctx, "StackHelper", "cleanup", 
 				ModelCreation.createLiteral("null"),
 				ModelCreation.createLiteral("__stack"),
 				ModelCreation.createLiteral(String.valueOf(until)));

@@ -8,9 +8,40 @@ import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl
 
 public class StmtModels
 {
+	int tabLevel;
+	
+	String tabOut()
+	{
+		switch (tabLevel)
+		{
+		case 0:
+			return "";
+		case 1:
+			return "    ";
+		case 2:
+			return "        ";
+		case 3:
+			return "            ";
+		case 4:
+			return "                ";
+		default:
+		{
+			StringBuilder sb = new StringBuilder("                ");
+
+			for (int i = 5; i <= tabLevel; i++)
+			{
+				sb.append("    ");
+			}
+
+			return sb.toString();
+		}
+		}
+	}
+	
+	
 	abstract static class MStmt {}
 	
-	static class MForStmt extends MStmt
+	class MForStmt extends MStmt
 	{
 		public boolean isFor = true;
 		
@@ -22,38 +53,38 @@ public class StmtModels
 		public MStmt body;
 	}
 	
-	static class MBreakStmt extends MStmt
+	class MBreakStmt extends MStmt
 	{
 		public boolean isBreak = true;
 		
 		public MStmt cleanup;
 	}
 	
-	static class MContinueStmt extends MStmt
+	class MContinueStmt extends MStmt
 	{
 		public boolean isContinue = true;
 		
 		public MStmt cleanup;
 	}
 	
-	static class MCaseStmt extends MStmt
+	class MCaseStmt extends MStmt
 	{
 		public boolean isCase = true;
 		
 		public MExpression expr;
 	}
 	
-	static class MDefaultStmt extends MStmt
+	class MDefaultStmt extends MStmt
 	{
 		public boolean isDefault = true;
 	}
 	
-	static class MEmptyStmt extends MStmt
+	class MEmptyStmt extends MStmt
 	{
 		public boolean isEmpty = true;
 	}
 	
-	static class MCompoundStmt extends MStmt
+	class MCompoundStmt extends MStmt
 	{
 		public boolean isCompound = true;
 		
@@ -61,14 +92,14 @@ public class StmtModels
 		public MStmt cleanup;
 	}
 	
-	static class MDeclarationStmt extends MStmt
+	class MDeclarationStmt extends MStmt
 	{
 		public boolean isDeclStmt = true;
 		
 		public MSimpleDecl simple;
 	}
 
-	static class MDoStmt extends MStmt
+	class MDoStmt extends MStmt
 	{
 		public boolean isDo = true;
 		
@@ -76,14 +107,14 @@ public class StmtModels
 		public MStmt body;
 	}
 	
-	static class MExprStmt extends MStmt
+	class MExprStmt extends MStmt
 	{
 		public boolean isExprStmt = true;
 		
 		public MExpression expr;
 	}
 
-	static class MIfStmt extends MStmt
+	class MIfStmt extends MStmt
 	{
 		public boolean isIf = true;
 		
@@ -93,7 +124,7 @@ public class StmtModels
 		public MSimpleDecl decl;
 	}
 
-	static class MReturnStmt extends MStmt
+	class MReturnStmt extends MStmt
 	{
 		public boolean isReturn = true;
 		
@@ -101,7 +132,7 @@ public class StmtModels
 		public MStmt cleanup;
 	}
 	
-	static class MWhileStmt extends MStmt
+	class MWhileStmt extends MStmt
 	{
 		public boolean isWhile = true;
 		
@@ -110,7 +141,7 @@ public class StmtModels
 		public MSimpleDecl decl;
 	}
 	
-	static class MSwitchStmt extends MStmt
+	class MSwitchStmt extends MStmt
 	{
 		public boolean isSwitch = true;
 		
@@ -119,21 +150,21 @@ public class StmtModels
 		public MSimpleDecl decl;
 	}
 	
-	static class MGotoStmt extends MStmt
+	class MGotoStmt extends MStmt
 	{
 		public boolean isGoto = true;
 		
 		public String lbl;
 	}
 
-	static class MProblemStmt extends MStmt
+	class MProblemStmt extends MStmt
 	{
 		public boolean isProblemStmt = true;
 		
 		public String problem;
 	}
 	
-	static class MLabelStmt extends MStmt
+	class MLabelStmt extends MStmt
 	{
 		public boolean isLabel = true;
 		
@@ -141,17 +172,17 @@ public class StmtModels
 		public MStmt body;
 	}
 	
-	static class MSuperStmt extends MStmt
+	class MSuperStmt extends MStmt
 	{
 		public boolean isSuperStmt = true;
 	}
 	
-	static class MSuperDtorStmt extends MStmt
+	class MSuperDtorStmt extends MStmt
 	{
 		public boolean isSuperDtorStmt = true;
 	}
 	
-	static class MSuperAssignStmt extends MStmt
+	class MSuperAssignStmt extends MStmt
 	{
 		public boolean isSuperAssignStmt = true;
 	}

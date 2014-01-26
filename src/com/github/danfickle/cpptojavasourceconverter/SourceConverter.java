@@ -675,7 +675,7 @@ public class SourceConverter
 				CppCtor ctor = new CppCtor();
 				ctor.type = tyd.name;
 				
-				MCompoundStmt blk = new MCompoundStmt();
+				MCompoundStmt blk = ctx.stmtModels.new MCompoundStmt();
 				ctor.body = blk;
 				
 				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
@@ -683,7 +683,7 @@ public class SourceConverter
 
 				if (info.hasSuper)
 				{
-					MSuperStmt sup = new MSuperStmt();
+					MSuperStmt sup = ctx.stmtModels.new MSuperStmt();
 					blk.statements.add(0, sup);
 				}
 				
@@ -695,7 +695,7 @@ public class SourceConverter
 				// Generate desctructor.
 				CppDtor dtor = new CppDtor();
 				
-				MCompoundStmt blk = new MCompoundStmt();
+				MCompoundStmt blk = ctx.stmtModels.new MCompoundStmt();
 				dtor.body = blk;
 				
 				List<FieldInfo> fields = collectFieldsForClass(declSpecifier);
@@ -725,10 +725,10 @@ public class SourceConverter
 			create.name = ModelCreation.createLiteral(tyd.name);
 			create.args.add(ModelCreation.createLiteral("this"));
 			
-			MReturnStmt stmt = new MReturnStmt();
+			MReturnStmt stmt = ctx.stmtModels.new MReturnStmt();
 			stmt.expr = create;
 			
-			MCompoundStmt blk = new MCompoundStmt();
+			MCompoundStmt blk = ctx.stmtModels.new MCompoundStmt();
 			blk.statements.add(stmt);
 			meth.body = blk;
 

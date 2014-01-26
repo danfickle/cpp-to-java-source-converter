@@ -52,7 +52,7 @@ class SpecialGenerator
 					infix.left = lbf;
 					infix.right = fieldInfo.init;
 					
-					method.statements.add(start++, ModelCreation.createExprStmt(infix));
+					method.statements.add(start++, ModelCreation.createExprStmt(ctx, infix));
 				}
 				else
 				{
@@ -61,7 +61,7 @@ class SpecialGenerator
 					MExpression expr = ModelCreation.createInfixExpr(frl, fieldInfo.init, "=");
 				
 					// Add assignment statements to start of generated method...
-					method.statements.add(start++, ModelCreation.createExprStmt(expr));
+					method.statements.add(start++, ModelCreation.createExprStmt(ctx, expr));
 				}
 			}
 		}
@@ -83,13 +83,14 @@ class SpecialGenerator
 			else if (TypeManager.isOneOf(fields.get(i).field.getType(), TypeEnum.OBJECT))
 			{
 				// Call this.field.destruct()
-				MStmt stmt = ModelCreation.createMethodCall("this", fields.get(i).field.getName(), "destruct");
+				MStmt stmt = ModelCreation.createMethodCall(ctx, "this", fields.get(i).field.getName(), "destruct");
 				method.statements.add(stmt);
 			}
 			else if (TypeManager.isOneOf(fields.get(i).field.getType(), TypeEnum.OBJECT_ARRAY))
 			{
 				// Call DestructHelper.destruct(this.field)
 				MStmt stmt = ModelCreation.createMethodCall(
+						ctx,
 						"DestructHelper",
 						"destruct",
 						ModelCreation.createFieldReference("this", fields.get(i).field.getName()));
@@ -101,7 +102,7 @@ class SpecialGenerator
 		if (hasSuper)
 		{
 			// Call super.destruct()
-			MStmt stmt = ModelCreation.createMethodCall("super", "destruct");
+			MStmt stmt = ModelCreation.createMethodCall(ctx, "super", "destruct");
 			method.statements.add(stmt);
 		}
 	}
@@ -118,7 +119,7 @@ class SpecialGenerator
 		var.name = "right";
 
 		meth.args.add(var);
-		meth.body = new MCompoundStmt();
+		meth.body = ctx.stmtModels.new MCompoundStmt();
 		
 		List<FieldInfo> fields = ctx.converter.collectFieldsForClass(declSpecifier);
 
@@ -126,7 +127,7 @@ class SpecialGenerator
 		{
 			// super(right);
 			MStmt sup = ModelCreation.createExprStmt(
-					ModelCreation.createFuncCall("super", ModelCreation.createLiteral("right")));
+					ctx, ModelCreation.createFuncCall("super", ModelCreation.createLiteral("right")));
 			
 			meth.body.statements.add(sup);
 		}
@@ -147,14 +148,14 @@ class SpecialGenerator
 				// this.field = right.field.copy();
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + " = right." + nm + ".copy()";
-				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+				meth.body.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if (TypeManager.isOneOf(tp, TypeEnum.OBJECT_ARRAY))
 			{
 				// this.field = CPP.copyArray(right.field);
 				MStringExpression expr = new MStringExpression(); 
 				expr.contents = "this." + nm + " = CPP.copyArray(right." + nm + ")";				
-				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+				meth.body.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_ARRAY))
 			{
@@ -174,14 +175,14 @@ class SpecialGenerator
 							".create(right." + nm + ".deep().clone(), 0)";
 				}
 				
-				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+				meth.body.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
 			{
 				// this.set__name(right.get__name());
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this.set__" + nm + "(right.get__" + nm + "())";
-				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+				meth.body.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if (TypeManager.isBasicType(tp))
 			{
@@ -192,21 +193,21 @@ class SpecialGenerator
 								ctx.typeMngr.cppToJavaType(tp, TypeType.IMPLEMENTATION) + 
 								".valueOf(right." + nm + ".get())";
 
-				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+				meth.body.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if (TypeManager.isOneOf(tp, TypeEnum.ENUMERATION))
 			{
 				// this.name = right.name
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + " = right." + nm;
-				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+				meth.body.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
 			{
 				// this.name = right.name.ptrCopy()
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + " = right." + nm + ".ptrCopy()";
-				meth.body.statements.add(ModelCreation.createExprStmt(expr));
+				meth.body.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else
 			{
@@ -223,15 +224,15 @@ class SpecialGenerator
 		CppAssign ass = new CppAssign();
 		
 		ass.type = tyd.name;
-		ass.body = new MCompoundStmt();
+		ass.body = ctx.stmtModels.new MCompoundStmt();
 		
 		List<FieldInfo> fields = ctx.converter.collectFieldsForClass(declSpecifier);
 
-		MCompoundStmt ifBlock = new MCompoundStmt();
+		MCompoundStmt ifBlock = ctx.stmtModels.new MCompoundStmt();
 
 		if (info.hasSuper)
 		{
-			MSuperAssignStmt sup = new MSuperAssignStmt();
+			MSuperAssignStmt sup = ctx.stmtModels.new MSuperAssignStmt();
 			ifBlock.statements.add(sup);
 		}
 
@@ -251,14 +252,14 @@ class SpecialGenerator
 				// this.name.opAssign(right.name);
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + ".opAssign(right." + nm + ")"; 
-				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+				ifBlock.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if (TypeManager.isOneOf(tp, TypeEnum.OBJECT_ARRAY))
 			{
 				// TODO
 				MFieldReferenceExpression right = ModelCreation.createFieldReference("right", fieldInfo.field.getName());
 				MFieldReferenceExpression left = ModelCreation.createFieldReference("this", fieldInfo.field.getName());
-				ifBlock.statements.add(ModelCreation.createMethodCall("CPP", "assignArray", left, right));
+				ifBlock.statements.add(ModelCreation.createMethodCall(ctx, "CPP", "assignArray", left, right));
 			}
 			else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_ARRAY))
 			{
@@ -273,7 +274,7 @@ class SpecialGenerator
 					expr.contents = "System.arraycopy(right." + nm + ".deep(), 0, this." + nm +
 							".deep(), 0, this." + nm + ".deep().length)";
 				
-					ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+					ifBlock.statements.add(ModelCreation.createExprStmt(ctx, expr));
 				}
 			}
 			else if (ctx.bitfieldMngr.isBitfield(fieldInfo.declarator.getName()))
@@ -281,28 +282,28 @@ class SpecialGenerator
 				// this.set__name(right.get__name());
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this.set__" + nm + "(right.get__" + nm + "())";
-				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+				ifBlock.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if(TypeManager.isBasicType(tp))
 			{
 				// this.name.set(right.name.get())
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + ".set(right." + nm + ".get())";
-				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+				ifBlock.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if (TypeManager.isOneOf(tp, TypeEnum.ENUMERATION))
 			{
 				// this.name = right.name
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + " = right." + nm;
-				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+				ifBlock.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else if (TypeManager.isOneOf(tp, TypeEnum.BASIC_POINTER, TypeEnum.OBJECT_POINTER))
 			{
 				// this.name = right.name.ptrCopy()
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "this." + nm + " = right." + nm + ".ptrCopy()";
-				ifBlock.statements.add(ModelCreation.createExprStmt(expr));
+				ifBlock.statements.add(ModelCreation.createExprStmt(ctx, expr));
 			}
 			else
 			{
@@ -320,7 +321,7 @@ class SpecialGenerator
 					ModelCreation.createLiteral("this"),
 					"!=");
 			
-			MIfStmt stmt = new MIfStmt();
+			MIfStmt stmt = ctx.stmtModels.new MIfStmt();
 
 			stmt.condition = expr;
 			stmt.body = ifBlock;
@@ -328,7 +329,7 @@ class SpecialGenerator
 			ass.body.statements.add(stmt);
 		}
 
-		MReturnStmt retu = new MReturnStmt();
+		MReturnStmt retu = ctx.stmtModels.new MReturnStmt();
 		retu.expr = ModelCreation.createLiteral("this");
 		
 		ass.body.statements.add(retu);
