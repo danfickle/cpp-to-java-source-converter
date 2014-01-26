@@ -398,25 +398,10 @@ class ExpressionEvaluator
 
 	private CppFunction lookForCastOperatorOverload(ICPPASTCastExpression expr) throws DOMException
 	{
-		IASTExpression exprr = ExpressionHelpers.unwrap(expr.getOperand());
-		IASTName nm;
-		
-		if (exprr instanceof IASTIdExpression)
-		{
-			nm = ((IASTIdExpression) exprr).getName();
-		}
-		else if (exprr instanceof IASTFieldReference)
-		{
-			nm = ((IASTFieldReference) exprr).getFieldName();
-		}
-		else
-		{
-			// Assumably a literal. No use to us.
-			return null;
-		}
-		
-		IBinding binding = nm.resolveBinding();
-		CppDeclaration decl = ctx.typeMngr.getDeclFromType(ctx.converter.evalBindingReturnType(binding));
+		IType exprType = expr.getOperand().getExpressionType();
+
+		CppDeclaration decl = ctx.typeMngr.getDeclFromType(exprType);
+
 		if (decl == null)
 			return null;
 
@@ -458,7 +443,7 @@ class ExpressionEvaluator
 			{
 				MOverloadedMethodCast cast = new MOverloadedMethodCast();
 				cast.name = func.name;
-				cast.object = eval1Expr(expr.getOperand());
+				cast.object = ExpressionHelpers.bracket(eval1Expr(expr.getOperand()));
 				return cast;
 			}
 		}

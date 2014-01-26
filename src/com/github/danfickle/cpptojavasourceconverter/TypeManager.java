@@ -570,14 +570,14 @@ class TypeManager
 			if (replace == null)
 			{
 				// Cast operators need cleaning.
-				replace = "castTo" + name
+				replace = "opCastTo" + name
 						.replace("operator ", "")
-						.replace(' ', '_')
+						.replace(" ", "")
 						.replace(':', '_')
-						.replace('&', '_')
+						.replace("&", "Ref")
 						.replace('(', '_')
 						.replace(')', '_')
-						.replace('*', '_')
+						.replace("*", "Ptr")
 						.replace('<', '_')
 						.replace('>', '_')
 						.replace(',', '_');

@@ -66,6 +66,11 @@ public:
 	{
 		return 42;
 	}
+
+	int * operator int*()
+	{
+		return 0;
+	}
 };
 
 void operator delete(void * ptr)
@@ -131,6 +136,9 @@ void OpTestTest()
 	f(1, 2);
 
 	int aaaaa = (int) f;
+	int * bbbb = (int *) OpTest(1);
+	OpTest * ptrtof = &f;
+	int ccccc = (int) (*ptrtof);
 
 	OpTest * ptr = new OpTest(1);
 	delete ptr;

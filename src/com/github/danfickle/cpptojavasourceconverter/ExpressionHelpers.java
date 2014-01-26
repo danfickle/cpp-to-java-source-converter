@@ -1,7 +1,6 @@
 package com.github.danfickle.cpptojavasourceconverter;
 
 import org.eclipse.cdt.core.dom.ast.*;
-
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 
@@ -326,8 +325,7 @@ class ExpressionHelpers
 			}
 			else
 			{
-				MyLogger.logImportant("Unexpected expression type in makeExpressionBoolean");
-				MyLogger.exitOnError();
+				assert(false);
 			}
 		}
 
