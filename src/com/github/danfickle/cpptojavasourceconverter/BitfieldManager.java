@@ -43,7 +43,7 @@ public class BitfieldManager
 	
 	void evalDeclBitfield(IField field, IASTDeclarator declarator) throws DOMException
 	{
-		CppBitfield bitfield = new CppBitfield();
+		CppBitfield bitfield = ctx.declModels.new CppBitfield();
 		addBitfield(declarator.getName());
 		bitfield.name = TypeManager.cppNameToJavaName(field.getName(), NameType.CAMEL_CASE);
 		bitfield.bits = ctx.exprEvaluator.eval1Expr(((IASTFieldDeclarator) declarator).getBitFieldSize());

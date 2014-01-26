@@ -35,7 +35,6 @@ class StackManager
 		int cnt;
 	}
 	
-	@SuppressWarnings("unused")
 	private final TranslationUnitContext ctx;
 	
 	StackManager(TranslationUnitContext con) {

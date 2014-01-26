@@ -26,14 +26,14 @@ class DeclarationModels
 		public int line;
 	}
 	
-	static class CppDtor extends CppDeclaration
+	class CppDtor extends CppDeclaration
 	{
 		public boolean isGeneratedDtor = true;
 		public MCompoundStmt body;
 		public boolean hasSuper;
 	}
 
-	static class CppAssign extends CppDeclaration
+	class CppAssign extends CppDeclaration
 	{
 		public boolean isGeneratedAssign = true;
 		public MCompoundStmt body;
@@ -41,7 +41,7 @@ class DeclarationModels
 		public String type;
 	}
 	
-	static class CppCtor extends CppDeclaration
+	class CppCtor extends CppDeclaration
 	{
 		public boolean isGeneratedCtor = true;
 		public MCompoundStmt body;
@@ -49,7 +49,7 @@ class DeclarationModels
 		public boolean hasSuper;
 	}
 	
-	static class CppFunction extends CppDeclaration
+	class CppFunction extends CppDeclaration
 	{
 		public boolean isFunctionDeclaration = true;
 		public String retType;
@@ -66,7 +66,7 @@ class DeclarationModels
 		IASTTypeId castType;
 	}
 	
-	static class CppClass extends CppDeclaration
+	class CppClass extends CppDeclaration
 	{
 		public boolean isClassDeclaration = true;
 		public boolean isNested;
@@ -76,20 +76,20 @@ class DeclarationModels
 		public List<CppDeclaration> declarations = new ArrayList<CppDeclaration>();
 	}
 	
-	static class CppEnumerator extends CppDeclaration
+	class CppEnumerator extends CppDeclaration
 	{
 		public boolean isEnumerator = true;
 		public MExpression value;
 	}
 	
-	static class CppEnum extends CppDeclaration
+	class CppEnum extends CppDeclaration
 	{
 		public boolean isEnum = true;
 		public boolean isNested;
 		public List<CppEnumerator> enumerators = new ArrayList<CppEnumerator>();
 	}
 	
-	static class CppBitfield extends CppDeclaration
+	class CppBitfield extends CppDeclaration
 	{
 		public boolean isBitfield = true;
 		public String qualified;

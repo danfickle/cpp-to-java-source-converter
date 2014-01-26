@@ -118,7 +118,7 @@ class FunctionManager
 				
 		if (method == null)
 		{
-			method = new CppFunction();
+			method = ctx.declModels.new CppFunction();
 			
 			ctx.typeMngr.registerDecl(method, ctx.converter.evalBindingReturnType(funcBinding),
 					func.getDeclarator().getName(), NameType.CAMEL_CASE,
@@ -293,7 +293,7 @@ class FunctionManager
 
 			// Create the method declaration.
 			// This will handle void return types.
-			CppFunction methodDef = new CppFunction();
+			CppFunction methodDef = ctx.declModels.new CppFunction();
 	
 			methodDef.name = TypeManager.getSimpleName(func.getName());
 			methodDef.retType = evalReturnType(funcBinding);

@@ -228,7 +228,7 @@ class TypeManager
 		
 		if (cls == null)
 		{
-			cls = new CppClass();
+			cls = ctx.declModels.new CppClass();
 			cls.name = filename;
 			ctx.global.fileClasses.put(filename, cls);
 		}

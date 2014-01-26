@@ -16,6 +16,7 @@ class TranslationUnitContext
 	TypeManager           typeMngr;
 	GlobalCtx             global;
 	StmtModels            stmtModels;
+	DeclarationModels     declModels;
 	
 	String currentFileName;
 	IType currentReturnType;

@@ -33,6 +33,7 @@ class Traverser
 		con.typeMngr = new TypeManager(con);
 		con.currentFileName = translationUnit.getContainingFilename();
 		con.stmtModels = new StmtModels();
+		con.declModels = new DeclarationModels();
 
 		MyLogger.ctx = con;
 

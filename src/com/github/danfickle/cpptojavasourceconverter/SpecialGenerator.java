@@ -109,7 +109,7 @@ class SpecialGenerator
 	
 	CppFunction generateCopyCtor(CompositeInfo info, CppClass tyd, IASTDeclSpecifier declSpecifier) throws DOMException
 	{
-		CppFunction meth = new CppFunction();
+		CppFunction meth = ctx.declModels.new CppFunction();
 		meth.retType = "";
 		meth.name = tyd.name;
 		meth.isCtor = true;
@@ -221,7 +221,7 @@ class SpecialGenerator
 	
 	CppAssign generateAssignMethod(CompositeInfo info, CppClass tyd, IASTDeclSpecifier declSpecifier) throws DOMException
 	{
-		CppAssign ass = new CppAssign();
+		CppAssign ass = ctx.declModels.new CppAssign();
 		
 		ass.type = tyd.name;
 		ass.body = ctx.stmtModels.new MCompoundStmt();

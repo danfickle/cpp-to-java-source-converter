@@ -339,7 +339,7 @@ public class SourceConverter
 							
 					if (func == null)
 					{
-						func = new CppFunction();
+						func = ctx.declModels.new CppFunction();
 						ctx.typeMngr.registerDecl(func, evalBindingReturnType(binding), 
 								declarator.getName(), NameType.CAMEL_CASE, declarator.getContainingFilename(),
 								declarator.getFileLocation().getStartingLineNumber());
@@ -634,7 +634,7 @@ public class SourceConverter
 			if (myDecl != null)
 				return;
 
-			CppClass tyd = new CppClass();
+			CppClass tyd = ctx.declModels.new CppClass();
 			
 			ctx.typeMngr.registerDecl(tyd, myType, compositeTypeSpecifier.getName(), NameType.CAPITALIZED, compositeTypeSpecifier.getContainingFilename(), compositeTypeSpecifier.getFileLocation().getStartingLineNumber());
 			
@@ -672,7 +672,7 @@ public class SourceConverter
 			if (!info.hasCtor)
 			{
 				// Generate a constructor.
-				CppCtor ctor = new CppCtor();
+				CppCtor ctor = ctx.declModels.new CppCtor();
 				ctor.type = tyd.name;
 				
 				MCompoundStmt blk = ctx.stmtModels.new MCompoundStmt();
@@ -693,7 +693,7 @@ public class SourceConverter
 			if (!info.hasDtor)
 			{
 				// Generate desctructor.
-				CppDtor dtor = new CppDtor();
+				CppDtor dtor = ctx.declModels.new CppDtor();
 				
 				MCompoundStmt blk = ctx.stmtModels.new MCompoundStmt();
 				dtor.body = blk;
@@ -716,7 +716,7 @@ public class SourceConverter
 			}
 			
 			// Add a copy method that calls the copy constructor.
-			CppFunction meth = new CppFunction();
+			CppFunction meth = ctx.declModels.new CppFunction();
 			meth.retType = tyd.name;
 			meth.name = "copy";
 			meth.isOverride = true;

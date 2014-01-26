@@ -29,7 +29,7 @@ class EnumManager
 		if (enumModel != null)
 			return;
 		
-		enumModel = new CppEnum();
+		enumModel = ctx.declModels.new CppEnum();
 
 		ctx.typeMngr.registerDecl(enumModel, type, enumerationSpecifier.getName(),
 				NameType.CAPITALIZED, enumerationSpecifier.getContainingFilename(),
@@ -41,7 +41,7 @@ class EnumManager
 
 		for (IASTEnumerator e : enumerators)
 		{
-			CppEnumerator enumerator = new CppEnumerator();
+			CppEnumerator enumerator = ctx.declModels.new CppEnumerator();
 			enumerator.name = TypeManager.cppNameToJavaName(e.getName().toString(), NameType.ALL_CAPS);
 
 			if (e.getValue() != null)
