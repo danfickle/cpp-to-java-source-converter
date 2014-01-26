@@ -3,7 +3,7 @@ C++ to Java Translator
 
 [Main source](/src/com/github/danfickle/cpptojavasourceconverter)
 
-This project aims to convert C++ code to high level Java source code. Where that is not possible, an error should appear in the generated source code.
+This project aims to convert C++ code to high level Java source code. Where that is not possible, a TODO should appear in the generated source code.
 
 Status
 ------
@@ -74,13 +74,23 @@ They are from Eclipse Juno (4.2.x), CDT 8.1.1 for Eclipse Juno and StringTemplat
 
 License
 -------
-This project is licensed under the Apache license. The CDT walking code is based loosely on code I found (and lost the url) on the web (also licensed under the Apache license). If you know the source of the code please file an issue.
+This project is licensed under the Apache license. The CDT walking code is based loosely on code I found (and lost the url) on the web (also licensed under the Apache license).
 
 TODO
 ----
 This is an incomplete and fluid list of items that need doing before the initial release.
 
 + General
+  + Lots more assertions
+  + Enable calling of delete on null expressions
+  + Destructor calls on static duration objects
+  + Cast operators other than C style cast should not resolve overloaded operator cast
+  + Basic type classes other than MInteger
+  + Global variables
+  + Templates
+  + Should be able to take the address of an enumerator
+  + ptr - ptr expression should yield an integer
+  + Allow ptr offset one past the end of an array for comparison purposes
   + Whitespace handling
   + Putting in comments/defines from original
   + A lot of work on multi dimension arrays.
@@ -95,14 +105,5 @@ This is an incomplete and fluid list of items that need doing before the initial
   + Varargs.
   + Bracketed expressions
   + Special case this pointer and void pointer.
-+ test-references
-+ test-enums
-+ test-bitfield
   + exact bit position for bitfield.
-+ test-basic-types
-  + multi dimension arrays.
-+ test-class
-  + top level class being marked as nested and nested inside Global.
-+ test-operator-overloading
-+ test-pointers
 
