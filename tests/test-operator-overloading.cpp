@@ -71,6 +71,11 @@ public:
 	{
 		return 0;
 	}
+
+	bool * operator bool*()
+	{
+		return 0;
+	}
 };
 
 void operator delete(void * ptr)

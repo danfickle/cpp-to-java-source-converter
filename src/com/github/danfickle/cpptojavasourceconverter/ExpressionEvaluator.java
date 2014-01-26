@@ -1209,20 +1209,31 @@ class ExpressionEvaluator
 				expr.operand = ModelCreation.createLiteral("this");
 				return expr;
 			}
-			else if (lit.getKind() == IASTLiteralExpression.lk_nullptr)
+			else if ((lit.getKind() == IASTLiteralExpression.lk_nullptr ||
+					 (lit.getKind() == IASTLiteralExpression.lk_integer_constant &&
+					  String.valueOf(lit.getValue()).equals("0"))) &&
+					TypeManager.isOneOf(tpRequired, TypeEnum.OBJECT_POINTER))
 			{
 				// Null pointer => PtrObjectNull.instance()
+				// 0 acting as the null pointer => PtrObjectNull.instance()
 				MStringExpression expr = new MStringExpression();
 				expr.contents = "PtrObjectNull.instance()";
 				return expr;
 			}
-			else if (lit.getKind() == IASTLiteralExpression.lk_integer_constant &&
-					String.valueOf(lit.getValue()).equals("0") &&
-					TypeManager.isOneOf(tpRequired, TypeEnum.OBJECT_POINTER))
+			else if ((lit.getKind() == IASTLiteralExpression.lk_nullptr ||
+					 (lit.getKind() == IASTLiteralExpression.lk_integer_constant &&
+					  String.valueOf(lit.getValue()).equals("0"))) &&
+					 TypeManager.isOneOf(tpRequired, TypeEnum.BASIC_POINTER))
 			{
-				// 0 acting as the null pointer => PtrObjectNull.instance()
-				MStringExpression expr = new MStringExpression();
-				expr.contents = "PtrObjectNull.instance()";
+				// MInteger.valueOf(0)
+				// MBoolean.valueOf(false)
+				MValueOfExpressionNumber expr = new MValueOfExpressionNumber();
+				expr.type = ctx.typeMngr.cppToJavaType(tpRequired, TypeType.IMPLEMENTATION);
+				expr.operand = eval1Expr(cppExpr);
+				
+				if (TypeManager.isOneOf(TypeManager.getPointerBaseType(tpRequired), TypeEnum.BOOLEAN))
+					expr.operand = ModelCreation.createLiteral("false");
+
 				return expr;
 			}
 		}

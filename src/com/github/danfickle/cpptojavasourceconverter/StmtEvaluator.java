@@ -264,7 +264,7 @@ class StmtEvaluator
 			stmts.add(retu);
 
 			retu.expr = ctx.exprEvaluator.wrapIfNeeded(returnStatement.getReturnValue(), ctx.currentReturnType);
-			
+
 			// Only call cleanup if we have something on the stack.
 			if (ctx.stackMngr.getLocalVariableId() != 0 &&
 				TypeManager.isOneOf(ctx.currentReturnType, TypeEnum.VOID))
