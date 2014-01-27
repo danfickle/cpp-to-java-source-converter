@@ -15,7 +15,6 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
-import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
 
 class FunctionManager 
 {
@@ -59,7 +58,7 @@ class FunctionManager
 			int missingCount = 0;
 			for (IParameter param : params)
 			{	
-				MSimpleDecl var = new MSimpleDecl();
+				MSimpleDecl var = ctx.declModels.new MSimpleDecl();
 				var.type = ctx.typeMngr.cppToJavaType(param.getType(), TypeType.INTERFACE);
 
 				MyLogger.log("Found param: " + param.getName());

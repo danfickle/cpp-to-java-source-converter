@@ -3,8 +3,8 @@ package com.github.danfickle.cpptojavasourceconverter;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.MSimpleDecl;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
-import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 
 public class StmtModels
 {

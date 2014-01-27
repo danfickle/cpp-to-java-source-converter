@@ -27,7 +27,6 @@ import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
-import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.*;
 
 /**
  * @author DanFickle
@@ -74,7 +73,7 @@ public class SourceConverter
 	{
 		IField ifield = (IField) binding;
 
-		MSimpleDecl frag = new MSimpleDecl();
+		MSimpleDecl frag = ctx.declModels.new MSimpleDecl();
 		frag.name = TypeManager.cppNameToJavaName(ifield.getName(), NameType.CAMEL_CASE);
 
 		if (ifield.isStatic())
@@ -126,7 +125,7 @@ public class SourceConverter
 	{
 		IVariable ifield = (IVariable) binding;
 
-		MSimpleDecl frag = new MSimpleDecl();
+		MSimpleDecl frag = ctx.declModels.new MSimpleDecl();
 		frag.name = TypeManager.cppNameToJavaName(ifield.getName(), NameType.CAMEL_CASE);
 		frag.initExpr = init;
 		frag.isStatic = true;
@@ -832,7 +831,7 @@ public class SourceConverter
 		List<String> names = evaluateDeclarationReturnNames(simpleDeclaration);
 		List<String> types = evaluateDeclarationReturnTypes(simpleDeclaration);
 
-		MSimpleDecl dec = new MSimpleDecl();
+		MSimpleDecl dec = ctx.declModels.new MSimpleDecl();
 		dec.name = names.get(0);
 		dec.initExpr = inits.get(0);
 		dec.type = types.get(0);

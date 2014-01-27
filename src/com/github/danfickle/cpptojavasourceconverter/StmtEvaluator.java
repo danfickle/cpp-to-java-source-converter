@@ -8,9 +8,9 @@ import org.eclipse.cdt.core.dom.ast.cpp.*;
 
 import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
+import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.MSimpleDecl;
 import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
-import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 
 class StmtEvaluator 
 {
@@ -142,7 +142,7 @@ class StmtEvaluator
 			
 			for (int i = 0; i < types.size(); i++)
 			{
-				MSimpleDecl simple = new MSimpleDecl();
+				MSimpleDecl simple = ctx.declModels.new MSimpleDecl();
 				simple.type = types.get(i);
 				simple.name = names.get(i); 
 				simple.initExpr = exprs.get(i);

@@ -12,7 +12,6 @@ import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
-import com.github.danfickle.cpptojavasourceconverter.VarDeclarations.MSimpleDecl;
 
 class SpecialGenerator
 {
@@ -114,7 +113,7 @@ class SpecialGenerator
 		meth.name = tyd.name;
 		meth.isCtor = true;
 		
-		MSimpleDecl var = new MSimpleDecl();
+		MSimpleDecl var = ctx.declModels.new MSimpleDecl();
 		var.type = tyd.name;
 		var.name = "right";
 
