@@ -63,14 +63,13 @@ The following lines give an indication of what generated code using pointers loo
 Required JARs
 -------------
 These are the JAR files I use to get this code to run.
-They are from Eclipse Juno (4.2.x), CDT 8.1.1 for Eclipse Juno and StringTemplate 4.07
+They are from Eclipse Juno (4.2.x) and CDT 8.1.1 for Eclipse Juno.
 
 + [Eclipse downloads](http://www.eclipse.org/downloads/)
 + [CDT downloads](http://www.eclipse.org/cdt/downloads.php)
-+ [StringTemplate downloads](http://stringtemplate.org/download.html)
 + org.eclipse.cdt.core_5.4.1.201209170703.jar
 + org.eclipse.equinox.common_3.6.100.v20120522-1841.jar
-+ ST-4.0.7.jar
+
 
 License
 -------

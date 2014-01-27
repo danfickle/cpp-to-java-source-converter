@@ -3,10 +3,6 @@ package com.github.danfickle.cpptojavasourceconverter;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTProblem;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
-import org.stringtemplate.v4.ST;
-import org.stringtemplate.v4.STGroup;
-import org.stringtemplate.v4.STGroupDir;
-
 import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
 
 class Traverser 
@@ -56,23 +52,18 @@ class Traverser
 			e.printStackTrace();
 		}
 		StringBuilder output = new StringBuilder();
-		STGroup group = new STGroupDir("/home/daniel/workspace/cpp-to-java-source-converter/templates");
 		
 		for (CppDeclaration decl : con.global.decls)
 		{
 			if (decl.parent == null)
 			{
-				ST test3 = group.getInstanceOf("declaration_tp");
-				test3.add("decl", decl);
-				output.append(test3.render());
+				output.append(decl.toString());
 			}
 		}
 		
 		for (CppDeclaration decl : con.global.fileClasses.values())
 		{
-			ST test3 = group.getInstanceOf("declaration_tp");
-			test3.add("decl", decl);
-			output.append(test3.render());
+			output.append(decl.toString());
 		}
 		
 		// TODO: Match up declarations with files.

@@ -12,28 +12,24 @@ class DeclarationModels
 {
 	private int tabLevel;
 	
+	private String tabOut(int addTabs)
+	{
+		tabLevel += addTabs;
+		String ret = tabOut();
+		tabLevel -= addTabs;
+		return ret;
+	}
+	
 	private String tabOut()
 	{
-		switch (tabLevel)
-		{
-		case 0:
-			return "";
-		case 1:
-			return "    ";
-		case 2:
-			return "        ";
-		default:
-		{
-			StringBuilder sb = new StringBuilder("        ");
+		StringBuilder sb = new StringBuilder();
 
-			for (int i = 3; i <= tabLevel; i++)
-			{
-				sb.append("    ");
-			}
+		for (int i = 0; i < tabLevel; i++)
+		{
+			sb.append("    ");
+		}
 
-			return sb.toString();
-		}
-		}
+		return sb.toString();
 	}
 	
 	private static String join(List<?> args)
@@ -160,7 +156,9 @@ class DeclarationModels
 					this.name);
 
 			str += "\n" + tabOut() + '{';
-			str += join(this.declarations);
+			tabLevel++;
+			  str += join(this.declarations);
+			tabLevel--;
 			str += "\n" + tabOut() + '}';
 			
 			return str;
@@ -169,23 +167,147 @@ class DeclarationModels
 	
 	class CppEnumerator extends CppDeclaration
 	{
-		public boolean isEnumerator = true;
 		public MExpression value;
 	}
 	
 	class CppEnum extends CppDeclaration
 	{
-		public boolean isEnum = true;
 		public boolean isNested;
 		public List<CppEnumerator> enumerators = new ArrayList<CppEnumerator>();
+		
+		@Override
+		public String toString() 
+		{
+			/*
+			enum AnonEnum0
+			{
+				value1(0), 
+				value2(1);
+
+				final int val;
+
+				AnonEnum0(final int enumVal)
+				{
+    				val = enumVal
+				}
+
+				static AnonEnum0 fromValue(final int enumVal)
+				{
+					switch (enumVal)
+					{
+					case (0): return value1;
+					case (1): return value2;
+					default: throw new ClassCastException();
+					}
+				}
+			}
+			*/
+			
+			StringBuilder sb = new StringBuilder();
+
+			sb.append(String.format("\n%senum %s", tabOut(), this.name));
+			sb.append(String.format("\n%s{", tabOut()));
+
+			for (int i = 0; i < enumerators.size(); i++)
+			{
+				sb.append(String.format("\n%s%s(%s)", tabOut(1),
+						enumerators.get(i).name, enumerators.get(i).value));
+				
+				if (i != enumerators.size() - 1)
+					sb.append(", ");
+				
+			}
+			
+			sb.append(";\n");
+			sb.append(String.format("\n%sfinal int val;", tabOut(1)));
+			sb.append(String.format("\n\n%s%s(final int enumVal)", tabOut(1), this.name));
+			sb.append(String.format("\n%s{", tabOut(1)));
+			sb.append(String.format("\n%sval = enumVal", tabOut(2)));
+			sb.append(String.format("\n%s}", tabOut(1)));
+			
+			sb.append(String.format("\n\n%sstatic %s fromValue(final int enumVal)", tabOut(1), this.name));
+			sb.append(String.format("\n%s{", tabOut(1)));
+			sb.append(String.format("\n%sswitch (enumVal)", tabOut(2)));
+			sb.append(String.format("\n%s{", tabOut(2)));			
+			
+			for (int i = 0; i < enumerators.size(); i++)
+			{
+				sb.append(String.format("\n%scase (%s): return %s;", tabOut(2),
+						enumerators.get(i).value, enumerators.get(i).name));
+			}
+			
+			sb.append(String.format("\n%sdefault: throw new ClassCastException();", tabOut(2)));
+			sb.append(String.format("\n%s}", tabOut(2)));
+			sb.append(String.format("\n%s}", tabOut(1)));
+			sb.append(String.format("\n%s}", tabOut()));
+			
+			return sb.toString();
+		}
 	}
 	
 	class CppBitfield extends CppDeclaration
 	{
-		public boolean isBitfield = true;
 		public String qualified;
 		public String type;
 		public MExpression bits;
+		
+		@Override
+		public String toString() 
+		{
+			/*
+			int gettest_with_bit_field()
+			{
+    			return bitfields & 1
+			}
+
+			int settest_with_bit_field(final int val)
+			{
+    			bitfields &= ~1;
+    			bitfields |= (val << 0) & 1;
+    			return val;
+			}
+
+			int postInctest_with_bit_field()
+			{
+    			int ret = gettest_with_bit_field();
+    			settest_with_bit_field(ret + 1)
+			}
+
+			int postDectest_with_bit_field()
+			{
+    			int ret = gettest_with_bit_field();
+    			settest_with_bit_field(ret - 1)
+			}
+			*/
+			
+			StringBuilder sb = new StringBuilder();
+			
+			sb.append(String.format("\n%s%s get%s()", tabOut(), this.type, this.name));
+			sb.append(String.format("\n%s{", tabOut()));
+			sb.append(String.format("\n%sreturn bitfields & 1", tabOut(1)));
+			sb.append(String.format("\n%s}", tabOut()));
+			
+			sb.append(String.format("\n\n%s%s set%s(final %s val)", tabOut(), this.type, this.name, this.type));
+			sb.append(String.format("\n%s{", tabOut()));
+			sb.append(String.format("\n%sbitfields &= ~1;", tabOut(1)));
+			sb.append(String.format("\n%sbitfields |= (val << 0) & 1;", tabOut(1)));
+			sb.append(String.format("\n%sreturn val;", tabOut(1)));
+			sb.append(String.format("\n%s}", tabOut()));
+			
+			sb.append(String.format("\n\n%s%s postInc%s()", tabOut(), this.type, this.name));
+			sb.append(String.format("\n%s{", tabOut()));
+			sb.append(String.format("\n%sint ret = get%s();", tabOut(1), this.name));
+			sb.append(String.format("\n%sset%s(ret + 1)", tabOut(1), this.name));
+			sb.append(String.format("\n%s}", tabOut()));			
+
+			sb.append(String.format("\n\n%s%s postDec%s()", tabOut(), this.type, this.name));
+			sb.append(String.format("\n%s{", tabOut()));
+			sb.append(String.format("\n%sint ret = get%s();", tabOut(1), this.name));
+			sb.append(String.format("\n%sset%s(ret - 1)", tabOut(1), this.name));
+			sb.append(String.format("\n%s}", tabOut()));			
+
+			return sb.toString();
+		}
 	}
 	
 	class MSimpleDecl extends CppDeclaration
