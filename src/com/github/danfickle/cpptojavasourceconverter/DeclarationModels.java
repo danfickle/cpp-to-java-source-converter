@@ -10,21 +10,26 @@ import com.github.danfickle.cpptojavasourceconverter.StmtModels.MCompoundStmt;
 
 class DeclarationModels 
 {
-	private int tabLevel;
+	private TranslationUnitContext ctx;
+	
+	DeclarationModels(TranslationUnitContext context) 
+	{
+		ctx = context;
+	}
 	
 	private String tabOut(int addTabs)
 	{
-		tabLevel += addTabs;
+		ctx.tabLevel += addTabs;
 		String ret = tabOut();
-		tabLevel -= addTabs;
+		ctx.tabLevel -= addTabs;
 		return ret;
 	}
 	
-	private String tabOut()
+	String tabOut()
 	{
 		StringBuilder sb = new StringBuilder();
 
-		for (int i = 0; i < tabLevel; i++)
+		for (int i = 0; i < ctx.tabLevel; i++)
 		{
 			sb.append("    ");
 		}
@@ -32,7 +37,7 @@ class DeclarationModels
 		return sb.toString();
 	}
 	
-	private static String join(List<?> args)
+	private static String join(List<?> args, String sep)
 	{
 		StringBuilder sb = new StringBuilder();
 		
@@ -41,7 +46,7 @@ class DeclarationModels
 			sb.append(args.get(i).toString());
 			
 			if (i != args.size() - 1)
-				sb.append(", ");
+				sb.append(sep);
 		}
 		
 		return sb.toString();
@@ -72,7 +77,7 @@ class DeclarationModels
 		{
 			return String.format("\n%s@Override" +
 			                     "\n%spublic void destruct()" +
-			                     "\n%s%s", tabOut(), tabOut(), tabOut(), this.body);
+			                     "\n%s", tabOut(), tabOut(), this.body);
 		}
 	}
 
@@ -87,7 +92,7 @@ class DeclarationModels
 		{
 			return String.format("\n%s@Override" +
 			                     "\n%spublic %s opAssign(%s right)" +
-			                     "\n%s%s", tabOut(), tabOut(), this.type, this.type, tabOut(), this.body);
+			                     "\n%s", tabOut(), tabOut(), this.type, this.type, this.body);
 		}
 	}
 	
@@ -101,7 +106,7 @@ class DeclarationModels
 		public String toString() 
 		{
 			return String.format("\n%spublic %s()" +
-			                     "\n%s%s", tabOut(), this.type, tabOut(), this.body);
+			                     "\n%s", tabOut(), this.type, this.body);
 		}
 	}
 	
@@ -124,10 +129,12 @@ class DeclarationModels
 		public String toString() 
 		{
 			String str = this.isOverride ? String.format("\n%s@Override", tabOut()) : "";
-			str += String.format("\n%spublic %s %s(%s)", tabOut(), this.retType, this.name, join(this.args));
+
+			str += String.format("\n%spublic %s %s(%s)", tabOut(), 
+					this.retType == null ? "" : this.retType, this.name, join(this.args, ", "));
 
 			if (this.body != null)
-				str += String.format("\n%s%s", tabOut(), this.body);
+				str += String.format("\n%s", this.body);
 			else
 				str += "\n" + tabOut() + (this.isUsed ? "{ /* TODO FUNCTION BODY */ }" : "{ /* NOT USED */ }");
 
@@ -156,9 +163,9 @@ class DeclarationModels
 					this.name);
 
 			str += "\n" + tabOut() + '{';
-			tabLevel++;
-			  str += join(this.declarations);
-			tabLevel--;
+			ctx.tabLevel++;
+			  str += join(this.declarations, "");
+			ctx.tabLevel--;
 			str += "\n" + tabOut() + '}';
 			
 			return str;
@@ -320,14 +327,24 @@ class DeclarationModels
 		@Override
 		public String toString() 
 		{
-			// [public] type name [= expr;]
-			return String.format("\n%s%s%s %s %s%s%s%s",
-					tabOut(), this.isPublic ? " public" : "",
+			// public [static] type name [= expr];
+			if (this.isPublic)
+			{
+				return String.format("%spublic %s %s %s%s%s;",
+					tabOut(),
 					this.isStatic ? " static" : "",
 					this.type, this.name,
 					this.initExpr != null ? " = " : "",
-					this.initExpr != null ? this.initExpr.toString() : "",
-					this.isPublic ? ";" : "");
+					this.initExpr != null ? this.initExpr : "");
+			}
+			else
+			{
+				// type name [= expr]
+				return String.format("%s %s%s%s",
+						this.type, this.name,
+						this.initExpr != null ? " = " : "",
+						this.initExpr != null ? this.initExpr : "");
+			}
 		}
 	}
 }

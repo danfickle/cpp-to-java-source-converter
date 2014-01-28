@@ -8,48 +8,41 @@ import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpressio
 
 public class StmtModels
 {
-	int tabLevel;
+	private TranslationUnitContext ctx;
 	
-	private String incTabLevel()
+	StmtModels(TranslationUnitContext context)
 	{
-		tabLevel++;
-		return "";
+		ctx = context;
 	}
-
-	private String decTabLevel()
+	
+	private String tabOut(int addTabs)
 	{
-		tabLevel--;
-		return "";
+		ctx.tabLevel += addTabs;
+		String ret = ctx.declModels.tabOut();
+		ctx.tabLevel -= addTabs;
+		return ret;
 	}
 	
 	private String tabOut()
 	{
-		switch (tabLevel)
-		{
-		case 0:
-			return "";
-		case 1:
-			return "    ";
-		case 2:
-			return "        ";
-		case 3:
-			return "            ";
-		case 4:
-			return "                ";
-		default:
-		{
-			StringBuilder sb = new StringBuilder("                ");
-
-			for (int i = 5; i <= tabLevel; i++)
-			{
-				sb.append("    ");
-			}
-
-			return sb.toString();
-		}
-		}
+		return tabOut(0);
 	}
 	
+	private String tabOut(Object child)
+	{
+		if (child == null ||
+			child instanceof MCompoundStmt)
+			return "";
+
+		return tabOut(0);
+	}
+	
+	private String stripNl(String str)
+	{
+		if (str.endsWith("\n"))
+			return str.substring(0, str.length() - 1);
+		return str;
+	}
 	
 	abstract static class MStmt {}
 	
@@ -68,10 +61,20 @@ public class StmtModels
 			String start = "";
 			
 			if (this.decl != null)
-				start += String.format("%s%s\n", tabOut(), this.decl);
+				start += String.format("%s%s;\n", tabOut(), this.decl);
 
-			start += String.format("%sfor (%s %s; %s)\n", tabOut(), this.initializer, this.condition, this.updater);
-			start += String.format("%s%s%s%s\n", incTabLevel(), tabOut(), this.body, decTabLevel());
+			start += tabOut();
+			
+			int temp = ctx.tabLevel;
+			ctx.tabLevel = 0;
+			  start += String.format("for (%s %s; %s)\n", tabOut(), 
+					  stripNl(this.initializer.toString()), 
+					  this.condition == null ? "" : this.condition,
+					  this.updater == null ? "" : this.updater);
+
+			ctx.tabLevel = temp;
+			
+			start += String.format("%s%s\n", tabOut(this.body), this.body);
 
 			return start;
 		}
@@ -84,7 +87,7 @@ public class StmtModels
 		@Override
 		public String toString() 
 		{
-			return String.format("%s%s\n%sbreak;\n", tabOut(), this.cleanup, tabOut());
+			return String.format("%s%s\n%sbreak;\n", tabOut(this.cleanup), this.cleanup == null ? "" : this.cleanup, tabOut());
 		}
 	}
 	
@@ -95,7 +98,7 @@ public class StmtModels
 		@Override
 		public String toString() 
 		{
-			return String.format("%s%s\n%scontinue;\n", tabOut(), this.cleanup, tabOut());
+			return String.format("%s%s\n%scontinue;\n", tabOut(this.cleanup), this.cleanup == null ? "" : this.cleanup, tabOut());
 		}
 	}
 	
@@ -138,15 +141,20 @@ public class StmtModels
 		{
 			StringBuilder sb = new StringBuilder();
 			
-			sb.append(String.format("%s%s%s{\n", decTabLevel(), tabOut(), incTabLevel()));
-			
+			sb.append(String.format("%s{\n", tabOut(0)));
+
+			ctx.tabLevel++;
 			for (MStmt stmt : this.statements)
 			{
-				sb.append(String.format("%s%s\n", tabOut(), stmt));
+				sb.append(String.format("%s\n", stmt));
 			}
 			
-			sb.append(String.format("%s%s\n", tabOut(), this.cleanup == null ? "" : this.cleanup));
-			sb.append(String.format("%s%s%s}\n", decTabLevel(), tabOut(), incTabLevel()));
+			if (this.cleanup != null)
+				sb.append(String.format("%s\n", this.cleanup));
+
+			ctx.tabLevel--;
+			
+			sb.append(String.format("%s}\n", tabOut(0)));
 
 			return sb.toString();
 		}
@@ -173,9 +181,9 @@ public class StmtModels
 		{
 			return String.format(
 					"%sdo\n" +
-			        "%s%s%s%s\n" +
+			        "%s%s\n" +
 					"%swhile (%s);\n",
-					tabOut(), incTabLevel(), tabOut(), this.body, decTabLevel(), tabOut(), this.expr);
+					tabOut(), tabOut(this.body), this.body, tabOut(), this.expr);
 		}
 	}
 	
@@ -203,13 +211,13 @@ public class StmtModels
 			String start = "";
 			
 			if (this.decl != null)
-				start += String.format("%s%s;\n", tabOut(), this.decl);
+				start += String.format("%s%s;\n", tabOut(this.decl), this.decl);
 			
 			start += String.format("%sif (%s)\n" +
-			                       "%s%s\n", tabOut(), this.condition, tabOut(), this.body);
+			                       "%s%s\n", tabOut(), this.condition, tabOut(this.body), this.body);
 			
 			if (this.elseBody != null)
-				start += String.format("%selse %s\n", tabOut(), this.elseBody);
+				start += String.format("%selse %s\n", tabOut(this.elseBody), this.elseBody);
 
 			return start;
 		}
@@ -223,7 +231,7 @@ public class StmtModels
 		@Override
 		public String toString() 
 		{
-			return String.format("%s%s\n%sreturn %s;\n", tabOut(), this.cleanup == null ? "" : this.cleanup, tabOut(), this.expr);
+			return String.format("%s%s\n%sreturn %s;\n", tabOut(this.cleanup), this.cleanup == null ? "" : this.cleanup, tabOut(), this.expr);
 		}
 	}
 	
@@ -239,10 +247,10 @@ public class StmtModels
 			String start = "";
 			
 			if (this.decl != null)
-				start += String.format("%s%s;\n", tabOut(), this.decl);
+				start += String.format("%s%s\n", tabOut(this.decl), this.decl);
 			
 			start += String.format("%swhile (%s)\n", tabOut(), this.expr);
-			start += String.format("%s%s\n", tabOut(), this.body);
+			start += String.format("%s%s\n", tabOut(this.body), this.body);
 			
 			return start;
 		}
@@ -260,10 +268,10 @@ public class StmtModels
 			String start = "";
 			
 			if (this.decl != null)
-				start += String.format("%s%s;\n", tabOut(), this.decl);
+				start += String.format("%s%s;\n", tabOut(this.decl), this.decl);
 		
 			start += String.format("%sswitch (%s)\n", tabOut(), this.expr);
-			start += String.format("%s%s\n", tabOut(), this.body);
+			start += String.format("%s%s\n", tabOut(this.body), this.body);
 
 			return start;
 		}

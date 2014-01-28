@@ -17,6 +17,7 @@ class TranslationUnitContext
 	GlobalCtx             global;
 	StmtModels            stmtModels;
 	DeclarationModels     declModels;
+	int                   tabLevel;
 	
 	String currentFileName;
 	IType currentReturnType;
