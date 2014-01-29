@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.CppClass;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.CppDeclaration;
 
 class GlobalCtx
 {

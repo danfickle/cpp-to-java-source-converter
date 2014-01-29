@@ -2,7 +2,10 @@ package com.github.danfickle.cpptojavasourceconverter;
 
 import org.eclipse.cdt.core.dom.ast.IType;
 
-class TranslationUnitContext 
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels;
+import com.github.danfickle.cpptojavasourceconverter.models.StmtModels;
+
+public class TranslationUnitContext 
 {
 	SourceConverter     converter;
 	StackManager        stackMngr;
@@ -16,8 +19,8 @@ class TranslationUnitContext
 	TypeManager           typeMngr;
 	GlobalCtx             global;
 	StmtModels            stmtModels;
-	DeclarationModels     declModels;
-	int                   tabLevel;
+	public DeclarationModels     declModels;
+	public int                   tabLevel;
 	
 	String currentFileName;
 	IType currentReturnType;

@@ -4,14 +4,13 @@ import java.util.List;
 
 import org.eclipse.cdt.core.dom.ast.*;
 
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MStringExpression;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.CompositeInfo;
 import com.github.danfickle.cpptojavasourceconverter.SourceConverter.FieldInfo;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
-import com.github.danfickle.cpptojavasourceconverter.StmtModels.*;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.StmtModels.*;
 
 class SpecialGenerator
 {

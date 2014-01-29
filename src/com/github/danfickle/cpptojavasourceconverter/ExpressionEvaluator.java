@@ -8,13 +8,13 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.c.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.*;
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppFunction;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppClass;
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppDeclaration;
 import com.github.danfickle.cpptojavasourceconverter.InitializationManager.InitType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.CppClass;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.CppDeclaration;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.CppFunction;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.*;
 import com.sun.org.apache.xalan.internal.xsltc.dom.MultiValuedNodeHeapIterator;
 
 class ExpressionEvaluator

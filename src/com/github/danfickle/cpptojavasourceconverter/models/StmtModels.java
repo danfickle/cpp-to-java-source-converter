@@ -1,16 +1,17 @@
-package com.github.danfickle.cpptojavasourceconverter;
+package com.github.danfickle.cpptojavasourceconverter.models;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.MSimpleDecl;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
+import com.github.danfickle.cpptojavasourceconverter.TranslationUnitContext;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.MSimpleDecl;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MExpression;
 
 public class StmtModels
 {
 	private TranslationUnitContext ctx;
 	
-	StmtModels(TranslationUnitContext context)
+	public StmtModels(TranslationUnitContext context)
 	{
 		ctx = context;
 	}
@@ -44,9 +45,9 @@ public class StmtModels
 		return str;
 	}
 	
-	abstract static class MStmt {}
+	public abstract static class MStmt {}
 	
-	class MForStmt extends MStmt
+	public class MForStmt extends MStmt
 	{
 		public MStmt initializer;
 		public MExpression condition;
@@ -80,7 +81,7 @@ public class StmtModels
 		}
 	}
 	
-	class MBreakStmt extends MStmt
+	public class MBreakStmt extends MStmt
 	{
 		public MStmt cleanup;
 		
@@ -91,7 +92,7 @@ public class StmtModels
 		}
 	}
 	
-	class MContinueStmt extends MStmt
+	public class MContinueStmt extends MStmt
 	{
 		public MStmt cleanup;
 		
@@ -102,7 +103,7 @@ public class StmtModels
 		}
 	}
 	
-	class MCaseStmt extends MStmt
+	public class MCaseStmt extends MStmt
 	{
 		public MExpression expr;
 		
@@ -113,7 +114,7 @@ public class StmtModels
 		}
 	}
 	
-	class MDefaultStmt extends MStmt
+	public class MDefaultStmt extends MStmt
 	{
 		@Override
 		public String toString() 
@@ -122,7 +123,7 @@ public class StmtModels
 		}
 	}
 	
-	class MEmptyStmt extends MStmt
+	public class MEmptyStmt extends MStmt
 	{
 		@Override
 		public String toString() 
@@ -131,7 +132,7 @@ public class StmtModels
 		}
 	}
 	
-	class MCompoundStmt extends MStmt
+	public class MCompoundStmt extends MStmt
 	{
 		public List<MStmt> statements = new ArrayList<MStmt>();
 		public MStmt cleanup;
@@ -160,7 +161,7 @@ public class StmtModels
 		}
 	}
 	
-	class MDeclarationStmt extends MStmt
+	public class MDeclarationStmt extends MStmt
 	{
 		public MSimpleDecl simple;
 		
@@ -171,7 +172,7 @@ public class StmtModels
 		}
 	}
 
-	class MDoStmt extends MStmt
+	public class MDoStmt extends MStmt
 	{
 		public MExpression expr;
 		public MStmt body;
@@ -187,7 +188,7 @@ public class StmtModels
 		}
 	}
 	
-	class MExprStmt extends MStmt
+	public class MExprStmt extends MStmt
 	{
 		public MExpression expr;
 		
@@ -198,7 +199,7 @@ public class StmtModels
 		}
 	}
 
-	class MIfStmt extends MStmt
+	public class MIfStmt extends MStmt
 	{
 		public MStmt body;
 		public MExpression condition;
@@ -223,7 +224,7 @@ public class StmtModels
 		}
 	}
 
-	class MReturnStmt extends MStmt
+	public class MReturnStmt extends MStmt
 	{
 		public MExpression expr;
 		public MStmt cleanup;
@@ -235,7 +236,7 @@ public class StmtModels
 		}
 	}
 	
-	class MWhileStmt extends MStmt
+	public class MWhileStmt extends MStmt
 	{
 		public MStmt body;
 		public MExpression expr;
@@ -256,7 +257,7 @@ public class StmtModels
 		}
 	}
 	
-	class MSwitchStmt extends MStmt
+	public class MSwitchStmt extends MStmt
 	{
 		public MStmt body;
 		public MExpression expr;
@@ -277,7 +278,7 @@ public class StmtModels
 		}
 	}
 	
-	class MGotoStmt extends MStmt
+	public class MGotoStmt extends MStmt
 	{
 		public String lbl;
 		@Override
@@ -287,7 +288,7 @@ public class StmtModels
 		}
 	}
 
-	class MProblemStmt extends MStmt
+	public class MProblemStmt extends MStmt
 	{
 		public String problem;
 		
@@ -298,7 +299,7 @@ public class StmtModels
 		}
 	}
 	
-	class MLabelStmt extends MStmt
+	public class MLabelStmt extends MStmt
 	{
 		public String lbl;
 		public MStmt body;
@@ -310,7 +311,7 @@ public class StmtModels
 		}
 	}
 	
-	class MSuperStmt extends MStmt
+	public class MSuperStmt extends MStmt
 	{
 		@Override
 		public String toString() 
@@ -319,7 +320,7 @@ public class StmtModels
 		}
 	}
 	
-	class MSuperDtorStmt extends MStmt
+	public class MSuperDtorStmt extends MStmt
 	{
 		@Override
 		public String toString() 
@@ -328,7 +329,7 @@ public class StmtModels
 		}
 	}
 	
-	class MSuperAssignStmt extends MStmt
+	public class MSuperAssignStmt extends MStmt
 	{
 		@Override
 		public String toString() 

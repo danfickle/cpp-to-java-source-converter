@@ -3,7 +3,10 @@ package com.github.danfickle.cpptojavasourceconverter;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTProblem;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
+
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels;
+import com.github.danfickle.cpptojavasourceconverter.models.StmtModels;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.*;
 
 class Traverser 
 {

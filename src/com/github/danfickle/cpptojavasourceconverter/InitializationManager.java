@@ -3,7 +3,7 @@ package com.github.danfickle.cpptojavasourceconverter;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.*;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
 

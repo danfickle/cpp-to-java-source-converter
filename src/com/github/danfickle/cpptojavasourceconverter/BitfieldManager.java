@@ -2,9 +2,9 @@ package com.github.danfickle.cpptojavasourceconverter;
 
 import org.eclipse.cdt.core.dom.ast.*;
 
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.CppBitfield;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeType;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.CppBitfield;
 
 public class BitfieldManager
 {

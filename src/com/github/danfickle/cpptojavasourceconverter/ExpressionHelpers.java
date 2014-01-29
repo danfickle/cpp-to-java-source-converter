@@ -2,7 +2,7 @@ package com.github.danfickle.cpptojavasourceconverter;
 
 import org.eclipse.cdt.core.dom.ast.*;
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.TypeEnum;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.*;
 
 class ExpressionHelpers
 {

@@ -101,4 +101,8 @@ This is an incomplete and fluid list of items that need doing before the initial
   + Bracketed expressions
   + Special case this pointer and void pointer.
   + exact bit position for bitfield.
++ First pass
+  + Recursively evaluate templates and generate expanded cpp code.
+  + Generate implicit special methods and output cpp code.
+  + Record if a basic variable(int, bool, etc) has its address taken so we can skip objectifying it if it does not.
 

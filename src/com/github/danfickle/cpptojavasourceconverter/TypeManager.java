@@ -7,7 +7,7 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.ICPPUnknownType;
 
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.*;
 
 class TypeManager 
 {

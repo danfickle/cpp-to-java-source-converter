@@ -4,8 +4,8 @@ import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier.IASTEnumerator;
 
 import com.github.danfickle.cpptojavasourceconverter.TypeManager.NameType;
-import com.github.danfickle.cpptojavasourceconverter.DeclarationModels.*;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.*;
 
 class EnumManager
 {

@@ -1,18 +1,19 @@
-package com.github.danfickle.cpptojavasourceconverter;
+package com.github.danfickle.cpptojavasourceconverter.models;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.cdt.core.dom.ast.*;
 
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
-import com.github.danfickle.cpptojavasourceconverter.StmtModels.MCompoundStmt;
+import com.github.danfickle.cpptojavasourceconverter.TranslationUnitContext;
+import com.github.danfickle.cpptojavasourceconverter.models.StmtModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.*;
 
-class DeclarationModels 
+public class DeclarationModels 
 {
 	private TranslationUnitContext ctx;
 	
-	DeclarationModels(TranslationUnitContext context) 
+	public DeclarationModels(TranslationUnitContext context) 
 	{
 		ctx = context;
 	}
@@ -52,7 +53,7 @@ class DeclarationModels
 		return sb.toString();
 	}
 	
-	abstract static class CppDeclaration
+	public abstract static class CppDeclaration
 	{ 
 		// The raw qualified (if needed) C++ name.
 		public String completeCppName;
@@ -67,7 +68,7 @@ class DeclarationModels
 		public int line;
 	}
 	
-	class CppDtor extends CppDeclaration
+	public class CppDtor extends CppDeclaration
 	{
 		public MCompoundStmt body;
 		public boolean hasSuper;
@@ -81,7 +82,7 @@ class DeclarationModels
 		}
 	}
 
-	class CppAssign extends CppDeclaration
+	public class CppAssign extends CppDeclaration
 	{
 		public MCompoundStmt body;
 		public boolean hasSuper;
@@ -96,7 +97,7 @@ class DeclarationModels
 		}
 	}
 	
-	class CppCtor extends CppDeclaration
+	public class CppCtor extends CppDeclaration
 	{
 		public MCompoundStmt body;
 		public String type;
@@ -110,7 +111,7 @@ class DeclarationModels
 		}
 	}
 	
-	class CppFunction extends CppDeclaration
+	public class CppFunction extends CppDeclaration
 	{
 		public String retType;
 		public List<MSimpleDecl> args = new ArrayList<MSimpleDecl>();
@@ -122,8 +123,8 @@ class DeclarationModels
 		public boolean isUsed;
 		public boolean isOriginallyGlobal;
 		
-		boolean isCastOperator;
-		IASTTypeId castType;
+		public boolean isCastOperator;
+		public IASTTypeId castType;
 		
 		@Override
 		public String toString() 
@@ -142,7 +143,7 @@ class DeclarationModels
 		}
 	}
 	
-	class CppClass extends CppDeclaration
+	public class CppClass extends CppDeclaration
 	{
 		public boolean isNested;
 		public boolean isUnion;
@@ -172,12 +173,12 @@ class DeclarationModels
 		}
 	}
 	
-	class CppEnumerator extends CppDeclaration
+	public class CppEnumerator extends CppDeclaration
 	{
 		public MExpression value;
 	}
 	
-	class CppEnum extends CppDeclaration
+	public class CppEnum extends CppDeclaration
 	{
 		public boolean isNested;
 		public List<CppEnumerator> enumerators = new ArrayList<CppEnumerator>();
@@ -252,7 +253,7 @@ class DeclarationModels
 		}
 	}
 	
-	class CppBitfield extends CppDeclaration
+	public class CppBitfield extends CppDeclaration
 	{
 		public String qualified;
 		public String type;
@@ -317,7 +318,7 @@ class DeclarationModels
 		}
 	}
 	
-	class MSimpleDecl extends CppDeclaration
+	public class MSimpleDecl extends CppDeclaration
 	{
 		public boolean isStatic;
 		public String type;

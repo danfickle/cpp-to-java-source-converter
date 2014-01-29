@@ -1,25 +1,25 @@
-package com.github.danfickle.cpptojavasourceconverter;
+package com.github.danfickle.cpptojavasourceconverter.models;
 
 import java.util.ArrayList;
 import java.util.List;
 
-class ExpressionModels
+public class ExpressionModels
 {
 	interface PlainString
 	{
 		public String toStringPlain();
 	}
 	
-	abstract static class MExpression
+	public abstract static class MExpression
 	{}
 
-	abstract static class MArrayExpression extends MExpression
+	public abstract static class MArrayExpression extends MExpression
 	{
 		public MExpression operand;
 		public List<MExpression> subscript = new ArrayList<MExpression>(1);
 	}
 	
-	abstract static class MFieldReferenceExpression extends MExpression
+	public abstract static class MFieldReferenceExpression extends MExpression
 	{
 		public MExpression object;
 		public String field;
@@ -27,36 +27,36 @@ class ExpressionModels
 		abstract String toStringRhOnly();
 	}
 	
-	abstract static class MInfixExpression extends MExpression
+	public abstract static class MInfixExpression extends MExpression
 	{
 		public MExpression left;
 		public MExpression right;
 		public String operator;
 	}
 	
-	abstract static class MPrefixExpression extends MExpression
+	public abstract static class MPrefixExpression extends MExpression
 	{
 		public MExpression operand;
 		public String operator;
 	}
 	
-	abstract static class MPostfixExpression extends MExpression
+	public abstract static class MPostfixExpression extends MExpression
 	{
 		public MExpression operand;
 		public String operator;
 	}
 	
-	abstract static class MIdentityExpression extends MExpression implements PlainString
+	public abstract static class MIdentityExpression extends MExpression implements PlainString
 	{
 		public String ident;
 	}
 	
-	abstract static class MDeleteExpression extends MExpression
+	public abstract static class MDeleteExpression extends MExpression
 	{
 		public MExpression operand;
 	}
 	
-	abstract static class MFunctionCallExpressionParent extends MExpression
+	public abstract static class MFunctionCallExpressionParent extends MExpression
 	{
 		public MExpression name;
 		public List<MExpression> args = new ArrayList<MExpression>();
@@ -137,7 +137,7 @@ class ExpressionModels
 	/**
 	 * Note: MStringExpression breaks the MVC architecture.
 	 */
-	static class MStringExpression extends MExpression
+	public static class MStringExpression extends MExpression
 	{
 		public String contents;
 		
@@ -148,7 +148,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MMultiExpression extends MExpression
+	public static class MMultiExpression extends MExpression
 	{
 		public List<MExpression> exprs = new ArrayList<MExpression>();
 		
@@ -159,7 +159,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MAddressOfExpressionArrayItem extends MArrayExpression
+	public static class MAddressOfExpressionArrayItem extends MArrayExpression
 	{
 		@Override
 		public String toString() 
@@ -180,7 +180,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MPostfixExpressionNumberInc extends MPostfixExpression
+	public static class MPostfixExpressionNumberInc extends MPostfixExpression
 	{
 		@Override
 		public String toString() 
@@ -201,7 +201,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MPostfixExpressionNumberDec extends MPostfixExpression
+	public static class MPostfixExpressionNumberDec extends MPostfixExpression
 	{
 		@Override
 		public String toString() 
@@ -222,7 +222,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MPrefixExpressionNumberInc extends MPrefixExpression
+	public static class MPrefixExpressionNumberInc extends MPrefixExpression
 	{
 		@Override
 		public String toString() 
@@ -243,7 +243,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MPrefixExpressionNumberDec extends MPrefixExpression
+	public static class MPrefixExpressionNumberDec extends MPrefixExpression
 	{
 		@Override
 		public String toString() 
@@ -264,7 +264,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MValueOfExpressionNumber extends MExpression
+	public static class MValueOfExpressionNumber extends MExpression
 	{
 		public MExpression operand;
 		public String type;
@@ -276,7 +276,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MValueOfExpressionArray extends MExpression
+	public static class MValueOfExpressionArray extends MExpression
 	{
 		public List<MExpression> operands;
 		public String type;
@@ -288,7 +288,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MValueOfExpressionPtr extends MExpression
+	public static class MValueOfExpressionPtr extends MExpression
 	{
 		public MExpression operand;
 		public String type;
@@ -300,7 +300,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MInfixExpressionWithPtrOnLeft extends MInfixExpression
+	public static class MInfixExpressionWithPtrOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -321,7 +321,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MInfixExpressionWithPtrOnRight extends MInfixExpression
+	public static class MInfixExpressionWithPtrOnRight extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -342,7 +342,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MInfixExpressionPtrComparison extends MInfixExpression
+	public static class MInfixExpressionPtrComparison extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -378,7 +378,7 @@ class ExpressionModels
 		}		
 	}
 	
-	static class MCompoundWithPtrOnLeft extends MInfixExpression
+	public static class MCompoundWithPtrOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -399,7 +399,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MPtrCopy extends MExpression
+	public static class MPtrCopy extends MExpression
 	{
 		public MExpression operand;
 		
@@ -410,7 +410,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MInfixAssignmentWithPtrOnLeft extends MInfixExpression
+	public static class MInfixAssignmentWithPtrOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -431,7 +431,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MRefWrapper extends MExpression
+	public static class MRefWrapper extends MExpression
 	{
 		public MExpression operand;
 		
@@ -454,7 +454,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MAddressOfExpressionPtr extends MExpression
+	public static class MAddressOfExpressionPtr extends MExpression
 	{
 		public MExpression operand;
 		
@@ -477,7 +477,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MBracketExpression extends MExpression
+	public static class MBracketExpression extends MExpression
 	{
 		public MExpression operand;
 		
@@ -488,7 +488,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MArrayExpressionPtr extends MArrayExpression implements PlainString
+	public static class MArrayExpressionPtr extends MArrayExpression implements PlainString
 	{
 		@Override
 		public String toString() 
@@ -520,7 +520,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MInfixExpressionWithBitfieldOnLeft extends MInfixExpression
+	public static class MInfixExpressionWithBitfieldOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -529,7 +529,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MInfixAssignmentWithNumberOnLeft extends MInfixExpression
+	public static class MInfixAssignmentWithNumberOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -550,7 +550,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MInfixWithNumberOnLeft extends MInfixExpression
+	public static class MInfixWithNumberOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -559,7 +559,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MCompoundWithNumberOnLeft extends MInfixExpression
+	public static class MCompoundWithNumberOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -580,7 +580,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MInfixExpressionWithDerefOnLeft extends MInfixExpression
+	public static class MInfixExpressionWithDerefOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -589,7 +589,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MInfixAssignmentWithBitfieldOnLeft extends MInfixExpression
+	public static class MInfixAssignmentWithBitfieldOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -610,7 +610,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MInfixAssignmentWithDerefOnLeft extends MInfixExpression
+	public static class MInfixAssignmentWithDerefOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -631,7 +631,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MCompoundWithBitfieldOnLeft extends MInfixExpression
+	public static class MCompoundWithBitfieldOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -652,7 +652,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MCompoundWithDerefOnLeft extends MInfixExpression
+	public static class MCompoundWithDerefOnLeft extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -673,7 +673,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MInfixExpressionPlain extends MInfixExpression
+	public static class MInfixExpressionPlain extends MInfixExpression
 	{
 		@Override
 		public String toString() 
@@ -682,7 +682,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MIdentityExpressionPlain extends MIdentityExpression
+	public static class MIdentityExpressionPlain extends MIdentityExpression
 	{
 		@Override
 		public String toString() 
@@ -697,7 +697,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MIdentityExpressionBitfield extends MIdentityExpression
+	public static class MIdentityExpressionBitfield extends MIdentityExpression
 	{
 		@Override
 		public String toString() 
@@ -711,7 +711,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MIdentityExpressionNumber extends MIdentityExpression
+	public static class MIdentityExpressionNumber extends MIdentityExpression
 	{
 		@Override
 		public String toString() 
@@ -726,7 +726,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MIdentityExpressionPtr extends MIdentityExpression
+	public static class MIdentityExpressionPtr extends MIdentityExpression
 	{
 		@Override
 		public String toString()
@@ -741,7 +741,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MIdentityExpressionDeref extends MIdentityExpression
+	public static class MIdentityExpressionDeref extends MIdentityExpression
 	{
 		@Override
 		public String toString()
@@ -756,7 +756,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MIdentityExpressionEnumerator extends MIdentityExpression
+	public static class MIdentityExpressionEnumerator extends MIdentityExpression
 	{
 		public String enumName;
 
@@ -773,7 +773,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MTernaryExpression extends MExpression
+	public static class MTernaryExpression extends MExpression
 	{
 		public MExpression condition;
 		public MExpression negative;
@@ -786,7 +786,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MFieldReferenceExpressionPlain extends MFieldReferenceExpression
+	public static class MFieldReferenceExpressionPlain extends MFieldReferenceExpression
 	{
 		@Override
 		public String toString() 
@@ -807,7 +807,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MFieldReferenceExpressionBitfield extends MFieldReferenceExpression
+	public static class MFieldReferenceExpressionBitfield extends MFieldReferenceExpression
 	{
 		@Override
 		public String toString()
@@ -828,7 +828,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MFieldReferenceExpressionNumber extends MFieldReferenceExpression
+	public static class MFieldReferenceExpressionNumber extends MFieldReferenceExpression
 	{
 		@Override
 		public String toString() 
@@ -849,7 +849,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MFieldReferenceExpressionPtr extends MFieldReferenceExpression
+	public static class MFieldReferenceExpressionPtr extends MFieldReferenceExpression
 	{
 		@Override
 		public String toString() 
@@ -870,7 +870,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MFieldReferenceExpressionDeref extends MFieldReferenceExpression
+	public static class MFieldReferenceExpressionDeref extends MFieldReferenceExpression
 	{
 		@Override
 		public String toString() 
@@ -891,7 +891,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MFieldReferenceExpressionEnumerator extends MFieldReferenceExpression
+	public static class MFieldReferenceExpressionEnumerator extends MFieldReferenceExpression
 	{
 		@Override
 		public String toString() 
@@ -912,7 +912,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MFunctionCallExpression extends MFunctionCallExpressionParent
+	public static class MFunctionCallExpression extends MFunctionCallExpressionParent
 	{
 		@Override
 		public String toString() 
@@ -921,7 +921,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MClassInstanceCreation extends MFunctionCallExpressionParent
+	public static class MClassInstanceCreation extends MFunctionCallExpressionParent
 	{
 		@Override
 		public String toString() 
@@ -930,7 +930,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MLiteralExpression extends MExpression
+	public static class MLiteralExpression extends MExpression
 	{
 		public String literal;
 		
@@ -941,7 +941,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MPrefixExpressionPlain extends MPrefixExpression
+	public static class MPrefixExpressionPlain extends MPrefixExpression
 	{
 		@Override
 		public String toString() 
@@ -950,7 +950,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MAddressOfExpression extends MExpression
+	public static class MAddressOfExpression extends MExpression
 	{
 		public MExpression operand;
 		
@@ -973,7 +973,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MPostfixExpressionPlain extends MPostfixExpression
+	public static class MPostfixExpressionPlain extends MPostfixExpression
 	{
 		@Override
 		public String toString() 
@@ -982,7 +982,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MPostfixExpressionPointerInc extends MPostfixExpression
+	public static class MPostfixExpressionPointerInc extends MPostfixExpression
 	{
 		@Override
 		public String toString() 
@@ -1003,7 +1003,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MPostfixExpressionPointerDec extends MPostfixExpression
+	public static class MPostfixExpressionPointerDec extends MPostfixExpression
 	{
 		@Override
 		public String toString() 
@@ -1024,7 +1024,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MPrefixExpressionPointerInc extends MPrefixExpression
+	public static class MPrefixExpressionPointerInc extends MPrefixExpression
 	{
 		@Override
 		public String toString() 
@@ -1045,7 +1045,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MPrefixExpressionPointerDec extends MPrefixExpression
+	public static class MPrefixExpressionPointerDec extends MPrefixExpression
 	{
 		@Override
 		public String toString() 
@@ -1066,7 +1066,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MPrefixExpressionPointer extends MPrefixExpression
+	public static class MPrefixExpressionPointer extends MPrefixExpression
 	{
 		@Override
 		public String toString() 
@@ -1075,7 +1075,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MPrefixExpressionPointerStar extends MPrefixExpression implements PlainString
+	public static class MPrefixExpressionPointerStar extends MPrefixExpression implements PlainString
 	{
 		@Override
 		public String toString() 
@@ -1114,7 +1114,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MPostfixExpressionBitfieldInc extends MPostfixExpression
+	public static class MPostfixExpressionBitfieldInc extends MPostfixExpression
 	{
 		@Override
 		public String toString() 
@@ -1135,7 +1135,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MPostfixExpressionBitfieldDec extends MPostfixExpression
+	public static class MPostfixExpressionBitfieldDec extends MPostfixExpression
 	{
 		@Override
 		public String toString() 
@@ -1156,7 +1156,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MPrefixExpressionBitfieldInc extends MPrefixExpression
+	public static class MPrefixExpressionBitfieldInc extends MPrefixExpression
 	{
 		public MExpression set;
 		
@@ -1179,7 +1179,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MPrefixExpressionBitfieldDec extends MPrefixExpression
+	public static class MPrefixExpressionBitfieldDec extends MPrefixExpression
 	{
 		public MExpression set;
 		
@@ -1202,7 +1202,7 @@ class ExpressionModels
 		}
 	}	
 	
-	static class MPrefixExpressionBitfield extends MPrefixExpression
+	public static class MPrefixExpressionBitfield extends MPrefixExpression
 	{
 		public MExpression set;
 		
@@ -1213,7 +1213,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MCastExpression extends MExpression
+	public static class MCastExpression extends MExpression
 	{
 		public MExpression operand;
 		public String type;
@@ -1225,7 +1225,7 @@ class ExpressionModels
 		}
 	}
 
-	static class MCastExpressionToEnum extends MExpression
+	public static class MCastExpressionToEnum extends MExpression
 	{
 		public MExpression operand;
 		public String type;
@@ -1237,7 +1237,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MDeleteObjectSingle extends MDeleteExpression
+	public static class MDeleteObjectSingle extends MDeleteExpression
 	{
 		@Override
 		public String toString() 
@@ -1246,7 +1246,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MDeleteObjectMultiple extends MDeleteExpression
+	public static class MDeleteObjectMultiple extends MDeleteExpression
 	{
 		@Override
 		public String toString() 
@@ -1255,7 +1255,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MEmptyExpression extends MExpression
+	public static class MEmptyExpression extends MExpression
 	{
 		@Override
 		public String toString() 
@@ -1264,7 +1264,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MNewArrayExpression extends MExpression
+	public static class MNewArrayExpression extends MExpression
 	{
 		public List<MExpression> sizes = new ArrayList<MExpression>();
 		public String type;
@@ -1276,7 +1276,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MNewArrayExpressionObject extends MExpression
+	public static class MNewArrayExpressionObject extends MExpression
 	{
 		public List<MExpression> sizes = new ArrayList<MExpression>();
 		public String type;
@@ -1288,7 +1288,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MNewExpression extends MExpression
+	public static class MNewExpression extends MExpression
 	{
 		public String type;
 		public MExpression argument;
@@ -1300,7 +1300,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MNewExpressionObject extends MExpression
+	public static class MNewExpressionObject extends MExpression
 	{
 		public String type;
 		public List<MExpression> arguments = new ArrayList<MExpression>();
@@ -1312,7 +1312,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MAddItemCall extends MExpression
+	public static class MAddItemCall extends MExpression
 	{
 		public MExpression operand;
 		public int nextFreeStackId;
@@ -1324,7 +1324,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MOverloadedMethodUnary extends MExpression
+	public static class MOverloadedMethodUnary extends MExpression
 	{
 		public String method;
 		public MExpression object;
@@ -1337,7 +1337,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MOverloadedFunctionUnary extends MExpression
+	public static class MOverloadedFunctionUnary extends MExpression
 	{
 		public String function;
 		public MExpression object;
@@ -1350,7 +1350,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MOverloadedMethodInfix extends MExpression
+	public static class MOverloadedMethodInfix extends MExpression
 	{
 		public String method;
 		public MExpression object;
@@ -1363,7 +1363,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MOverloadedFunctionInfix extends MExpression
+	public static class MOverloadedFunctionInfix extends MExpression
 	{
 		public String function;
 		public MExpression left;
@@ -1376,7 +1376,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MOverloadedMethodFuncCall extends MExpression
+	public static class MOverloadedMethodFuncCall extends MExpression
 	{
 		public MExpression object;
 		public List<MExpression> args = new ArrayList<MExpression>();
@@ -1388,7 +1388,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MOverloadedMethodSubscript extends MExpression
+	public static class MOverloadedMethodSubscript extends MExpression
 	{
 		public MExpression object;
 		public MExpression subscript;
@@ -1400,7 +1400,7 @@ class ExpressionModels
 		}
 	}
 	
-	static class MOverloadedMethodCast extends MExpression
+	public static class MOverloadedMethodCast extends MExpression
 	{
 		public MExpression object;
 		public String name;

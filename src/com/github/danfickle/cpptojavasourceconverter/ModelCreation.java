@@ -2,19 +2,19 @@ package com.github.danfickle.cpptojavasourceconverter;
 
 import java.util.Arrays;
 
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MFieldReferenceExpression;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MFunctionCallExpression;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpression;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionNumber;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MIdentityExpressionPlain;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpression;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionPtrComparison;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MLiteralExpression;
-import com.github.danfickle.cpptojavasourceconverter.StmtModels.MExprStmt;
-import com.github.danfickle.cpptojavasourceconverter.StmtModels.MStmt;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MFieldReferenceExpressionPlain;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MInfixExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MExpression;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MFieldReferenceExpression;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MFieldReferenceExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MFunctionCallExpression;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MIdentityExpression;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MIdentityExpressionNumber;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MIdentityExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MInfixExpression;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MInfixExpressionPlain;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MInfixExpressionPtrComparison;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.MLiteralExpression;
+import com.github.danfickle.cpptojavasourceconverter.models.StmtModels.MExprStmt;
+import com.github.danfickle.cpptojavasourceconverter.models.StmtModels.MStmt;
 
 public class ModelCreation
 {

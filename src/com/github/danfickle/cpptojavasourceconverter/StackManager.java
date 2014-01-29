@@ -4,9 +4,8 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
 
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.MExpression;
-import com.github.danfickle.cpptojavasourceconverter.StmtModels.MStmt;
-import com.github.danfickle.cpptojavasourceconverter.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.*;
+import com.github.danfickle.cpptojavasourceconverter.models.StmtModels.MStmt;
 
 /**
  * The stack manager is in charge of keeping track of the stack of 
