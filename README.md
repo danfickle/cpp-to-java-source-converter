@@ -81,16 +81,12 @@ This is an incomplete and fluid list of items that need doing before the initial
 
 + General
   + Lots more assertions
-  + Enable calling of delete on null expressions
   + Destructor calls on static duration objects
   + Cast operators other than C style cast should not resolve overloaded operator cast
   + Basic type classes other than MInteger
   + Global variables
   + Templates
   + Should be able to take the address of an enumerator
-  + ptr - ptr expression should yield an integer
-  + Allow ptr offset one past the end of an array for comparison purposes
-  + Whitespace handling
   + Putting in comments/defines from original
   + A lot of work on multi dimension arrays.
   + cleanup cpptojavatype method.

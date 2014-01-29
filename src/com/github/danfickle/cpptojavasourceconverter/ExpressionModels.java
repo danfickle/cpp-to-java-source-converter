@@ -1242,7 +1242,7 @@ class ExpressionModels
 		@Override
 		public String toString() 
 		{
-			return String.format("%s.destruct()", this.operand);
+			return String.format("DestructHelper.destruct(%s)", this.operand);
 		}
 	}
 	
