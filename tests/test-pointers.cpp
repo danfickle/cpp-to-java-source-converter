@@ -41,6 +41,8 @@ void ptr_test_method()
 	f < &f[1];
 	&f[0] == f;
 
+	&f[1] - &f[0];
+
 	// Test addressof ptr
 	&f;
 }

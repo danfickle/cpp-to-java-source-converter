@@ -1106,6 +1106,20 @@ class ExpressionEvaluator
 			infix.operator = ExpressionHelpers.compoundAssignmentToInfixOperator(expr.getOperator());
 			return infix;
 		}
+		else if (expr.getOperator() == IASTBinaryExpression.op_minus &&
+				TypeManager.isPtrOrArrayBasic(expr.getOperand1().getExpressionType()) &&
+				TypeManager.isPtrOrArrayBasic(expr.getOperand2().getExpressionType()))
+		{
+			MInfixExpressionPtrComparison infix = new MInfixExpressionPtrComparison();
+			infix.left = eval1Expr(expr.getOperand1());
+			infix.right = eval1Expr(expr.getOperand2());
+			infix.operator = ExpressionHelpers.evaluateBinaryOperator(expr.getOperator());
+			
+			modifyLiteralToPtr(infix.left);
+			modifyLiteralToPtr(infix.right);
+			
+			return infix;
+		}
 		else if ((expr.getOperator() == IASTBinaryExpression.op_minus ||
 				 expr.getOperator() == IASTBinaryExpression.op_plus) &&
 				 TypeManager.isPtrOrArrayBasic(expr.getOperand1().getExpressionType()))
