@@ -1,4 +1,34 @@
-All variables are to be considered object except bitfields.
+TEMPLATES:
+
+template <typename Type>
+Type max(Type a, Type b) {
+    return a > b ? a : b;
+}
+
+becomes:
+
+Type <Type> max(Type a, Type b)
+{
+    return (isOpOverride(a, b) ? opOverride(a, b, "opGreaterThan") : getVal(a) > getVal(b)) ? a : b;
+}
+
+Another example:
+
+void <Type> plusAssign(Type a, Type b)
+{
+	// a += b;
+	(isOpOverride(a, b) ? opOverride(a, b, "opPlusAssign") : setVal(a, getVal(a) + getVal(b)));
+}
+
+Another example:
+
+void <Type> plusAssign(Type a)
+{
+	// a++;
+	(isOpOverride(a) ? opOverride(a, "++") : setVal(a, getVal(a) + 1));
+}
+
+All variables are to be considered objects except bitfields.
 
 The interface for pointer to objects follows:
 public interface IPtrObject<T>
