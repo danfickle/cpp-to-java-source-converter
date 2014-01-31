@@ -518,6 +518,7 @@ class TypeManager
 		operators.put("operator *", "opStar");
 		operators.put("operator /", "opDivide");
 		operators.put("operator %", "opModulo");
+		operators.put("operator &", "opAmper");
 		operators.put("operator ++", "opPreIncrement");
 		operators.put("operator --", "opPreDecrement");
 		operators.put("operator ==", "equals");

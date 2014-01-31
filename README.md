@@ -64,12 +64,14 @@ Required JARs
 -------------
 These are the JAR files I use to get this code to run.
 They are from Eclipse Juno (4.2.x) and CDT 8.1.1 for Eclipse Juno.
+Additionally, jOOR is required by the runtime template handling code.
 
 + [Eclipse downloads](http://www.eclipse.org/downloads/)
 + [CDT downloads](http://www.eclipse.org/cdt/downloads.php)
++ [jOOR at Github](https://github.com/jOOQ/jOOR)
 + org.eclipse.cdt.core_5.4.1.201209170703.jar
 + org.eclipse.equinox.common_3.6.100.v20120522-1841.jar
-
++ joor-0.9.3.jar
 
 License
 -------
