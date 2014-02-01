@@ -6,7 +6,7 @@ package com.github.danfickle.cpptojavasourceconverter.helper;
  * and assigning depending on whether you need it to be
  * a value or a pointer.
  */
-public interface IInteger
+public interface IInteger extends IBasicType
 {
 	public IInteger ptrCopy();
 	public IInteger ptrOffset(int cnt);

@@ -6,6 +6,7 @@ import org.joor.ReflectException;
 // NOTE: This is an experimental class to see if we can
 // call operators, etc at runtime in a template
 // to avoid doing code generation.
+// TODO: All of this class will be terribly slow!
 public class Template
 {
 	public static enum UnaryOp
@@ -22,8 +23,51 @@ public class Template
 		opComplement;
 	}
 
-	@SuppressWarnings("unchecked")
-	public static <T> T doUnaryOp(Object var, UnaryOp op)
+	public static enum BinaryOp
+	{
+		opAssign;
+	}
+	
+	public static Object doBinaryOp(Object a, Object b, BinaryOp op)
+	{
+		if (a instanceof CppType ||
+			b instanceof CppType)
+		{
+			try
+			{
+				// 1. First try method a.op(b)
+				return Reflect.on(a).call(op.toString(), b).get();
+			}
+			catch (ReflectException re)
+			{
+				// 2. Then try function op(a, b)
+				return Reflect.on(GlobalOpOverloads.class).call(op.toString(), a, b).get();						
+			}
+		}
+		else if (a instanceof IInteger)
+		{
+			switch (op)
+			{
+			case opAssign:
+				((IInteger) a).set((Integer) getValue(b));
+			// TOOD: Other binary operators.
+			}
+		}
+
+		return null;
+	}
+	
+	private static Object getValue(Object b) 
+	{
+		if (b instanceof IInteger)
+			return ((IInteger) b).get();
+
+		// TODO: Object types via cast operator, basic types via get, enums, etc.
+		
+		return null;
+	}
+
+	public static Object doUnaryOp(Object var, UnaryOp op)
 	{
 		if (var instanceof CppType)
 		{
@@ -57,34 +101,38 @@ public class Template
 		}
 		else if (var instanceof IInteger)
 		{
-			int val = ((IInteger) var).get();
+			IInteger down = (IInteger) var;
+			int val = down.get();
 
+			// TODO: Pointers and arrays.
 			switch (op)
 			{
 			case opAmper:
-				return Reflect.on(var).call("addressOf").get();
-			case opComplement:
-				return (T) (Integer) (~val);
-			case opLogicalNot:
-				return (T) (Boolean) (val != 0);
-			case opMinus:
-				return (T) (Integer) (-val);
-			case opPlus:
-				return (T) (Integer) (+val);
+				return down.addressOf();
 			case opPostDecrement:
-				return Reflect.on(var).call("postDec").get();
+				return MInteger.valueOf(down.postDec());
 			case opPostIncrement:
-				return Reflect.on(var).call("postInc").get();
+				return MInteger.valueOf(down.postInc());
+			case opComplement:
+				return MInteger.valueOf(~val);
+			case opLogicalNot:
+				return MInteger.valueOf(val == 0 ? 1 : 0);
+			case opMinus:
+				return MInteger.valueOf(-val);
+			case opPlus:
+				return MInteger.valueOf(+val);
 			case opPreDecrement:
-				return Reflect.on(var).call("set", val - 1).get();
+				down.set(val - 1);
+				return down;
 			case opPreIncrement:
-				return Reflect.on(var).call("set", val + 1).get();
+				down.set(val + 1);
+				return down;
 			case opStar:
-				break;
+				return MInteger.valueOf(val);
 			}
 		}
-		// More else ifs to handle other built in types here.
-		
+		// TODO: More else ifs to handle other built in types and enums here.
+
 		return null;
 	}
 }

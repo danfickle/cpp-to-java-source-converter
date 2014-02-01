@@ -17,7 +17,7 @@ public class MInteger implements IInteger
 	{
 		return new MInteger(value);
 	}
-	
+
 	@Override
 	public IPtrObject<IInteger> ptrAddressOf()
 	{
