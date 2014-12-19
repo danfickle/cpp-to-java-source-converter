@@ -38,7 +38,8 @@ class Traverser
 
 		for (IASTProblem prob : translationUnit.getPreprocessorProblems())
 		{
-			MyLogger.logImportant(prob.getRawSignature());
+			MyLogger.log(prob.getRawSignature());
+			MyLogger.logImportant(prob.getMessageWithLocation());
 		}
 
 		try
