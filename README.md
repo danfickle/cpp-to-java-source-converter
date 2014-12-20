@@ -62,6 +62,18 @@ The following lines give an indication of what generated code using pointers loo
 
 Required JARs
 -------------
+This fork will build with Maven. Eclipse CDT is not
+in Maven central, or any repository I could find, but
+for your convenience, private copies of
+certain JARS are shipped in the lib/ directory:
++ org.eclipse.cdt.core_5.4.1.201209170703.jar
++ org.eclipse.equinox.common_3.6.100.v20120522-1841.jar
++ com.ibm.icu_50.1.1.v201304230130.jar (I needed it at run-time once to fix a logging error)
+
+Please note these are from a separate project with separate licenses.
+
+Historical required JARs:
+
 These are the JAR files I use to get this code to run.
 They are from Eclipse Juno (4.2.x) and CDT 8.1.1 for Eclipse Juno.
 Additionally, jOOR is required by the runtime template handling code.
