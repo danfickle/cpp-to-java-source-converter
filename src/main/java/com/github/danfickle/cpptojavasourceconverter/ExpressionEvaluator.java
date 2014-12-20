@@ -15,7 +15,6 @@ import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.Cp
 import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.CppDeclaration;
 import com.github.danfickle.cpptojavasourceconverter.models.DeclarationModels.CppFunction;
 import com.github.danfickle.cpptojavasourceconverter.models.ExpressionModels.*;
-import com.sun.org.apache.xalan.internal.xsltc.dom.MultiValuedNodeHeapIterator;
 
 class ExpressionEvaluator
 {
