@@ -1,7 +1,8 @@
 *~
 .classpath
 .project
-lib
+.settings
 bin
 test-*.java
 crap
+target
